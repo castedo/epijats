@@ -4,17 +4,6 @@ from datetime import datetime, date, time, timezone
 from pkg_resources import resource_filename
 from ruamel.yaml import YAML
 
-def copytree_nostat(src, dst):
-    # like shutil but avoids calling copystat so SELinux context is not copied
-    os.makedirs(dst, exist_ok=True)
-    for srcentry in os.scandir(src):
-        dstentry = os.path.join(dst, srcentry.name)
-        if srcentry.is_dir():
-            copytree_nostat(srcentry, dstentry)
-        else:
-            shutil.copy(srcentry, dstentry)
-    return dst
-
 def run_pandoc(args, echo=True):
     cmd = ['pandoc'] + args
     if echo:
@@ -130,13 +119,13 @@ class JatsEprinter:
             env = None
         tmp_pdf = self.tmp / "pdf"
         os.makedirs(tmp_pdf, exist_ok=True)
-        tex = self.make_latex(self.tmp / "tex" / "main.tex")
+        tex = self.make_latex(self.tmp / "tex" / "article.tex")
         cmd = "rubber --pdf --into {} {}".format(tmp_pdf, tex)
         print(cmd)
         subprocess.run(cmd, shell=True, check=True,
                        stdout=sys.stdout, stderr=sys.stderr, env=env)
         os.makedirs(target.parent, exist_ok=True)
-        shutil.copy(tmp_pdf / "main.pdf", target)
+        shutil.copy(tmp_pdf / "article.pdf", target)
         return target
 
     def _get_html_template_var(self, name):
