@@ -25,6 +25,10 @@ class JatsVars:
         return self.jats.body_html
 
     @property
+    def hexhash(self):
+        return self.jats.git_hash
+
+    @property
     def uri(self):
         return "swh:1:cnt:" + self.jats.git_hash
 
