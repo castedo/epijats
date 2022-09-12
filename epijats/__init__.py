@@ -23,7 +23,7 @@ def git_hash_object(path):
 
 class EprinterConfig:
 
-    def __init__(self, pandoc_opts):
+    def __init__(self, pandoc_opts=""):
         self.pandoc_opts = pandoc_opts
 
 class JatsEprinter:
