@@ -1,6 +1,4 @@
-
 class JatsVars:
-
     def __init__(self, jats):
         self.jats = jats
 
@@ -34,8 +32,8 @@ class JatsVars:
 
 
 class JatsEditionVars(JatsVars):
-    def __init__(self, jats, edition):
-        super().__init__(jats)
+    def __init__(self, edition):
+        super().__init__(edition.jats())
         self.edition = edition
 
     @property
@@ -52,7 +50,7 @@ class JatsEditionVars(JatsVars):
 
     @property
     def seq_edid(self):
-        return str(self.edition.up.edid)
+        return str(self.edition.up.edid) if self.edition.up else None
 
     @property
     def latest_edid(self):
