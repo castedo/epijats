@@ -56,3 +56,17 @@ class JatsEditionVars(JatsVars):
     def latest_edid(self):
         subid = self.edition.up.last_subid
         return self.edition.up.subs[subid].edid
+
+    @property
+    def ref_commit(self):
+        return self.edition.suc.ref_commit
+
+    @property
+    def sign_key(self):
+        fingerprint = self.edition.suc.sign_key_fingerprint
+        return fingerprint.hex().upper()
+
+    @property
+    def all_editions(self):
+        eds = self.edition.suc.root.all_editions()
+        return [JatsEditionVars(e) for e in eds]
