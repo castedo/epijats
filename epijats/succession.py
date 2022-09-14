@@ -7,6 +7,16 @@ class JatsEdition(hidos.Edition):
         super().__init__(git_tree, succession, edid, up)
         self._jats = None
 
+    def flow_edition(self):
+        if self.has_digital_object:
+            return self
+        for subid in reversed(sorted(self.subs.keys())):
+            if subid > 0 or self.edid.unlisted:
+                flow = self.subs[subid].flow_edition()
+                if flow is not None:
+                    return flow
+        return None
+
     def jats(self):
         if self._jats is None and self.work_copy() is not None:
             self._jats = JatsEprinter(

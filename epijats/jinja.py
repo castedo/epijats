@@ -53,6 +53,11 @@ class JatsEditionVars(JatsVars):
         return str(self.edition.up.edid) if self.edition.up else None
 
     @property
+    def flow_edition(self):
+        flow = self.edition.flow_edition()
+        return JatsEditionVars(flow) if flow else None
+
+    @property
     def latest_edid(self):
         subid = self.edition.up.last_subid
         return self.edition.up.subs[subid].edid
@@ -68,5 +73,5 @@ class JatsEditionVars(JatsVars):
 
     @property
     def all_editions(self):
-        eds = self.edition.suc.root.all_editions()
+        eds = self.edition.suc.root.all_subeditions()
         return [JatsEditionVars(e) for e in eds]
