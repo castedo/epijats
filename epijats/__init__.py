@@ -31,7 +31,7 @@ class JatsEprinter:
     def __init__(self, config, jats_src, tmp):
         self.config = config
         self.src = Path(jats_src)
-        self.tmp = Path(tmp)
+        self.tmp = Path(tmp) / "epijats"
         self._json = self.tmp / "article.json"
         self._meta = None
         self._hash = None
@@ -73,9 +73,7 @@ class JatsEprinter:
         return self._hash
 
     def _convert_to(self, dst):
-        cmd = 'pandoc --from jats --standalone --output "{}"'.format(dst)
-        # temporary sed hack for bug in pandoc 2.18
-        cmd = """sed 's/rid="ref-/rid="/g' "{}" | {}""".format(self.src, cmd)
+        cmd = 'pandoc {} --from jats --standalone --output "{}"'.format(self.src, dst)
         print(cmd)
         subprocess.run(cmd, shell=True, check=True,
                        stdout=sys.stdout, stderr=sys.stderr)
