@@ -31,10 +31,41 @@ class JatsVars:
         return "swh:1:cnt:" + self.jats.git_hash
 
 
-class DocEditionVars(JatsVars):
+class DocEditionVars:
     def __init__(self, edition):
-        super().__init__(edition.dobj.jats if edition.dobj else None)
         self.edition = edition
+
+    @property
+    def title(self):
+        return self.edition.dobj.title_html
+
+    @property
+    def date(self):
+        return self.edition.dobj.date
+
+    @property
+    def authors(self):
+        if self.edition.dobj.is_jats:
+            return self.edition.dobj.authors
+        return [self.edition.suc.author.name]
+
+    @property
+    def abstract(self):
+        if self.edition.dobj.is_jats:
+            return self.edition.dobj.abstract_html
+        return None
+
+    @property
+    def body(self):
+        if self.edition.dobj.is_jats:
+            return self.edition.dobj.body_html
+        return None
+
+    @property
+    def hexhash(self):
+        if self.edition.dobj.is_jats:
+            return self.edition.dobj.git_hash
+        return self.edition.hexsha
 
     @property
     def obsolete(self):
