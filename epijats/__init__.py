@@ -138,3 +138,20 @@ class JatsEprinter:
         with open(p) as f:
             return f.read()
 
+
+class Document:
+    def __init__(self):
+        self.jats = None
+
+
+class DocLoader:
+    def __init__(self, eprinter_config=None):
+        self.eprinter_config = eprinter_config if eprinter_config else EprinterConfig()
+
+    def __call__(self, src_dir, cache_dir):
+        ret = Document()
+        if src_dir.is_dir():
+            xml = src_dir / "article.xml"
+            assert xml.exists()
+            ret.jats = JatsEprinter(self.eprinter_config, xml, cache_dir)
+        return ret

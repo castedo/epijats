@@ -31,9 +31,9 @@ class JatsVars:
         return "swh:1:cnt:" + self.jats.git_hash
 
 
-class JatsEditionVars(JatsVars):
+class DocEditionVars(JatsVars):
     def __init__(self, edition):
-        super().__init__(edition.jats())
+        super().__init__(edition.dobj.jats if edition.dobj else None)
         self.edition = edition
 
     @property
@@ -55,7 +55,7 @@ class JatsEditionVars(JatsVars):
     @property
     def flow_edition(self):
         flow = self.edition.flow_edition()
-        return JatsEditionVars(flow) if flow else None
+        return DocEditionVars(flow) if flow else None
 
     @property
     def latest_edid(self):
@@ -74,4 +74,4 @@ class JatsEditionVars(JatsVars):
     @property
     def all_editions(self):
         eds = self.edition.suc.root.all_subeditions()
-        return [JatsEditionVars(e) for e in eds]
+        return [DocEditionVars(e) for e in eds]
