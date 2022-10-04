@@ -24,9 +24,11 @@ def read_markdown_meta(path : Path):
 
 
 class EprinterConfig:
+    def __init__(self, theme_dir=None):
+        self.pandoc_opts = []
+        if theme_dir:
+            self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
 
-    def __init__(self, pandoc_opts=""):
-        self.pandoc_opts = pandoc_opts
 
 class JatsEprinter:
 
