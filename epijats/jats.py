@@ -1,4 +1,7 @@
-import os, sys, shutil, subprocess
+from elifetools import parseJATS, rawJATS
+from elifetools.utils import node_text
+
+import json, os, sys, shutil, subprocess
 from pathlib import Path
 from datetime import datetime, date, time, timezone
 from pkg_resources import resource_filename
@@ -58,6 +61,13 @@ class JatsEprinter:
     def body_html(self):
         return self._get_html_template_var('body')
 
+    def meta_pod(self):
+        ret = dict()
+        soup = parseJATS.parse_document(self.src)
+        ret['contributors'] = parseJATS.contributors(soup)
+        ret['dsi'] = node_text(rawJATS.meta_article_id(soup, pub_id_type="dsi"))
+        return ret
+
     @property
     def date(self):
         self._load()
@@ -96,6 +106,12 @@ class JatsEprinter:
         if self._meta is None:
             self._meta = read_markdown_meta(tmp_markdown)
 
+    def make_extra_metadata(self):
+        extra = self.tmp / 'extra_metadata.json'
+        with open(extra, 'w') as file:
+            json.dump(self.meta_pod(), file)
+        return extra
+
     def make_latex(self, target):
         self._load()
         target = Path(target)
@@ -107,6 +123,7 @@ class JatsEprinter:
         if pass_dir.exists():
             os.symlink(pass_dir.resolve(), symlink)
         args = [self._json, '--to=latex', '--citeproc', '-so', target]
+        args += ['--metadata-file', self.make_extra_metadata()]
         run_pandoc(args + self.config.pandoc_opts)
         return target
 
