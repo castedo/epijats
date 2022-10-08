@@ -1,5 +1,4 @@
-from elifetools import parseJATS, rawJATS
-from elifetools.utils import node_text
+from .elife import parseJATS, meta_article_id_text
 
 import json, os, sys, shutil, subprocess
 from pathlib import Path
@@ -65,7 +64,7 @@ class JatsEprinter:
         ret = dict()
         soup = parseJATS.parse_document(self.src)
         ret['contributors'] = parseJATS.contributors(soup)
-        ret['dsi'] = node_text(rawJATS.meta_article_id(soup, pub_id_type="dsi"))
+        ret['dsi'] = meta_article_id_text(soup, "dsi")
         return ret
 
     @property
