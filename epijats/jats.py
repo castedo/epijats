@@ -3,6 +3,7 @@ from .elife import parseJATS, meta_article_id_text
 import json, os, sys, shutil, subprocess
 from pathlib import Path
 from datetime import datetime, date, time, timezone
+from time import mktime
 from pkg_resources import resource_filename
 from ruamel.yaml import YAML
 
@@ -13,10 +14,12 @@ def run_pandoc(args, echo=True):
         print(' '.join([str(s) for s in cmd]))
     subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
 
+
 def git_hash_object(path):
     ret = subprocess.run(['git', 'hash-object', path],
         check=True, text=True, stdout=subprocess.PIPE, stderr=sys.stderr)
     return ret.stdout.rstrip()
+
 
 def read_markdown_meta(path : Path):
     with open(path, 'r') as file:
@@ -32,16 +35,18 @@ class EprinterConfig:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
 
 
-class JatsEprinter:
-
+class JatsEprint:
     def __init__(self, config, jats_src, tmp):
         self.config = config
         self.src = Path(jats_src)
         self.tmp = Path(tmp) / "epijats"
+        self.git_hash = git_hash_object(self.src)
         self._json = self.tmp / "article.json"
         self._meta = None
-        self._hash = None
-        self.is_jats = True
+        soup = parseJATS.parse_document(self.src)
+        self.dsi = meta_article_id_text(soup, "dsi")
+        self._dates = parseJATS.pub_dates(soup)
+        self._contributors = parseJATS.contributors(soup)
 
     @property
     def title_html(self):
@@ -60,31 +65,19 @@ class JatsEprinter:
     def body_html(self):
         return self._get_html_template_var('body')
 
-    def meta_pod(self):
-        ret = dict()
-        soup = parseJATS.parse_document(self.src)
-        ret['contributors'] = parseJATS.contributors(soup)
-        ret['dsi'] = meta_article_id_text(soup, "dsi")
-        return ret
-
     @property
     def date(self):
-        self._load()
-        return self._meta['date']
+        ret = None
+        if self._dates:
+            ret = datetime.fromtimestamp(mktime(self._dates[0]["date"])).date()
+        return ret
 
     @property
     def authors(self):
-        self._load()
-        ret = self._meta['author']
-        assert iter(ret)
-        assert len(ret) == 0 or isinstance(ret[0], str)
+        ret = []
+        for c in self._contributors:
+            ret.append(c["given-names"] + " " + c["surname"])
         return ret
-
-    @property
-    def git_hash(self):
-        if self._hash is None:
-            self._hash = git_hash_object(self.src)
-        return self._hash
 
     def _convert_to(self, dst):
         cmd = 'pandoc {} --from jats --standalone --output "{}"'.format(self.src, dst)
@@ -107,8 +100,9 @@ class JatsEprinter:
 
     def make_extra_metadata(self):
         extra = self.tmp / 'extra_metadata.json'
+        metadata = dict(contributors=self._contributors, dsi=self.dsi)
         with open(extra, 'w') as file:
-            json.dump(self.meta_pod(), file)
+            json.dump(metadata, file)
         return extra
 
     def make_latex(self, target):
@@ -127,9 +121,8 @@ class JatsEprinter:
         return target
 
     def make_pdf(self, target):
-        self._load()
-        assert isinstance(self._meta['date'], date)
-        doc_date = datetime.combine(self._meta['date'], time(0), timezone.utc)
+        assert isinstance(self.date, date)
+        doc_date = datetime.combine(self.date, time(0), timezone.utc)
         source_mtime = doc_date.timestamp()
         if source_mtime:
             env = os.environ.copy()
@@ -137,6 +130,7 @@ class JatsEprinter:
         else:
             env = None
         tmp_pdf = self.tmp / "pdf"
+        self._load() # need to make sure _load does not delete tmp_pdf later
         os.makedirs(tmp_pdf, exist_ok=True)
         tex = self.make_latex(self.tmp / "tex" / "article.tex")
         cmd = "rubber --pdf --into {} {}".format(tmp_pdf, tex)
@@ -158,4 +152,3 @@ class JatsEprinter:
             run_pandoc(args)
         with open(p) as f:
             return f.read()
-

@@ -1,3 +1,6 @@
+from . import DocLoader
+
+
 class JatsVars:
     def __init__(self, jats):
         self.jats = jats
@@ -34,6 +37,7 @@ class JatsVars:
 class DocEditionVars:
     def __init__(self, edition):
         self.edition = edition
+        self.is_jats = DocLoader.is_jats(edition.dobj)
 
     @property
     def title(self):
@@ -45,25 +49,25 @@ class DocEditionVars:
 
     @property
     def authors(self):
-        if self.edition.dobj.is_jats:
+        if self.is_jats:
             return self.edition.dobj.authors
         return [self.edition.suc.author.name]
 
     @property
     def abstract(self):
-        if self.edition.dobj.is_jats:
+        if self.is_jats:
             return self.edition.dobj.abstract_html
         return None
 
     @property
     def body(self):
-        if self.edition.dobj.is_jats:
+        if self.is_jats:
             return self.edition.dobj.body_html
         return None
 
     @property
     def hexhash(self):
-        if self.edition.dobj.is_jats:
+        if self.is_jats:
             return self.edition.dobj.git_hash
         return self.edition.hexsha
 
