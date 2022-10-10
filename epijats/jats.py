@@ -1,4 +1,5 @@
 from .util import up_to_date
+from .jinja import JatsVars, WebPageGenerator
 
 from .elife import parseJATS, meta_article_id_text
 
@@ -30,10 +31,10 @@ class EprinterConfig:
 
 
 class PandocJatsReader:
-    def __init__(self, config, jats_src, tmp):
-        self.config = config
+    def __init__(self, jats_src, tmp, config=None):
         self.src = jats_src
         self._tmp = Path(tmp) / "cache"
+        self.config = config
         self._json = self._tmp / "article.json"
         if not up_to_date(self._json, self.src):
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -48,7 +49,8 @@ class PandocJatsReader:
             args = [self._json, '--to', 'html', '--mathjax', '--output', p]
             tmpl = resource_filename(__name__, "templates/{}.pandoc".format(name))
             args += ['--citeproc', '--template', tmpl]
-            args += self.config.pandoc_opts
+            if self.config:
+                args += self.config.pandoc_opts
             run_pandoc(args)
         with open(p) as f:
             return f.read()
@@ -64,7 +66,9 @@ class PandocJatsReader:
             os.symlink(pass_dir.resolve(), symlink)
         args = [self._json, '--to=latex', '--citeproc', '-so', target]
         args += ['--metadata-file', self._make_metadata_file(extra_metadata)]
-        run_pandoc(args + self.config.pandoc_opts)
+        if self.config:
+            args += self.config.pandoc_opts
+        run_pandoc(args)
         return target
 
     def _make_metadata_file(self, extra_metadata):
@@ -75,7 +79,7 @@ class PandocJatsReader:
 
 
 class JatsEprint:
-    def __init__(self, config, jats_src, tmp):
+    def __init__(self, jats_src, tmp, config=None):
         self.src = Path(jats_src)
         self._tmp = Path(tmp)
         self.git_hash = git_hash_object(self.src)
@@ -83,8 +87,9 @@ class JatsEprint:
         self.dsi = meta_article_id_text(soup, "dsi")
         self._dates = parseJATS.pub_dates(soup)
         self._contributors = parseJATS.contributors(soup)
-        self._pandoc = PandocJatsReader(config, self.src, self._tmp / "pandoc")
+        self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", config)
         self.has_abstract = self._pandoc.has_abstract
+        self._gen = WebPageGenerator()
 
     @property
     def title_html(self):
@@ -92,7 +97,9 @@ class JatsEprint:
 
     @property
     def abstract_html(self):
-        return self._pandoc.get_html_template_var('abstract')
+        if self.has_abstract:
+            return self._pandoc.get_html_template_var('abstract') 
+        return None
 
     @property
     def body_html(self):
@@ -111,6 +118,13 @@ class JatsEprint:
         for c in self._contributors:
             ret.append(c["given-names"] + " " + c["surname"])
         return ret
+
+    def make_web_page(self, target):
+        target = Path(target)
+        os.makedirs(target.parent, exist_ok=True)
+        ctx = dict(jats=JatsVars(self))
+        self._gen.render_file('article.html.jinja', target, ctx)
+        return target
 
     def make_pdf(self, target):
         assert isinstance(self.date, date)

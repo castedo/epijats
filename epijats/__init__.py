@@ -1,15 +1,12 @@
-from .jats import EprinterConfig, JatsEprint
-
-
 class DocLoader:
     def __init__(self, eprinter_config=None):
-        self.eprinter_config = eprinter_config if eprinter_config else EprinterConfig()
+        self.eprinter_config = eprinter_config
 
     def __call__(self, src_path, cache_dir):
         ret = None
         if src_path.is_dir():
             xml = src_path / "article.xml"
-            ret = JatsEprint(self.eprinter_config, xml, cache_dir)
+            ret = JatsEprint(xml, cache_dir, self.eprinter_config)
         else:
             from .pdf import PdfDocument
 
@@ -25,3 +22,6 @@ class DocLoader:
         from .pdf import PdfDocument
 
         return isinstance(obj, PdfDocument)
+
+
+from .jats import EprinterConfig, JatsEprint

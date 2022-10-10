@@ -1,5 +1,10 @@
 from . import DocLoader
 
+import jinja2
+
+# std lib
+from pkg_resources import resource_filename
+
 
 class JatsVars:
     def __init__(self, jats):
@@ -24,6 +29,10 @@ class JatsVars:
     @property
     def body(self):
         return self.jats.body_html
+
+    @property
+    def dsi(self):
+        return self.jats.dsi
 
     @property
     def hexhash(self):
@@ -110,3 +119,19 @@ class DocEditionVars:
     def all_editions(self):
         eds = self.edition.suc.root.all_subeditions()
         return [DocEditionVars(e) for e in eds]
+
+
+class WebPageGenerator:
+    def __init__(self):
+        templates = resource_filename(__name__, "templates")
+        self.env = jinja2.Environment(
+            loader=jinja2.ChoiceLoader([jinja2.FileSystemLoader(templates)]),
+            trim_blocks=True,
+            lstrip_blocks=True,
+            keep_trailing_newline=True,
+            extensions=["jinja2.ext.do"],
+        )
+
+    def render_file(self, tmpl_subpath, dest_filepath, ctx=dict()):
+        tmpl = self.env.get_template(str(tmpl_subpath))
+        tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")

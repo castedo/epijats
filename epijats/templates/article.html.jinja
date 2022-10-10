@@ -1,0 +1,46 @@
+{% extends 'base.html.jinja' %}
+
+{% block head_content %}
+{{super()-}}
+<title>{{ jats.title }}</title>
+<style>
+{% include 'pandoc.css' %}
+.article-title {
+  text-align: center;
+}
+</style>
+{% endblock head_content %}
+
+{% block body_content %}
+<div class="article-header">
+  {% if jats.dsi %}
+  <div class="article-dsi">
+    <b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
+  </div>
+  <div class="article-date">
+    {{jats.date}}
+  </div>
+  {% endif %}
+</div>
+
+<h1 class="article-title">
+{{jats.title or "No Title"}}
+</h1>
+
+<center>
+{{ jats.authors | join(', ') | escape }}
+</center>
+
+{% if jats.abstract %}
+<h2>Abstract</h2>
+<div class="jats-abstract">
+{{jats.abstract}}
+</div>
+{% endif %}
+
+{% if jats.body %}
+<div class="jats-body">
+{{jats.body}}
+</div>
+{% endif %}
+{% endblock body_content %}
