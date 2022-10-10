@@ -23,6 +23,10 @@ class JatsVars:
         return self.jats.authors
 
     @property
+    def contributors(self):
+        return self.jats.contributors
+
+    @property
     def abstract(self):
         return self.jats.abstract_html
 

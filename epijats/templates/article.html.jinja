@@ -5,8 +5,30 @@
 <title>{{ jats.title }}</title>
 <style>
 {% include 'pandoc.css' %}
+body {
+  hyphens: manual;
+  overflow-wrap: normal;
+}
+@media print {
+  body {
+    text-align: justify;
+    text-justify: inter-word;
+  }
+}
 .article-title {
   text-align: center;
+}
+.author {
+  text-align: center;
+}
+.orcid-icon::before {
+  display: inline-block;
+  content: "";
+  vertical-align: -.125em;
+  background-repeat: no-repeat;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjU2IDI1NjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNBNkNFMzk7fQoJLnN0MXtmaWxsOiNGRkZGRkY7fQo8L3N0eWxlPgo8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjU2LDEyOGMwLDcwLjctNTcuMywxMjgtMTI4LDEyOEM1Ny4zLDI1NiwwLDE5OC43LDAsMTI4QzAsNTcuMyw1Ny4zLDAsMTI4LDBDMTk4LjcsMCwyNTYsNTcuMywyNTYsMTI4eiIvPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04Ni4zLDE4Ni4ySDcwLjlWNzkuMWgxNS40djQ4LjRWMTg2LjJ6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTA4LjksNzkuMWg0MS42YzM5LjYsMCw1NywyOC4zLDU3LDUzLjZjMCwyNy41LTIxLjUsNTMuNi01Ni44LDUzLjZoLTQxLjhWNzkuMXogTTEyNC4zLDE3Mi40aDI0LjUgICBjMzQuOSwwLDQyLjktMjYuNSw0Mi45LTM5LjdjMC0yMS41LTEzLjctMzkuNy00My43LTM5LjdoLTIzLjdWMTcyLjR6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNODguNyw1Ni44YzAsNS41LTQuNSwxMC4xLTEwLjEsMTAuMWMtNS42LDAtMTAuMS00LjYtMTAuMS0xMC4xYzAtNS42LDQuNS0xMC4xLDEwLjEtMTAuMSAgIEM4NC4yLDQ2LjcsODguNyw1MS4zLDg4LjcsNTYuOHoiLz4KPC9nPgo8L3N2Zz4=");
 }
 </style>
 {% endblock head_content %}
@@ -15,7 +37,9 @@
 <div class="article-header">
   {% if jats.dsi %}
   <div class="article-dsi">
-    <b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
+    <a href="{{dsi_base_url}}/{{jats.dsi}}">
+      <b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
+    </a>
   </div>
   <div class="article-date">
     {{jats.date}}
@@ -27,9 +51,12 @@
 {{jats.title or "No Title"}}
 </h1>
 
-<center>
-{{ jats.authors | join(', ') | escape }}
-</center>
+{% for c in jats.contributors %}
+<div class="author">
+{{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
+<a class="orcid" href="https://orcid.org/{{c.orcid}}"><i class="orcid-icon"></i></a>
+</div>
+{% endfor %}
 
 {% if jats.abstract %}
 <h2>Abstract</h2>

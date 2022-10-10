@@ -24,17 +24,18 @@ def git_hash_object(path):
 
 
 class EprinterConfig:
-    def __init__(self, theme_dir=None):
+    def __init__(self, theme_dir=None, dsi_base_url=None):
+        self.dsi_base_url = dsi_base_url.rstrip('/') if dsi_base_url else None
         self.pandoc_opts = []
         if theme_dir:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
 
 
 class PandocJatsReader:
-    def __init__(self, jats_src, tmp, config=None):
+    def __init__(self, jats_src, tmp, pandoc_opts):
         self.src = jats_src
         self._tmp = Path(tmp) / "cache"
-        self.config = config
+        self._pandoc_opts = list(pandoc_opts)
         self._json = self._tmp / "article.json"
         if not up_to_date(self._json, self.src):
             shutil.rmtree(self._tmp, ignore_errors=True)
@@ -49,9 +50,7 @@ class PandocJatsReader:
             args = [self._json, '--to', 'html', '--mathjax', '--output', p]
             tmpl = resource_filename(__name__, "templates/{}.pandoc".format(name))
             args += ['--citeproc', '--template', tmpl]
-            if self.config:
-                args += self.config.pandoc_opts
-            run_pandoc(args)
+            run_pandoc(args + self._pandoc_opts)
         with open(p) as f:
             return f.read()
 
@@ -66,9 +65,7 @@ class PandocJatsReader:
             os.symlink(pass_dir.resolve(), symlink)
         args = [self._json, '--to=latex', '--citeproc', '-so', target]
         args += ['--metadata-file', self._make_metadata_file(extra_metadata)]
-        if self.config:
-            args += self.config.pandoc_opts
-        run_pandoc(args)
+        run_pandoc(args + self._pandoc_opts)
         return target
 
     def _make_metadata_file(self, extra_metadata):
@@ -87,7 +84,9 @@ class JatsEprint:
         self.dsi = meta_article_id_text(soup, "dsi")
         self._dates = parseJATS.pub_dates(soup)
         self._contributors = parseJATS.contributors(soup)
-        self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", config)
+        self.dsi_base_url = config.dsi_base_url if config else None
+        pandoc_opts = config.pandoc_opts if config else []
+        self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", pandoc_opts)
         self.has_abstract = self._pandoc.has_abstract
         self._gen = WebPageGenerator()
 
@@ -119,10 +118,15 @@ class JatsEprint:
             ret.append(c["given-names"] + " " + c["surname"])
         return ret
 
+    @property
+    def contributors(self):
+        ret = []
+        return self._contributors
+
     def make_web_page(self, target):
         target = Path(target)
         os.makedirs(target.parent, exist_ok=True)
-        ctx = dict(jats=JatsVars(self))
+        ctx = dict(jats=JatsVars(self), dsi_base_url=self.dsi_base_url)
         self._gen.render_file('article.html.jinja', target, ctx)
         return target
 
