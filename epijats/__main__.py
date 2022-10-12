@@ -1,8 +1,7 @@
 from .jats import JatsEprint, EprinterConfig
-from weasyprint import HTML
 
 # std lib
-import argparse, os, shutil, tempfile
+import argparse, os, tempfile
 from pathlib import Path
 
 
@@ -14,11 +13,7 @@ args = parser.parse_args()
 config = EprinterConfig(dsi_base_url="https://perm.pub")
 
 with tempfile.TemporaryDirectory() as tempdir:
-    stage = Path(tempdir) / "stage.html"
-    JatsEprint(args.source / "article.xml", tempdir, config).make_web_page(stage)
-    # make_web_page streams data to file
-    # so copy the file data all at once
-    # otherwise auto-reload/watch/live web servers will serve partial files
-    html_target = args.target / "article.html"
-    shutil.copy(stage, html_target)
-    HTML(html_target).write_pdf(args.target / "article.pdf")
+    eprint = JatsEprint(args.source / "article.xml", tempdir, config)
+    os.makedirs(target.parent, exist_ok=True)
+    eprint.make_html(args.target / "article.html")
+    eprint.make_pdf(args.target / "article.pdf")

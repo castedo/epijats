@@ -1,7 +1,8 @@
 from .util import up_to_date
 from .jinja import JatsVars, WebPageGenerator
-
 from .elife import parseJATS, meta_article_id_text
+
+import weasyprint
 
 import json, os, sys, shutil, subprocess
 from pathlib import Path
@@ -25,7 +26,9 @@ def git_hash_object(path):
 
 class EprinterConfig:
     def __init__(self, theme_dir=None, dsi_base_url=None):
-        self.dsi_base_url = dsi_base_url.rstrip('/') if dsi_base_url else None
+        self.urls = dict(
+            dsi_base_url = dsi_base_url.rstrip('/') if dsi_base_url else None,
+        )
         self.pandoc_opts = []
         if theme_dir:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
@@ -84,7 +87,7 @@ class JatsEprint:
         self.dsi = meta_article_id_text(soup, "dsi")
         self._dates = parseJATS.pub_dates(soup)
         self._contributors = parseJATS.contributors(soup)
-        self.dsi_base_url = config.dsi_base_url if config else None
+        self._html_ctx = config.urls if config else dict()
         pandoc_opts = config.pandoc_opts if config else []
         self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", pandoc_opts)
         self.has_abstract = self._pandoc.has_abstract
@@ -123,14 +126,25 @@ class JatsEprint:
         ret = []
         return self._contributors
 
-    def make_web_page(self, target):
+    def get_html(self):
+        ret = self._tmp / "article.html"
+        if not up_to_date(ret, self.src):
+            # for now just assume math is always needed
+            ctx = dict(jats=JatsVars(self), **self._html_ctx, has_math=True)
+            self._gen.render_file('article.html.jinja', ret, ctx)
+        return ret
+
+    def make_html(self, target):
         target = Path(target)
-        os.makedirs(target.parent, exist_ok=True)
-        ctx = dict(jats=JatsVars(self), dsi_base_url=self.dsi_base_url)
-        self._gen.render_file('article.html.jinja', target, ctx)
+        shutil.copy(self.get_html(), target)
         return target
 
     def make_pdf(self, target):
+        target = Path(target)
+        weasyprint.HTML(self.get_html()).write_pdf(target)
+        return target
+
+    def make_old_pdf(self, target):
         assert isinstance(self.date, date)
         doc_date = datetime.combine(self.date, time(0), timezone.utc)
         source_mtime = doc_date.timestamp()

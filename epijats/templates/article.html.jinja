@@ -15,6 +15,11 @@ body {
     text-justify: inter-word;
   }
 }
+@page {
+  @bottom-center {
+    content: counter(page);
+  }
+}
 .article-title {
   text-align: center;
 }
@@ -54,7 +59,13 @@ body {
 {% for c in jats.contributors %}
 <div class="author">
 {{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
-<a class="orcid" href="https://orcid.org/{{c.orcid}}"><i class="orcid-icon"></i></a>
+{% if c.orcid %}
+<a class="orcid" href="https://orcid.org/{{c.orcid | escape}}"><i class="orcid-icon"></i></a>
+{% endif %}
+{% if c.email %}
+<br>
+{{c.email | join(', ') | escape}}
+{% endif %}
 </div>
 {% endfor %}
 
