@@ -25,9 +25,10 @@ def git_hash_object(path):
 
 
 class EprinterConfig:
-    def __init__(self, theme_dir=None, dsi_base_url=None):
+    def __init__(self, theme_dir=None, dsi_base_url=None, math_css_url=None):
         self.urls = dict(
             dsi_base_url = dsi_base_url.rstrip('/') if dsi_base_url else None,
+            math_css_url=math_css_url,
         )
         self.pandoc_opts = []
         if theme_dir:
@@ -50,9 +51,9 @@ class PandocJatsReader:
     def get_html_template_var(self, name):
         p = self._tmp / (name + ".html")
         if not p.exists():
-            args = [self._json, '--to', 'html', '--mathjax', '--output', p]
+            args = [self._json, '--to', 'html', '--output', p]
             tmpl = resource_filename(__name__, "templates/{}.pandoc".format(name))
-            args += ['--citeproc', '--template', tmpl]
+            args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
             run_pandoc(args + self._pandoc_opts)
         with open(p) as f:
             return f.read()
@@ -126,22 +127,26 @@ class JatsEprint:
         ret = []
         return self._contributors
 
-    def get_html(self):
+    def get_static_dir(self):
+        return Path(resource_filename(__name__, "static/"))
+
+    def _get_html(self):
         ret = self._tmp / "article.html"
         if not up_to_date(ret, self.src):
             # for now just assume math is always needed
             ctx = dict(jats=JatsVars(self), **self._html_ctx, has_math=True)
             self._gen.render_file('article.html.jinja', ret, ctx)
+            os.symlink(self.get_static_dir(), ret.with_name("static"))
         return ret
 
     def make_html(self, target):
         target = Path(target)
-        shutil.copy(self.get_html(), target)
+        shutil.copy(self._get_html(), target)
         return target
 
     def make_pdf(self, target):
         target = Path(target)
-        weasyprint.HTML(self.get_html()).write_pdf(target)
+        weasyprint.HTML(self._get_html()).write_pdf(target)
         return target
 
     def make_old_pdf(self, target):

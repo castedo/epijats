@@ -17,13 +17,15 @@ body {
   text-rendering: optimizeLegibility;
   font-kerning: normal;
 }
-@media (max-width: 600px) {
-  body {
-    font-size: 0.9em;
-    padding: 1em;
-  }
-  h1 {
-    font-size: 1.8em;
+@media screen {
+  @media (max-width: 600px) {
+    body {
+      font-size: 0.9em;
+      padding: 1em;
+    }
+    h1 {
+      font-size: 1.8em;
+    }
   }
 }
 @media print {
