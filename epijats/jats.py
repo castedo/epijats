@@ -27,8 +27,8 @@ def git_hash_object(path):
 class EprinterConfig:
     def __init__(self, theme_dir=None, dsi_base_url=None, math_css_url=None):
         self.urls = dict(
-            dsi_base_url = dsi_base_url.rstrip('/') if dsi_base_url else None,
-            math_css_url=math_css_url,
+            dsi_base_url=(dsi_base_url.rstrip("/") if dsi_base_url else None),
+            math_css_url=(math_css_url or "static/katex/katex.css"),
         )
         self.pandoc_opts = []
         if theme_dir:

@@ -8,6 +8,14 @@
 {% if has_math %}
 {% if math_css_url %}
 <link rel="stylesheet" href="{{math_css_url}}">
+<style>
+@media print {
+  .katex .thinbox {
+    /* work around for https://github.com/Kozea/WeasyPrint/issues/1739 */
+    display: inline-block;
+  }
+}
+</style>
 {% else %}
 {% include "/dev/stderr/ math_css_url must be defined" %}
 {% endif %}

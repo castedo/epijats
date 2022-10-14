@@ -15,10 +15,7 @@ args = parser.parse_args()
 LOGGER.setLevel(logging.INFO)
 LOGGER.addHandler(logging.StreamHandler())
 
-config = EprinterConfig(
-    dsi_base_url="https://perm.pub",
-    math_css_url="static/katex/katex.css",
-)
+config = EprinterConfig(dsi_base_url="https://perm.pub")
 
 with tempfile.TemporaryDirectory() as tempdir:
     eprint = JatsEprint(args.source / "article.xml", tempdir, config)
