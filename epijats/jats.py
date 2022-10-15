@@ -58,15 +58,18 @@ class PandocJatsReader:
         with open(p) as f:
             return f.read()
 
-    def make_latex(self, target, extra_metadata):
-        target = Path(target)
-        os.makedirs(target.parent, exist_ok=True)
+    def symlink_pass_dir(self, target_dir):
         pass_dir = self.src.with_name("pass")
-        symlink = target.with_name("pass")
+        symlink = target_dir / "pass"
         if symlink.exists():
             os.unlink(symlink)
         if pass_dir.exists():
             os.symlink(pass_dir.resolve(), symlink)
+
+    def make_latex(self, target, extra_metadata):
+        target = Path(target)
+        os.makedirs(target.parent, exist_ok=True)
+        self.symlink_pass_dir(target.parent)
         args = [self._json, '--to=latex', '--citeproc', '-so', target]
         args += ['--metadata-file', self._make_metadata_file(extra_metadata)]
         run_pandoc(args + self._pandoc_opts)
@@ -136,12 +139,18 @@ class JatsEprint:
             # for now just assume math is always needed
             ctx = dict(jats=JatsVars(self), **self._html_ctx, has_math=True)
             self._gen.render_file('article.html.jinja', ret, ctx)
-            os.symlink(self.get_static_dir(), ret.with_name("static"))
+            if not ret.with_name("static").exists():
+                os.symlink(self.get_static_dir(), ret.with_name("static"))
+            self._pandoc.symlink_pass_dir(self._tmp)
         return ret
 
     def make_html(self, target):
         target = Path(target)
         shutil.copy(self._get_html(), target)
+        if os.path.exists(self._tmp / "pass"):
+            # using shell cp to avoid copying permissions, especially SELinux context
+            cmd = ["cp", "-r", self._tmp / "pass", target.with_name("pass")]
+            subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
         return target
 
     def make_pdf(self, target):
