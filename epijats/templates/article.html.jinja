@@ -5,6 +5,18 @@
 <title>{{ jats.title }}</title>
 <style>
 {% include 'pandoc.css' %}
+a {
+  color: #25a;
+}
+a:visited {
+  color: #208;
+}
+div.csl-entry {
+  break-inside: avoid;{# avoid weasyprint page break between reference entry number and text #}
+}
+a {
+  text-decoration: none;
+}
 html {
   font-size: 16px;
 }
