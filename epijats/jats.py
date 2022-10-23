@@ -3,6 +3,7 @@ from .jinja import JatsVars, WebPageGenerator
 from .elife import parseJATS, meta_article_id_text
 
 import weasyprint
+from lxml import etree
 
 import json, os, sys, shutil, subprocess
 from pathlib import Path
@@ -54,6 +55,7 @@ class PandocJatsReader:
             args = [self._json, '--to', 'html', '--output', p]
             tmpl = resource_filename(__name__, "templates/{}.pandoc".format(name))
             args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
+            #args += ["--template", tmpl, "--filter=pandoc-katex-filter"]
             run_pandoc(args + self._pandoc_opts)
         with open(p) as f:
             return f.read()
@@ -155,16 +157,24 @@ class JatsEprint:
 
     def make_pdf(self, target):
         target = Path(target)
+        os.environ.update(self._source_date_epoch())
         weasyprint.HTML(self._get_html()).write_pdf(target)
         return target
 
-    def make_old_pdf(self, target):
+    def _source_date_epoch(self):
+        ret = dict()
         assert isinstance(self.date, date)
         doc_date = datetime.combine(self.date, time(0), timezone.utc)
         source_mtime = doc_date.timestamp()
         if source_mtime:
+            ret["SOURCE_DATE_EPOCH"] = "{:.0f}".format(source_mtime)
+        return ret
+
+    def make_old_pdf(self, target):
+        epoch_key_value = self._source_date_epoch()
+        if epoch_key_value:
             env = os.environ.copy()
-            env["SOURCE_DATE_EPOCH"] = "{:.0f}".format(source_mtime)
+            env.update(epoch_key_value)
         else:
             env = None
         tmp_pdf = self._tmp / "pdf"
