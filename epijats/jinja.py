@@ -1,4 +1,4 @@
-from . import DocLoader
+from .doc import DocLoader
 
 import jinja2
 
