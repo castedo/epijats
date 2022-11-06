@@ -1,0 +1,188 @@
+{% import 'style/boston.html.jinja' as boston %}
+
+{% macro article_css_style() %}
+{{boston.article_css_style()-}}
+<style>
+/* override boston style css */
+.article-date {
+  text-align: left;
+}
+</style>
+<style>
+body {
+  hyphens: manual;
+  overflow-wrap: normal;
+}
+@media screen {
+  body {
+    max-width: 1080px;
+  }
+}
+@media print {
+  body {
+    font-size: 12px;
+    padding: 0; 
+  }
+}
+@page {
+  @bottom-right{
+    content: counter(page) " / " counter(pages);
+  }
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+.article {
+  display: flex;
+  flex-wrap: wrap;
+}
+.article p {
+  text-align: justify;
+}
+.article-title {
+  text-align: center;
+  width: 100%;
+}
+.author-list {
+  width: 100%;
+  margin-bottom: 48px;
+}
+
+.article-side-column {
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: 0.875rem;
+  flex-basis: 240px;
+  flex-grow: 0.125;
+}
+.article-main-column {
+  padding-left: 18px;
+  padding-right: 18px;
+  flex-basis: 360px;
+  flex-grow: 1;
+}
+.article-side-column, .article-side-column p {
+  text-align: left;
+}
+.article-date {
+  margin-top: 33.6px;
+}
+@media print {
+  .article-side-column,
+  .article-side-column * {
+    font-size: 10px; 
+  }
+}
+
+.cc-icon {
+  height: 16px;
+  margin-left: 64px;
+}
+.copyright-brief {
+  margin-top: 24px;
+}
+.copyright-footer {
+  margin-top: 48px;
+  margin-bottom: 32px;
+}
+.copyright-footer img {
+  vertical-align: text-bottom;
+  margin-right: 16px;
+}
+</style>
+{% endmacro %}
+
+
+{% macro article_layout(jats, dsi_base_url) %}
+<div class="article">
+
+<div class="article-header">
+  {% if jats.dsi %}
+  <div class="article-dsi">
+    <a href="{{dsi_base_url}}/{{jats.dsi}}">
+      {{dsi_base_url}}/<b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
+    </a>
+    <img class="cc-icon" src="static/cc.svg">
+  </div>
+  <div class="edition-number">
+  Edition {{jats.edition or "?"}}
+  </div>
+  {% endif %}
+</div>
+
+<h1 class="article-title">
+{{jats.title or "No Title"}}
+</h1>
+
+<div class="author-list">
+{% for c in jats.contributors %}
+<div class="author">
+{{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
+{% if c.orcid %}
+<a class="orcid" href="https://orcid.org/{{c.orcid | escape}}"><i class="orcid-icon"></i></a>
+{% endif %}
+{% if c.email %}
+<br>
+{{c.email | join(', ') | escape}}
+{% endif %}
+</div>
+{% endfor %}
+</div>{# author-list #}
+
+<div class="article-side-column">
+
+<div class="article-date">
+{% if jats.date %}
+  {{jats.date}}
+{% endif %}
+</div>
+
+<p>
+<b>Archived:</b> 2099-12-31
+</p>
+
+<p class="citation">
+<b>Citation:</b>
+{% for c in jats.contributors %}
+{{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
+{% endfor %}
+(2022)
+"{{jats.title}}"
+perm.pub
+{{dsi_base_url}}/dsi:{{jats.dsi}}
+</p>
+
+</div>{# article-side-column #}
+
+<div class="article-main-column">
+
+{% if jats.abstract %}
+<h2>Abstract</h2>
+<div class="jats-abstract">
+{{jats.abstract}}
+</div>
+{% endif %}
+
+{% if jats.body %}
+<div class="jats-body">
+{{jats.body}}
+</div>
+{% endif %}
+
+<div class="copyright-footer">
+  <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
+    <img alt="CC BY 4.0" src="https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg" style="max-width: 100%;">
+  </a>
+  <a href="https://creativecommons.org/licenses/by/4.0/">
+           https://creativecommons.org/licenses/by/4.0/</a>
+  <p>
+  2022 &copy; The Authors.
+  This document is distributed under a Creative Commons Attribution 4.0 International
+  license.
+  </p>
+</div>{# copyright-footer #}
+
+</div>{# article-main-column #}
+
+</div>{# article #}
+{% endmacro %}

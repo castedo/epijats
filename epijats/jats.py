@@ -34,6 +34,7 @@ class EprinterConfig:
         self.pandoc_opts = []
         if theme_dir:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
+        self.article_style = 'lyon'
 
 
 class PandocJatsReader:
@@ -88,16 +89,20 @@ class JatsEprint:
     def __init__(self, jats_src, tmp, config=None):
         self.src = Path(jats_src)
         self._tmp = Path(tmp)
-        self.git_hash = git_hash_object(self.src)
         soup = parseJATS.parse_document(self.src)
         self.dsi = meta_article_id_text(soup, "dsi")
         self._dates = parseJATS.pub_dates(soup)
         self._contributors = parseJATS.contributors(soup)
         self._html_ctx = config.urls if config else dict()
+        self._html_ctx['article_style'] = config.article_style
         pandoc_opts = config.pandoc_opts if config else []
         self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", pandoc_opts)
         self.has_abstract = self._pandoc.has_abstract
         self._gen = WebPageGenerator()
+
+    @property
+    def git_hash(self):
+        return git_hash_object(self.src)
 
     @property
     def title_html(self):
