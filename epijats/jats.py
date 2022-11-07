@@ -1,4 +1,4 @@
-from .util import up_to_date
+from .util import up_to_date, copytree_nostat
 from .jinja import JatsVars, WebPageGenerator
 from .elife import parseJATS, meta_article_id_text
 
@@ -141,24 +141,20 @@ class JatsEprint:
         return Path(resource_filename(__name__, "static/"))
 
     def _get_html(self):
-        ret = self._tmp / "article.html"
+        html_dir = self._tmp / "html"
+        os.makedirs(html_dir, exist_ok=True)
+        ret = html_dir / "article.html"
         if not up_to_date(ret, self.src):
             # for now just assume math is always needed
             ctx = dict(jats=JatsVars(self), **self._html_ctx, has_math=True)
             self._gen.render_file('article.html.jinja', ret, ctx)
             if not ret.with_name("static").exists():
                 os.symlink(self.get_static_dir(), ret.with_name("static"))
-            self._pandoc.symlink_pass_dir(self._tmp)
+            self._pandoc.symlink_pass_dir(html_dir)
         return ret
 
-    def make_html(self, target):
-        target = Path(target)
-        shutil.copy(self._get_html(), target)
-        if os.path.exists(self._tmp / "pass"):
-            # using shell cp to avoid copying permissions, especially SELinux context
-            cmd = ["cp", "-r", self._tmp / "pass", target.with_name("pass")]
-            subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
-        return target
+    def make_html_dir(self, target):
+        copytree_nostat(self._get_html().parent, target)
 
     def make_pdf(self, target):
         target = Path(target)

@@ -46,6 +46,12 @@ body {
 .author-list {
   width: 100%;
   margin-bottom: 48px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.author {
+  margin: 4px 16px;
 }
 
 .article-side-column {
@@ -94,20 +100,19 @@ body {
 
 
 {% macro article_layout(jats, dsi_base_url) %}
+{% set jats_dsi = jats.dsi or "0123456789abcdefghijklmnopq/0" %}
 <div class="article">
 
 <div class="article-header">
-  {% if jats.dsi %}
   <div class="article-dsi">
-    <a href="{{dsi_base_url}}/{{jats.dsi}}">
-      {{dsi_base_url}}/<b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
+    <a href="{{dsi_base_url}}/{{jats_dsi}}">
+      {{dsi_base_url}}/<b>dsi:</b>&thinsp;<code>{{jats_dsi}}</code>
     </a>
     <img class="cc-icon" src="static/cc.svg">
   </div>
   <div class="edition-number">
-  Edition {{jats.edition or "?"}}
+  Edition {{jats.edition or "0"}}
   </div>
-  {% endif %}
 </div>
 
 <h1 class="article-title">
@@ -149,7 +154,7 @@ body {
 (2022)
 "{{jats.title}}"
 perm.pub
-{{dsi_base_url}}/dsi:{{jats.dsi}}
+{{dsi_base_url}}/dsi:<code>{{jats_dsi}}</code>
 </p>
 
 </div>{# article-side-column #}

@@ -20,9 +20,5 @@ config = EprinterConfig(dsi_base_url="https://perm.pub")
 with tempfile.TemporaryDirectory() as tempdir:
     eprint = JatsEprint(args.source / "article.xml", tempdir, config)
     os.makedirs(args.target , exist_ok=True)
-    eprint.make_html(args.target / "article.html")
+    eprint.make_html_dir(args.target)
     eprint.make_pdf(args.target / "article.pdf")
-    if not os.path.exists(args.target / "static"):
-        # using shell cp -r to avoid copying permissions, especially SELinux context
-        cmd = ["cp", "-r", eprint.get_static_dir(), args.target / "static"]
-        subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
