@@ -113,6 +113,9 @@ body {
   <div class="edition-number">
   Edition {{jats.edition or "0"}}
   </div>
+  <div class="online-msg">
+  Additional formats and editions available online.
+  </div>
 </div>
 
 <h1 class="article-title">
@@ -138,7 +141,7 @@ body {
 
 <div class="article-date">
 {% if jats.date %}
-  {{jats.date}}
+<b>Authored:</b> {{jats.date}}
 {% endif %}
 </div>
 
@@ -154,7 +157,7 @@ body {
 (2022)
 "{{jats.title}}"
 perm.pub
-{{dsi_base_url}}/dsi:<code>{{jats_dsi}}</code>
+{{dsi_base_url}}/<wbr>dsi:<code>{{jats_dsi}}</code>
 </p>
 
 </div>{# article-side-column #}
