@@ -67,6 +67,10 @@ class DocEditionVars:
         return [self.edition.suc.author.name]
 
     @property
+    def contributors(self):
+        return self.edition.dobj.contributors
+
+    @property
     def abstract(self):
         if self.is_jats:
             return self.edition.dobj.abstract_html
@@ -127,9 +131,8 @@ class DocEditionVars:
 
 class WebPageGenerator:
     def __init__(self):
-        templates = resource_filename(__name__, "templates")
         self.env = jinja2.Environment(
-            loader=jinja2.ChoiceLoader([jinja2.FileSystemLoader(templates)]),
+            loader=jinja2.PackageLoader(__name__, "templates"),
             trim_blocks=True,
             lstrip_blocks=True,
             keep_trailing_newline=True,
@@ -139,3 +142,9 @@ class WebPageGenerator:
     def render_file(self, tmpl_subpath, dest_filepath, ctx=dict()):
         tmpl = self.env.get_template(str(tmpl_subpath))
         tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")
+
+
+def style_template_loader(prefix):
+    return jinja2.PrefixLoader(
+        {prefix: jinja2.PackageLoader(__name__, "templates/style")}
+    )

@@ -4,12 +4,7 @@ html {
   font-size: 16px;
 }
 body {
-  hyphens: manual;
-  overflow-wrap: normal;
   max-width: 720px;
-}
-body p {
-  text-align: justify;
 }
 @media print {
   body {
@@ -33,14 +28,27 @@ div.csl-entry {
     content: counter(page) " / " counter(pages);
   }
 }
+</style>
+{{article_main_css_style()-}}
+{% endmacro %}
+
+{% macro article_main_css_style() %}
+<style>
+.article-main {
+  hyphens: manual;
+  overflow-wrap: normal;
+}
+.article-main p {
+  text-align: justify;
+}
 .article-title {
   text-align: center;
 }
 .article-date {
+  margin-top: 24px;
   text-align: center;
 }
 .author {
-  margin-top: 24px;
   text-align: center;
 }
 .orcid-icon::before {
@@ -66,21 +74,25 @@ div.csl-entry {
   {% endif %}
 </div>
 
+{{article_main_layout(jats)-}}
+{% endmacro %}
+
+{% macro orcid_url(orcid) -%}
+{% if not orcid.startswith("http") %}https://orcid.org/{% endif %}{{orcid | escape}}
+{%- endmacro %}
+
+{% macro article_main_layout(jats) %}
+<div class=article-main">
+
 <h1 class="article-title">
 {{jats.title or "No Title"}}
 </h1>
-
-<div class="article-date">
-{% if jats.date %}
-  {{jats.date}}
-{% endif %}
-</div>
 
 {% for c in jats.contributors %}
 <div class="author">
 {{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
 {% if c.orcid %}
-<a class="orcid" href="https://orcid.org/{{c.orcid | escape}}"><i class="orcid-icon"></i></a>
+<a class="orcid" href="{{orcid_url(c.orcid)}}"><i class="orcid-icon"></i></a>
 {% endif %}
 {% if c.email %}
 <br>
@@ -88,6 +100,12 @@ div.csl-entry {
 {% endif %}
 </div>
 {% endfor %}
+
+<div class="article-date">
+{% if jats.date %}
+  {{jats.date}}
+{% endif %}
+</div>
 
 {% if jats.abstract %}
 <h2>Abstract</h2>
@@ -101,4 +119,6 @@ div.csl-entry {
 {{jats.body}}
 </div>
 {% endif %}
+
+</div><!-- article-main -->
 {% endmacro %}

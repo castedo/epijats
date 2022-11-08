@@ -35,6 +35,7 @@ class EprinterConfig:
         if theme_dir:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
         self.article_style = 'lyon'
+        self._gen = WebPageGenerator()
 
 
 class PandocJatsReader:
@@ -98,7 +99,7 @@ class JatsEprint:
         pandoc_opts = config.pandoc_opts if config else []
         self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", pandoc_opts)
         self.has_abstract = self._pandoc.has_abstract
-        self._gen = WebPageGenerator()
+        self._gen = config._gen if config else WebPageGenerator()
 
     @property
     def git_hash(self):
