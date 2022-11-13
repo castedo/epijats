@@ -58,6 +58,7 @@ class PandocJatsReader:
             tmpl = resource_filename(__name__, "templates/{}.pandoc".format(name))
             args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
             #args += ["--template", tmpl, "--filter=pandoc-katex-filter"]
+            args += ["--shift-heading-level-by=1"]
             run_pandoc(args + self._pandoc_opts)
         with open(p) as f:
             return f.read()

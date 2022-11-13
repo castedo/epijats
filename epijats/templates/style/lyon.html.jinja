@@ -127,7 +127,7 @@ body {
 <div class="author">
 {{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
 {% if c.orcid %}
-<a class="orcid" href="https://orcid.org/{{c.orcid | escape}}"><i class="orcid-icon"></i></a>
+<a class="orcid" href="{{boston.orcid_url(c.orcid)}}"><i class="orcid-icon"></i></a>
 {% endif %}
 {% if c.email %}
 <br>
