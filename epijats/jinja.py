@@ -111,8 +111,8 @@ class DocEditionVars:
 
     @property
     def latest_edid(self):
-        subid = self.edition.up.last_subid
-        return self.edition.up.subs[subid].edid
+        latest = self.edition.suc.latest(self.edition.unlisted)
+        return latest.edid if latest else None
 
     @property
     def ref_commit(self):
