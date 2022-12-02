@@ -1,3 +1,19 @@
+{% from 'epijats/_common.html.jinja' import orcid_url %}
+
+{% macro article_layout(jats, dsi_base_url) %}
+<div class="article-header">
+  {% if jats.dsi %}
+  <div class="article-dsi">
+    <a href="{{dsi_base_url}}/{{jats.dsi}}">
+      <b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{{article_main_layout(jats)-}}
+{% endmacro %}
+
 {% macro article_css_style() %}
 <style>
 {% include 'pandoc.css' %}
@@ -65,24 +81,6 @@ div.csl-entry {
 }
 </style>
 {% endmacro %}
-
-{% macro article_layout(jats, dsi_base_url) %}
-<div class="article-header">
-  {% if jats.dsi %}
-  <div class="article-dsi">
-    <a href="{{dsi_base_url}}/{{jats.dsi}}">
-      <b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
-    </a>
-  </div>
-  {% endif %}
-</div>
-
-{{article_main_layout(jats)-}}
-{% endmacro %}
-
-{% macro orcid_url(orcid) -%}
-{% if not orcid.startswith("http") %}https://orcid.org/{% endif %}{{orcid | escape}}
-{%- endmacro %}
 
 {% macro article_main_layout(jats) %}
 <div class="article-main">

@@ -1,0 +1,3 @@
+{% macro orcid_url(orcid) -%}
+{% if not orcid.startswith("http") %}https://orcid.org/{% endif %}{{orcid | escape}}
+{%- endmacro %}

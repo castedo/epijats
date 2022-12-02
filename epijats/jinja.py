@@ -144,7 +144,7 @@ class WebPageGenerator:
         tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")
 
 
-def style_template_loader(prefix):
+def style_template_loader():
     return jinja2.PrefixLoader(
-        {prefix: jinja2.PackageLoader(__name__, "templates/style")}
+        {"epijats": jinja2.PackageLoader(__name__, "templates/epijats")}
     )

@@ -1,4 +1,4 @@
-{% import 'style/boston.html.jinja' as boston %}
+{% from 'epijats/_common.html.jinja' import orcid_url %}
 
 {% macro article_layout(jats, dsi_base_url) %}
   {% set jats_dsi = jats.dsi or "0123456789abcdefghijklmnopq/0" %}
@@ -21,7 +21,7 @@
         <dt>
           {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
           {% if contributor.orcid %}
-            <a class="orcid" href="{{ boston.orcid_url(contributor.orcid) }}"><i class="orcid-icon"></i></a>
+            <a class="orcid" href="{{ orcid_url(contributor.orcid) }}"><i class="orcid-icon"></i></a>
           {%- endif -%}
         </dt>
         {% if contributor.email %}
