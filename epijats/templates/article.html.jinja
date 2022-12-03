@@ -3,6 +3,9 @@
 
 {% block head_content %}
 {{super()-}}
+{% if embed_web_fonts %}
+{{style.link_fonts()}}
+{% endif %}
 <title>{{ jats.title }}</title>
 {{style.article_css_style()-}}
 {% endblock head_content %}

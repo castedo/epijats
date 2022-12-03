@@ -1,17 +1,19 @@
-{% from 'epijats/_common.html.jinja' import orcid_url %}
+{% extends 'epijats/_common.html.jinja' %}
+
 
 {% macro article_layout(jats, dsi_base_url) %}
-<div class="article-header">
-  {% if jats.dsi %}
-  <div class="article-dsi">
-    <a href="{{dsi_base_url}}/{{jats.dsi}}">
-      <b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
-    </a>
-  </div>
-  {% endif %}
-</div>
-
+<article lang="en">
+  <header>
+    {% if jats.dsi %}
+    <div class="article-dsi">
+      <a href="{{dsi_base_url}}/{{jats.dsi}}">
+        <b>dsi:</b>&thinsp;<code>{{jats.dsi}}</code>
+      </a>
+    </div>
+    {% endif %}
+  </header>
 {{article_main_layout(jats)-}}
+</article>
 {% endmacro %}
 
 {% macro article_css_style() %}
@@ -25,11 +27,6 @@ html {
 body {
   max-width: 720px;
 }
-@media print {
-  body {
-    font-size: 12px;
-  }
-}
 a {
   text-decoration: none;
 }
@@ -39,19 +36,84 @@ a {
 a:visited {
   color: #208;
 }
-div.csl-entry {
-  break-inside: avoid;{# avoid weasyprint page break between reference entry number and text #}
-}
-@page {
-  @bottom-right{
-    content: counter(page) " / " counter(pages);
-  }
-}
 </style>
 {{article_main_css_style()-}}
 {% endmacro %}
 
 {% macro article_main_css_style() %}
+  <style>
+    :root {
+      --eprint-font-sans: 'Fira Sans', sans-serif;
+      --eprint-font-mono: 'Fira Mono', monospace;
+      --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
+    }
+
+    /* Page */
+
+    @page {
+      color: #555;
+      font-family: var(--eprint-font-sans);
+      font-size: 10pt;
+      font-weight: 300;
+      line-height: 1.2;
+      margin: 1in 0.5in;
+      size: letter;
+
+      @bottom-right{
+        content: counter(page) " of " counter(pages);
+        margin-top: 1em;
+        padding-top: 1em;
+        vertical-align: top;
+        width: 40%;
+      }
+    }
+
+
+    /* Article */
+
+    article {
+      --main-color: #04b;
+      --text-color: black;
+      --light-text-color: #555;
+      color: var(--text-color);
+      font-family: var(--eprint-font-sans);
+      line-height: 1.4;
+    }
+    @media print {
+      article {
+        font-size: 10pt;
+      }
+    }
+    @media screen {
+      article > header {
+          display: none;
+      }
+    }
+
+
+    /* Titles */
+
+    h1, h2, h3, h4 {
+      font-weight: 300;
+      line-height: 1;
+      margin: 1.4em 0 0.6em 0;
+    }
+    h1 {
+      font-size: 2.6em;
+      letter-spacing: -0.03em;
+      margin-top: 0.7em;
+    }
+    h2 {
+      font-size: 1.8em;
+      letter-spacing: -0.02em;
+    }
+    h3 {
+      font-size: 1.45em;
+    }
+    h4 {
+      font-size: 1.25em;
+    }
+  </style>
 <style>
 .article-main {
   hyphens: manual;
@@ -70,16 +132,24 @@ div.csl-entry {
 .author {
   text-align: center;
 }
-.orcid-icon::before {
-  display: inline-block;
-  content: "";
-  vertical-align: -.125em;
-  background-repeat: no-repeat;
-  width: 16px;
-  height: 16px;
-  background-image: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjU2IDI1NjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNBNkNFMzk7fQoJLnN0MXtmaWxsOiNGRkZGRkY7fQo8L3N0eWxlPgo8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjU2LDEyOGMwLDcwLjctNTcuMywxMjgtMTI4LDEyOEM1Ny4zLDI1NiwwLDE5OC43LDAsMTI4QzAsNTcuMyw1Ny4zLDAsMTI4LDBDMTk4LjcsMCwyNTYsNTcuMywyNTYsMTI4eiIvPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04Ni4zLDE4Ni4ySDcwLjlWNzkuMWgxNS40djQ4LjRWMTg2LjJ6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTA4LjksNzkuMWg0MS42YzM5LjYsMCw1NywyOC4zLDU3LDUzLjZjMCwyNy41LTIxLjUsNTMuNi01Ni44LDUzLjZoLTQxLjhWNzkuMXogTTEyNC4zLDE3Mi40aDI0LjUgICBjMzQuOSwwLDQyLjktMjYuNSw0Mi45LTM5LjdjMC0yMS41LTEzLjctMzkuNy00My43LTM5LjdoLTIzLjdWMTcyLjR6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNODguNyw1Ni44YzAsNS41LTQuNSwxMC4xLTEwLjEsMTAuMWMtNS42LDAtMTAuMS00LjYtMTAuMS0xMC4xYzAtNS42LDQuNS0xMC4xLDEwLjEtMTAuMSAgIEM4NC4yLDQ2LjcsODguNyw1MS4zLDg4LjcsNTYuOHoiLz4KPC9nPgo8L3N2Zz4=");
-}
-</style>
+    div.csl-entry {
+      break-inside: avoid;
+    }
+    article pre {
+      break-inside: avoid;
+    }
+    .katex {
+      break-before: avoid;
+    }
+    .orcid-icon::before {
+      background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjU2IDI1NjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNBNkNFMzk7fQoJLnN0MXtmaWxsOiNGRkZGRkY7fQo8L3N0eWxlPgo8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjU2LDEyOGMwLDcwLjctNTcuMywxMjgtMTI4LDEyOEM1Ny4zLDI1NiwwLDE5OC43LDAsMTI4QzAsNTcuMyw1Ny4zLDAsMTI4LDBDMTk4LjcsMCwyNTYsNTcuMywyNTYsMTI4eiIvPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04Ni4zLDE4Ni4ySDcwLjlWNzkuMWgxNS40djQ4LjRWMTg2LjJ6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTA4LjksNzkuMWg0MS42YzM5LjYsMCw1NywyOC4zLDU3LDUzLjZjMCwyNy41LTIxLjUsNTMuNi01Ni44LDUzLjZoLTQxLjhWNzkuMXogTTEyNC4zLDE3Mi40aDI0LjUgICBjMzQuOSwwLDQyLjktMjYuNSw0Mi45LTM5LjdjMC0yMS41LTEzLjctMzkuNy00My43LTM5LjdoLTIzLjdWMTcyLjR6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNODguNyw1Ni44YzAsNS41LTQuNSwxMC4xLTEwLjEsMTAuMWMtNS42LDAtMTAuMS00LjYtMTAuMS0xMC4xYzAtNS42LDQuNS0xMC4xLDEwLjEtMTAuMSAgIEM4NC4yLDQ2LjcsODguNyw1MS4zLDg4LjcsNTYuOHoiLz4KPC9nPgo8L3N2Zz4=") no-repeat;
+      content: "";
+      display: inline-block;
+      height: 1em;
+      vertical-align: -10%;
+      width: 1em;
+    }
+  </style>
 {% endmacro %}
 
 {% macro article_main_layout(jats) %}

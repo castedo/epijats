@@ -1,6 +1,4 @@
 html {
-  line-height: 1.5;
-  font-family: Georgia, serif;
   font-size: 20px;
   color: #1a1a1a;
   background-color: #fdfdfd;
@@ -53,16 +51,6 @@ a:visited {
 }
 img {
   max-width: 100%;
-}
-h1, h2, h3, h4, h5, h6 {
-  margin-top: 1.4em;
-}
-h5, h6 {
-  font-size: 1em;
-  font-style: italic;
-}
-h6 {
-  font-weight: normal;
 }
 ol, ul {
   padding-left: 1.7em;

@@ -35,6 +35,7 @@ class EprinterConfig:
         if theme_dir:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
         self.article_style = 'lyon'
+        self.embed_web_fonts = True
         self._gen = WebPageGenerator()
 
 
@@ -99,6 +100,7 @@ class JatsEprint:
         self._contributors = parseJATS.contributors(soup)
         self._html_ctx = config.urls
         self._html_ctx['article_style'] = config.article_style
+        self._html_ctx['embed_web_fonts'] = config.embed_web_fonts
         pandoc_opts = config.pandoc_opts
         self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", pandoc_opts)
         self.has_abstract = self._pandoc.has_abstract

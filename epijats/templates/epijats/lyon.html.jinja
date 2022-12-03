@@ -1,4 +1,5 @@
-{% from 'epijats/_common.html.jinja' import orcid_url %}
+{% extends 'epijats/_common.html.jinja' %}
+
 
 {% macro article_layout(jats, dsi_base_url) %}
   {% set jats_dsi = jats.dsi or "0123456789abcdefghijklmnopq/0" %}
@@ -84,11 +85,21 @@
 
 {% macro article_css_style() %}
   <style>
+    :root {
+      --eprint-font-sans: 'Fira Sans', sans-serif;
+      --eprint-font-mono: 'Fira Mono', monospace;
+      --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
+      --main-color: #04b;
+      --text-color: black;
+      --light-text-color: #555;
+    }
+
+
     /* Page */
 
     @page {
       color: #555;
-      font-family: FiraSans;
+      font-family: var(--eprint-font-sans);
       font-size: 10pt;
       font-weight: 300;
       line-height: 1.2;
@@ -126,14 +137,9 @@
 
     /* Common */
 
-    :root {
-      --main-color: #04b;
-      --text-color: black;
-      --light-text-color: #555;
-    }
     body {
       color: var(--text-color);
-      font-family: FiraSans;
+      font-family: var(--eprint-font-sans);
       font-size: 10pt;
       line-height: 1.4;
       margin: 0;
@@ -154,7 +160,7 @@
       hyphenate-limit-chars: 3 3;
     }
     code {
-      font-family: FiraMono;
+      font-family: var(--eprint-font-mono);
     }
 
     ul li::marker {
@@ -262,7 +268,7 @@
     aside {
       bottom: 0;
       font-size: 0.8em;
-      font-family: FiraSansCondensed;
+      font-family: var(--eprint-font-condensed);
       font-stretch: condensed;
       left: 0;
       overflow-wrap: anywhere;
@@ -342,6 +348,12 @@
     }
     #edition-number, #online-msg {
       display: inline;
+    }
+    div.csl-entry {
+      break-inside: avoid;
+    }
+    article pre {
+      break-inside: avoid;
     }
     .katex {
       break-before: avoid;
