@@ -72,21 +72,6 @@ class PandocJatsReader:
         if pass_dir.exists():
             os.symlink(pass_dir.resolve(), symlink)
 
-    def make_latex(self, target, extra_metadata):
-        target = Path(target)
-        os.makedirs(target.parent, exist_ok=True)
-        self.symlink_pass_dir(target.parent)
-        args = [self._json, '--to=latex', '--citeproc', '-so', target]
-        args += ['--metadata-file', self._make_metadata_file(extra_metadata)]
-        run_pandoc(args + self._pandoc_opts)
-        return target
-
-    def _make_metadata_file(self, extra_metadata):
-        extra_path = self._tmp / 'extra_metadata.json'
-        with open(extra_path, 'w') as file:
-            json.dump(extra_metadata, file)
-        return extra_path
-
 
 class JatsEprint:
     def __init__(self, jats_src, tmp, config=None):
@@ -176,22 +161,3 @@ class JatsEprint:
         if source_mtime:
             ret["SOURCE_DATE_EPOCH"] = "{:.0f}".format(source_mtime)
         return ret
-
-    def make_old_pdf(self, target):
-        epoch_key_value = self._source_date_epoch()
-        if epoch_key_value:
-            env = os.environ.copy()
-            env.update(epoch_key_value)
-        else:
-            env = None
-        tmp_pdf = self._tmp / "pdf"
-        os.makedirs(tmp_pdf, exist_ok=True)
-        metadata = dict(contributors=self._contributors, dsi=self.dsi)
-        tex = self._pandoc.make_latex(self._tmp / "tex" / "article.tex", metadata)
-        cmd = "rubber --pdf --into {} {}".format(tmp_pdf, tex)
-        print(cmd)
-        subprocess.run(cmd, shell=True, check=True,
-                       stdout=sys.stdout, stderr=sys.stderr, env=env)
-        os.makedirs(target.parent, exist_ok=True)
-        shutil.copy(tmp_pdf / "article.pdf", target)
-        return target
