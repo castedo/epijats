@@ -8,11 +8,15 @@ class DocLoader:
         if not work_path.exists():
             edition.work_copy(work_path)
         if work_path.is_dir():
-            from .jats import JatsEprint
+            from .jats import JatsBaseprint, JatsEprint
 
             xml = work_path / "article.xml"
+
             subcache = self.cache / "epijats" / str(edition.dsi)
-            ret = JatsEprint(xml, subcache, self.eprinter_config)
+            basep = JatsBaseprint(
+                xml, subcache / "pandoc", self.eprinter_config.pandoc_opts
+            )
+            ret = JatsEprint(basep, subcache / "html", self.eprinter_config)
         else:
             from .pdf import PdfDocument
 

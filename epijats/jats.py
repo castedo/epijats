@@ -41,16 +41,14 @@ class EprinterConfig:
 
 class PandocJatsReader:
     def __init__(self, jats_src, tmp, pandoc_opts):
-        self.src = jats_src
-        self._tmp = Path(tmp) / "cache"
+        self.src = Path(jats_src)
+        self._tmp = Path(tmp)
         self._pandoc_opts = list(pandoc_opts)
         self._json = self._tmp / "article.json"
         if not up_to_date(self._json, self.src):
             shutil.rmtree(self._tmp, ignore_errors=True)
             os.makedirs(self._tmp)
             run_pandoc([self.src, "--from=jats", "-s", "--output", self._json])
-        with open(self._json) as file:
-            self.has_abstract = "abstract" in json.load(file)["meta"]
 
     def get_html_template_var(self, name):
         p = self._tmp / (name + ".html")
@@ -73,23 +71,15 @@ class PandocJatsReader:
             os.symlink(pass_dir.resolve(), symlink)
 
 
-class JatsEprint:
-    def __init__(self, jats_src, tmp, config=None):
-        if config is None:
-            config = EprinterConfig()
-        self.src = Path(jats_src)
-        self._tmp = Path(tmp)
-        soup = parseJATS.parse_document(self.src)
+class JatsBaseprint(PandocJatsReader):
+    def __init__(self, jats_src, tmp, pandoc_opts):
+        super().__init__(jats_src, tmp, pandoc_opts)
+        with open(self._json) as file:
+            self.has_abstract = "abstract" in json.load(file)["meta"]
+        soup = parseJATS.parse_document(jats_src)
         self.dsi = meta_article_id_text(soup, "dsi")
         self._dates = parseJATS.pub_dates(soup)
         self._contributors = parseJATS.contributors(soup)
-        self._html_ctx = config.urls
-        self._html_ctx['article_style'] = config.article_style
-        self._html_ctx['embed_web_fonts'] = config.embed_web_fonts
-        pandoc_opts = config.pandoc_opts
-        self._pandoc = PandocJatsReader(self.src, self._tmp / "pandoc", pandoc_opts)
-        self.has_abstract = self._pandoc.has_abstract
-        self._gen = config._gen
 
     @property
     def git_hash(self):
@@ -97,17 +87,17 @@ class JatsEprint:
 
     @property
     def title_html(self):
-        return self._pandoc.get_html_template_var('title')
+        return self.get_html_template_var('title')
 
     @property
     def abstract_html(self):
         if self.has_abstract:
-            return self._pandoc.get_html_template_var('abstract') 
+            return self.get_html_template_var('abstract') 
         return None
 
     @property
     def body_html(self):
-        return self._pandoc.get_html_template_var('body')
+        return self.get_html_template_var('body')
 
     @property
     def date(self):
@@ -128,20 +118,41 @@ class JatsEprint:
         ret = []
         return self._contributors
 
-    def get_static_dir(self):
+
+class JatsEprint:
+    def __init__(self, baseprint, tmp, config=None):
+        if config is None:
+            config = EprinterConfig()
+        self._tmp = Path(tmp)
+        self._html_ctx = config.urls
+        self._html_ctx["article_style"] = config.article_style
+        self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
+        self._gen = config._gen
+        self._basep = baseprint
+        self.src = self._basep.src
+        self.dsi = self._basep.dsi
+        self.has_abstract = self._basep.has_abstract
+        self.git_hash = self._basep.git_hash
+        self.title_html =  self._basep.title_html
+        self.abstract_html = self._basep.abstract_html
+        self.body_html = self._basep.body_html
+        self.date = self._basep.date
+        self.authors = self._basep.authors
+        self.contributors = self._basep.contributors
+
+    def _get_static_dir(self):
         return Path(resource_filename(__name__, "static/"))
 
     def _get_html(self):
-        html_dir = self._tmp / "html"
+        html_dir = self._tmp
         os.makedirs(html_dir, exist_ok=True)
         ret = html_dir / "article.html"
-        if not up_to_date(ret, self.src):
-            # for now just assume math is always needed
-            ctx = dict(jats=JatsVars(self), **self._html_ctx, has_math=True)
-            self._gen.render_file('article.html.jinja', ret, ctx)
-            if not ret.with_name("static").exists():
-                os.symlink(self.get_static_dir(), ret.with_name("static"))
-            self._pandoc.symlink_pass_dir(html_dir)
+        # for now just assume math is always needed
+        ctx = dict(jats=JatsVars(self), **self._html_ctx, has_math=True)
+        self._gen.render_file('article.html.jinja', ret, ctx)
+        if not ret.with_name("static").exists():
+            os.symlink(self._get_static_dir(), ret.with_name("static"))
+        self._basep.symlink_pass_dir(html_dir)
         return ret
 
     def make_html_dir(self, target):
