@@ -48,44 +48,45 @@ class JatsVars:
 
 
 class DocEditionVars:
-    def __init__(self, edition):
+    def __init__(self, edition, doc):
         self.edition = edition
-        self.is_jats = DocLoader.is_jats(edition.dobj)
+        self.doc = doc
+        self.is_jats = DocLoader.is_jats(doc)
 
     @property
     def title(self):
-        return self.edition.dobj.title_html
+        return self.doc.title_html
 
     @property
     def date(self):
-        return self.edition.dobj.date
+        return self.doc.date
 
     @property
     def authors(self):
         if self.is_jats:
-            return self.edition.dobj.authors
+            return self.doc.authors
         return [self.edition.suc.author.name]
 
     @property
     def contributors(self):
-        return self.edition.dobj.contributors
+        return self.doc.contributors
 
     @property
     def abstract(self):
         if self.is_jats:
-            return self.edition.dobj.abstract_html
+            return self.doc.abstract_html
         return None
 
     @property
     def body(self):
         if self.is_jats:
-            return self.edition.dobj.body_html
+            return self.doc.body_html
         return None
 
     @property
     def hexhash(self):
         if self.is_jats:
-            return self.edition.dobj.git_hash
+            return self.doc.git_hash
         return self.edition.hexsha
 
     @property
@@ -105,11 +106,6 @@ class DocEditionVars:
         return str(self.edition.up.edid) if self.edition.up else None
 
     @property
-    def flow_edition(self):
-        flow = self.edition.flow_edition()
-        return DocEditionVars(flow) if flow else None
-
-    @property
     def latest_edid(self):
         latest = self.edition.suc.latest(self.edition.unlisted)
         return latest.edid if latest else None
@@ -122,11 +118,6 @@ class DocEditionVars:
     def sign_key(self):
         fingerprint = self.edition.suc.sign_key_fingerprint
         return fingerprint.hex().upper()
-
-    @property
-    def all_editions(self):
-        eds = self.edition.suc.root.all_subeditions()
-        return [DocEditionVars(e) for e in eds]
 
 
 class WebPageGenerator:
