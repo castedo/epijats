@@ -1,4 +1,4 @@
-import os, shutil
+import os, shutil, sys, subprocess
 
 
 def up_to_date(target, source):
@@ -17,3 +17,9 @@ def copytree_nostat(src, dst):
         else:
             shutil.copy(srcentry, dstentry)
     return dst
+
+
+def git_hash_object(path):
+    ret = subprocess.run(['git', 'hash-object', path],
+        check=True, text=True, stdout=subprocess.PIPE, stderr=sys.stderr)
+    return ret.stdout.rstrip()

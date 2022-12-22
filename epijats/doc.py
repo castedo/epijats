@@ -1,7 +1,7 @@
 class DocLoader:
     def __init__(self, cache, eprinter_config=None):
         self.cache = cache
-        self.eprinter_config = eprinter_config
+        self.pandoc_opts = eprinter_config.pandoc_opts
 
     def __call__(self, edition):
         work_path = self.cache / "arc" / str(edition.dsi)
@@ -11,11 +11,13 @@ class DocLoader:
             from .jats import JatsBaseprint
 
             subcache = self.cache / "epijats" / str(edition.dsi) / "pandoc"
-            ret = JatsBaseprint(work_path, subcache, self.eprinter_config.pandoc_opts)
+            ret = JatsBaseprint(work_path, subcache, self.pandoc_opts)
         else:
             from .pdf import PdfDocument
 
             ret = PdfDocument(work_path)
+            assert ret.git_hash == edition.hexsha
+
         return ret
 
     @staticmethod

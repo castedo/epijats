@@ -35,10 +35,6 @@ class JatsVars:
         return self.doc.body_html
 
     @property
-    def dsi(self):
-        return self.doc.dsi
-
-    @property
     def hexhash(self):
         return self.doc.git_hash
 
@@ -54,30 +50,6 @@ class DocEditionVars(JatsVars):
         self.is_jats = DocLoader.is_jats(doc)
 
     @property
-    def authors(self):
-        if self.is_jats:
-            return self.doc.authors
-        return [self.edition.suc.author.name]
-
-    @property
-    def abstract(self):
-        if self.is_jats:
-            return self.doc.abstract_html
-        return None
-
-    @property
-    def body(self):
-        if self.is_jats:
-            return self.doc.body_html
-        return None
-
-    @property
-    def hexhash(self):
-        if self.is_jats:
-            return self.doc.git_hash
-        return self.edition.hexsha
-
-    @property
     def obsolete(self):
         return self.edition.obsolete
 
@@ -87,7 +59,7 @@ class DocEditionVars(JatsVars):
 
     @property
     def dsi(self):
-        return self.base_dsi + "/" + self.edid
+        return str(self.edition.dsi)
 
     @property
     def edid(self):

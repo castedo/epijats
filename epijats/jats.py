@@ -1,4 +1,4 @@
-from .util import up_to_date, copytree_nostat
+from .util import up_to_date, copytree_nostat, git_hash_object
 from .jinja import JatsVars, WebPageGenerator
 from .elife import parseJATS, meta_article_id_text
 
@@ -17,12 +17,6 @@ def run_pandoc(args, echo=True):
     if echo:
         print(' '.join([str(s) for s in cmd]))
     subprocess.run(cmd, check=True, stdout=sys.stdout, stderr=sys.stderr)
-
-
-def git_hash_object(path):
-    ret = subprocess.run(['git', 'hash-object', path],
-        check=True, text=True, stdout=subprocess.PIPE, stderr=sys.stderr)
-    return ret.stdout.rstrip()
 
 
 class EprinterConfig:
@@ -74,6 +68,8 @@ class JatsBaseprint:
         self.dsi = meta_article_id_text(soup, "dsi")
         self._dates = parseJATS.pub_dates(soup)
         self._contributors = parseJATS.contributors(soup)
+        #TODO: generaize to work with folder based baseprint, not just single file
+        self.git_hash = git_hash_object(self.jats_src)
 
     def symlink_pass_dir(self, target_dir):
         pass_dir = self.jats_src.with_name("pass")
@@ -82,10 +78,6 @@ class JatsBaseprint:
             os.unlink(symlink)
         if pass_dir.exists():
             os.symlink(pass_dir.resolve(), symlink)
-
-    @property
-    def git_hash(self):
-        return git_hash_object(self.jats_src)
 
     @property
     def title_html(self):
