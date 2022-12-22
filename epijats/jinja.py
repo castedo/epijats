@@ -7,51 +7,8 @@ from pkg_resources import resource_filename
 
 
 class JatsVars:
-    def __init__(self, jats):
-        self.jats = jats
-
-    @property
-    def title(self):
-        return self.jats.title_html
-
-    @property
-    def date(self):
-        return self.jats.date
-
-    @property
-    def authors(self):
-        return self.jats.authors
-
-    @property
-    def contributors(self):
-        return self.jats.contributors
-
-    @property
-    def abstract(self):
-        return self.jats.abstract_html
-
-    @property
-    def body(self):
-        return self.jats.body_html
-
-    @property
-    def dsi(self):
-        return self.jats.dsi
-
-    @property
-    def hexhash(self):
-        return self.jats.git_hash
-
-    @property
-    def uri(self):
-        return "swh:1:cnt:" + self.jats.git_hash
-
-
-class DocEditionVars:
-    def __init__(self, edition, doc):
-        self.edition = edition
+    def __init__(self, doc):
         self.doc = doc
-        self.is_jats = DocLoader.is_jats(doc)
 
     @property
     def title(self):
@@ -63,13 +20,44 @@ class DocEditionVars:
 
     @property
     def authors(self):
-        if self.is_jats:
-            return self.doc.authors
-        return [self.edition.suc.author.name]
+        return self.doc.authors
 
     @property
     def contributors(self):
         return self.doc.contributors
+
+    @property
+    def abstract(self):
+        return self.doc.abstract_html
+
+    @property
+    def body(self):
+        return self.doc.body_html
+
+    @property
+    def dsi(self):
+        return self.doc.dsi
+
+    @property
+    def hexhash(self):
+        return self.doc.git_hash
+
+    @property
+    def uri(self):
+        return "swh:1:cnt:" + self.doc.git_hash
+
+
+class DocEditionVars(JatsVars):
+    def __init__(self, doc, edition=None):
+        super().__init__(doc)
+        self.edition = edition
+        self.is_jats = DocLoader.is_jats(doc)
+
+    @property
+    def authors(self):
+        if self.is_jats:
+            return self.doc.authors
+        return [self.edition.suc.author.name]
 
     @property
     def abstract(self):
@@ -94,8 +82,12 @@ class DocEditionVars:
         return self.edition.obsolete
 
     @property
-    def dsi(self):
+    def base_dsi(self):
         return str(self.edition.suc.dsi)
+
+    @property
+    def dsi(self):
+        return self.base_dsi + "/" + self.edid
 
     @property
     def edid(self):
