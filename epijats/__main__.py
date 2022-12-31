@@ -1,4 +1,4 @@
-from .jats import JatsEprint, EprinterConfig
+from .jats import JatsEprint, JatsBaseprint, EprinterConfig
 
 from weasyprint import LOGGER
 
@@ -25,7 +25,9 @@ config = EprinterConfig(dsi_base_url="https://perm.pub")
 config.embed_web_fonts = not args.no_web_fonts
 
 with tempfile.TemporaryDirectory() as tempdir:
-    eprint = JatsEprint(args.source / "article.xml", tempdir, config)
+    tempdir = Path(tempdir)
+    bp = JatsBaseprint(args.source, tempdir / "base", config.pandoc_opts)
+    eprint = JatsEprint(bp, tempdir / "html", config)
     os.makedirs(args.target , exist_ok=True)
     eprint.make_html_dir(args.target)
     eprint.make_pdf(args.target / "article.pdf")
