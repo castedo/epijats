@@ -1,4 +1,4 @@
-from .jats import JatsEprint, JatsBaseprint, EprinterConfig
+from .jats import Eprint, JatsBaseprint, EprinterConfig
 
 from weasyprint import LOGGER
 
@@ -27,7 +27,7 @@ config.embed_web_fonts = not args.no_web_fonts
 with tempfile.TemporaryDirectory() as tempdir:
     tempdir = Path(tempdir)
     bp = JatsBaseprint(args.source, tempdir / "base", config.pandoc_opts)
-    eprint = JatsEprint(bp, tempdir / "html", config)
+    eprint = Eprint(bp.to_webstract(), tempdir / "html", config)
     os.makedirs(args.target , exist_ok=True)
     eprint.make_html_dir(args.target)
     eprint.make_pdf(args.target / "article.pdf")

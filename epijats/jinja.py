@@ -2,13 +2,12 @@ from .doc import DocLoader
 
 import jinja2
 
-# std lib
-from pkg_resources import resource_filename
 
-
-class JatsVars:
-    def __init__(self, doc):
+class DocEditionVars:
+    def __init__(self, doc, edition=None):
         self.doc = doc
+        self.edition = edition
+        self.is_jats = DocLoader.is_jats(doc)
 
     @property
     def title(self):
@@ -37,17 +36,6 @@ class JatsVars:
     @property
     def hexhash(self):
         return self.doc.git_hash
-
-    @property
-    def uri(self):
-        return "swh:1:cnt:" + self.doc.git_hash
-
-
-class DocEditionVars(JatsVars):
-    def __init__(self, doc, edition=None):
-        super().__init__(doc)
-        self.edition = edition
-        self.is_jats = DocLoader.is_jats(doc)
 
     @property
     def obsolete(self):

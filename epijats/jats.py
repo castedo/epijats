@@ -1,5 +1,6 @@
-from .util import up_to_date, copytree_nostat, git_hash_object
-from .jinja import JatsVars, WebPageGenerator
+from .util import up_to_date, copytree_nostat, swhid_from_files, git_hash_object
+
+from .jinja import WebPageGenerator
 from .elife import parseJATS, meta_article_id_text
 from .webstract import Webstract, Source
 
@@ -72,14 +73,6 @@ class JatsBaseprint:
         #TODO: generaize to work with folder based baseprint, not just single file
         self.git_hash = git_hash_object(self.jats_src)
 
-    def symlink_pass_dir(self, target_dir):
-        pass_dir = self.jats_src.with_name("pass")
-        symlink = target_dir / "pass"
-        if symlink.exists():
-            os.unlink(symlink)
-        if pass_dir.exists():
-            os.symlink(pass_dir.resolve(), symlink)
-
     @property
     def title_html(self):
         return self._pandoc.get_html_template_var('title')
@@ -130,8 +123,8 @@ class JatsBaseprint:
         return ret
 
 
-class JatsEprint:
-    def __init__(self, baseprint, tmp, config=None):
+class Eprint:
+    def __init__(self, webstract, tmp, config=None):
         if config is None:
             config = EprinterConfig()
         self._tmp = Path(tmp)
@@ -139,7 +132,7 @@ class JatsEprint:
         self._html_ctx["article_style"] = config.article_style
         self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
         self._gen = config._gen
-        self._basep = baseprint
+        self.webstract = webstract
 
     def _get_static_dir(self):
         return Path(resource_filename(__name__, "static/"))
@@ -149,11 +142,12 @@ class JatsEprint:
         os.makedirs(html_dir, exist_ok=True)
         ret = html_dir / "article.html"
         # for now just assume math is always needed
-        ctx = dict(jats=JatsVars(self._basep), **self._html_ctx, has_math=True)
+        ctx = dict(doc=self.webstract.facade, **self._html_ctx, has_math=True)
         self._gen.render_file('article.html.jinja', ret, ctx)
         if not ret.with_name("static").exists():
             os.symlink(self._get_static_dir(), ret.with_name("static"))
-        self._basep.symlink_pass_dir(html_dir)
+        if self.webstract.source.subpath_exists("pass"):
+            self.webstract.source.symlink_subpath(html_dir / "pass", "pass")
         return ret
 
     def make_html_dir(self, target):
@@ -167,8 +161,8 @@ class JatsEprint:
 
     def _source_date_epoch(self):
         ret = dict()
-        assert isinstance(self._basep.date, date)
-        doc_date = datetime.combine(self._basep.date, time(0), timezone.utc)
+        assert isinstance(self.webstract.date, date)
+        doc_date = datetime.combine(self.webstract.date, time(0), timezone.utc)
         source_mtime = doc_date.timestamp()
         if source_mtime:
             ret["SOURCE_DATE_EPOCH"] = "{:.0f}".format(source_mtime)

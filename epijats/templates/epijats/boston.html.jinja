@@ -1,18 +1,18 @@
 {% extends 'epijats/_common.html.jinja' %}
 
 
-{% macro article_layout(jats, dsi_base_url) %}
+{% macro article_layout(doc, dsi_base_url) %}
 <article lang="en">
   <header>
-    {% if jats.dsi %}
+    {% if doc.dsi %}
     <div class="article-dsi">
-      <a href="{{dsi_base_url}}/{{jats.base_dsi}}">
-        <b>dsi:</b>&thinsp;<code>{{jats.base_dsi}}</code>
+      <a href="{{dsi_base_url}}/{{doc.base_dsi}}">
+        <b>dsi:</b>&thinsp;<code>{{doc.base_dsi}}</code>
       </a>
     </div>
     {% endif %}
   </header>
-{{article_main_layout(jats)-}}
+{{article_main_layout(doc)-}}
 </article>
 {% endmacro %}
 
@@ -152,14 +152,14 @@ a:visited {
   </style>
 {% endmacro %}
 
-{% macro article_main_layout(jats) %}
+{% macro article_main_layout(doc) %}
 <div class="article-main">
 
 <h1 class="article-title">
-{{jats.title or "No Title"}}
+{{doc.title or "No Title"}}
 </h1>
 
-{% for c in jats.contributors %}
+{% for c in doc.contributors %}
 <div class="author">
 {{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
 {% if c.orcid %}
@@ -173,21 +173,21 @@ a:visited {
 {% endfor %}
 
 <div class="article-date">
-{% if jats.date %}
-  {{jats.date}}
+{% if doc.date %}
+  {{doc.date}}
 {% endif %}
 </div>
 
-{% if jats.abstract %}
+{% if doc.abstract %}
 <h2>Abstract</h2>
 <div class="jats-abstract">
-{{jats.abstract}}
+{{doc.abstract}}
 </div>
 {% endif %}
 
-{% if jats.body %}
+{% if doc.body %}
 <div class="jats-body">
-{{jats.body}}
+{{doc.body}}
 </div>
 {% endif %}
 

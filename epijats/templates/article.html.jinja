@@ -6,10 +6,10 @@
 {% if embed_web_fonts %}
 {{style.link_fonts()}}
 {% endif %}
-<title>{{ jats.title }}</title>
+<title>{{ doc.title }}</title>
 {{style.article_css_style()-}}
 {% endblock head_content %}
 
 {% block body_content %}
-{{style.article_layout(jats, dsi_base_url)-}}
+{{style.article_layout(doc, dsi_base_url)-}}
 {% endblock body_content %}
