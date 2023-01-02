@@ -46,8 +46,9 @@ class PandocJatsReader:
             run_pandoc([self.src, "--from=jats", "-s", "--output", self._json])
         with open(self._json) as file:
             self.has_abstract = "abstract" in json.load(file)["meta"]
+        self.webstract = Webstract.load_xml(self._render_template("webstract"))
 
-    def get_html_template_var(self, name):
+    def _render_template(self, name):
         p = self._tmp / (name + ".html")
         if not p.exists():
             args = [self._json, '--to', 'html', '--output', p]
@@ -56,8 +57,7 @@ class PandocJatsReader:
             #args += ["--template", tmpl, "--filter=pandoc-katex-filter"]
             args += ["--shift-heading-level-by=1", "--wrap=preserve"]
             run_pandoc(args + self._pandoc_opts)
-        with open(p) as f:
-            return f.read()
+        return p
 
 
 class JatsBaseprint:
@@ -75,17 +75,17 @@ class JatsBaseprint:
 
     @property
     def title_html(self):
-        return self._pandoc.get_html_template_var('title')
+        return self._pandoc.webstract.facade.title
 
     @property
     def abstract_html(self):
         if self.has_abstract:
-            return self._pandoc.get_html_template_var('abstract') 
+            return self._pandoc.webstract.facade.abstract
         return None
 
     @property
     def body_html(self):
-        return self._pandoc.get_html_template_var('body')
+        return self._pandoc.webstract.facade.body
 
     @property
     def date(self):
@@ -106,20 +106,12 @@ class JatsBaseprint:
         return self._contributors
 
     def to_webstract(self):
-        ret = Webstract(
-            dict(
-                source=Source(path=self._src),
-                date=self.date,
-                title=self.title_html,
-                body=self.body_html,
-            )
-        )
-        if self.has_abstract:
-            ret['abstract'] = self.abstract_html
-        contributors = copy.deepcopy(self._contributors)
-        for c in contributors:
-            c["orcid"] = c["orcid"].rsplit("/", 1)[-1]
-        ret['contributors'] = contributors
+        ret = self._pandoc.webstract
+        ret['source'] = Source(path=self._src)
+        ret['date'] = self.date
+        ret['contributors'] = copy.deepcopy(self._contributors)
+        for c in ret['contributors']:
+            c['orcid'] = c['orcid'].rsplit("/", 1)[-1]
         return ret
 
 

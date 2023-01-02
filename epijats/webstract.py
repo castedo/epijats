@@ -108,7 +108,7 @@ class Webstract(dict):
 
     @staticmethod
     def load_xml(path):
-        return Webstract(jsoml.load(str(path)))
+        return Webstract(jsoml.load(Path(path)))
 
 
 def add_webstract_key_properties(cls):
