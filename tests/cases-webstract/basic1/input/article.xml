@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.2 20190208//EN" "JATS-archivearticle1.dtd">
+<article xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" dtd-version="1.2" article-type="other">
+  <front>
+    <journal-meta>
+      <journal-id/>
+      <journal-title-group/>
+      <issn/>
+      <publisher>
+        <publisher-name/>
+      </publisher>
+    </journal-meta>
+    <article-meta>
+      <title-group>
+        <article-title>On testing</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
+          <name>
+            <surname>Sagües</surname>
+            <given-names>Begoña José</given-names>
+          </name>
+          <email>begona@example.com</email>
+        </contrib>
+      </contrib-group>
+      <pub-date date-type="eprint" publication-format="electronic" iso-8601-date="2022-04-14">
+        <day>14</day>
+        <month>4</month>
+        <year>2022</year>
+      </pub-date>
+      <permissions>
+        <copyright-statement>© 2022, Ellerman et al</copyright-statement>
+        <copyright-year>2022</copyright-year>
+        <copyright-holder>Ellerman et al</copyright-holder>
+        <license license-type="open-access">
+          <ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-p>This document is distributed under a Creative Commons
+Attribution 4.0 International license.</license-p>
+        </license>
+      </permissions>
+      <abstract>
+        <p>Here we test.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <sec id="summary">
+      <title>Summary</title>
+      <p>Begoña José Sagües is test.</p>
+    </sec>
+  </body>
+</article>

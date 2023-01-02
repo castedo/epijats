@@ -1,11 +1,11 @@
 from .util import up_to_date, copytree_nostat, git_hash_object
 from .jinja import JatsVars, WebPageGenerator
 from .elife import parseJATS, meta_article_id_text
+from .webstract import Webstract, Source
 
 import weasyprint
-from lxml import etree
 
-import json, os, sys, shutil, subprocess
+import copy, json, os, sys, shutil, subprocess
 from pathlib import Path
 from datetime import datetime, date, time, timezone
 from time import mktime
@@ -53,7 +53,7 @@ class PandocJatsReader:
             tmpl = resource_filename(__name__, "templates/{}.pandoc".format(name))
             args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
             #args += ["--template", tmpl, "--filter=pandoc-katex-filter"]
-            args += ["--shift-heading-level-by=1"]
+            args += ["--shift-heading-level-by=1", "--wrap=preserve"]
             run_pandoc(args + self._pandoc_opts)
         with open(p) as f:
             return f.read()
@@ -61,6 +61,7 @@ class PandocJatsReader:
 
 class JatsBaseprint:
     def __init__(self, src, tmp, pandoc_opts):
+        self._src = Path(src)
         self.jats_src = Path(src) / "article.xml"
         self._pandoc = PandocJatsReader(self.jats_src, tmp, pandoc_opts)
         self.has_abstract = self._pandoc.has_abstract
@@ -109,8 +110,24 @@ class JatsBaseprint:
 
     @property
     def contributors(self):
-        ret = []
         return self._contributors
+
+    def to_webstract(self):
+        ret = Webstract(
+            dict(
+                source=Source(path=self._src),
+                date=self.date,
+                title=self.title_html,
+                body=self.body_html,
+            )
+        )
+        if self.has_abstract:
+            ret['abstract'] = self.abstract_html
+        contributors = copy.deepcopy(self._contributors)
+        for c in contributors:
+            c["orcid"] = c["orcid"].rsplit("/", 1)[-1]
+        ret['contributors'] = contributors
+        return ret
 
 
 class JatsEprint:
