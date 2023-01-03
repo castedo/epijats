@@ -1,12 +1,12 @@
-from .util import up_to_date, copytree_nostat, swhid_from_files, git_hash_object
+from .util import up_to_date, copytree_nostat, swhid_from_files
 
 from .jinja import WebPageGenerator
-from .elife import parseJATS, meta_article_id_text
+from .elife import parseJATS
 from .webstract import Webstract, Source
 
 import weasyprint
 
-import copy, json, os, sys, shutil, subprocess
+import os, sys, shutil, subprocess
 from pathlib import Path
 from datetime import datetime, date, time, timezone
 from time import mktime
@@ -34,85 +34,66 @@ class EprinterConfig:
         self._gen = WebPageGenerator()
 
 
-class PandocJatsReader:
-    def __init__(self, jats_src, tmp, pandoc_opts):
-        self.src = Path(jats_src)
-        self._tmp = Path(tmp)
-        self._pandoc_opts = list(pandoc_opts)
-        self._json = self._tmp / "article.json"
-        if not up_to_date(self._json, self.src):
-            shutil.rmtree(self._tmp, ignore_errors=True)
-            os.makedirs(self._tmp)
-            run_pandoc([self.src, "--from=jats", "-s", "--output", self._json])
-        with open(self._json) as file:
-            self.has_abstract = "abstract" in json.load(file)["meta"]
-        self.webstract = Webstract.load_xml(self._render_template("webstract"))
-
-    def _render_template(self, name):
-        p = self._tmp / (name + ".html")
-        if not p.exists():
-            args = [self._json, '--to', 'html', '--output', p]
-            tmpl = resource_filename(__name__, "templates/{}.pandoc".format(name))
-            args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
-            #args += ["--template", tmpl, "--filter=pandoc-katex-filter"]
-            args += ["--shift-heading-level-by=1", "--wrap=preserve"]
-            run_pandoc(args + self._pandoc_opts)
-        return p
+def pandoc_jats_to_webstract(jats_src, dest, pandoc_opts):
+    args = [jats_src, "--from=jats", "-s", '--to', 'html', "--output", dest]
+    tmpl = resource_filename(__name__, "templates/webstract.pandoc")
+    args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
+    args += ["--shift-heading-level-by=1", "--wrap=preserve"]
+    run_pandoc(args + pandoc_opts)
 
 
 class JatsBaseprint:
     def __init__(self, src, tmp, pandoc_opts):
-        self._src = Path(src)
-        self.jats_src = Path(src) / "article.xml"
-        self._pandoc = PandocJatsReader(self.jats_src, tmp, pandoc_opts)
-        self.has_abstract = self._pandoc.has_abstract
+        src = Path(src)
+        self.jats_src = src / "article.xml"
+
+        dest = Path(tmp) / "webstract.jsoml"
+        if not up_to_date(dest, self.jats_src):
+            shutil.rmtree(tmp, ignore_errors=True)
+            os.makedirs(tmp)
+            pandoc_jats_to_webstract(self.jats_src, dest, pandoc_opts)
+        self.webstract = Webstract.load_xml(dest)
+
+        self.webstract['source'] = Source(path=src)
         soup = parseJATS.parse_document(self.jats_src)
-        self.dsi = meta_article_id_text(soup, "dsi")
-        self._dates = parseJATS.pub_dates(soup)
-        self._contributors = parseJATS.contributors(soup)
-        #TODO: generaize to work with folder based baseprint, not just single file
-        self.git_hash = git_hash_object(self.jats_src)
+
+        dates = parseJATS.pub_dates(soup)
+        if dates:
+            self.date = datetime.fromtimestamp(mktime(dates[0]["date"])).date()
+        else:
+            self.date = None
+        self.webstract['date'] = self.date
+
+        self.contributors = parseJATS.contributors(soup)
+        for c in self.contributors:
+            c['orcid'] = c['orcid'].rsplit("/", 1)[-1]
+        self.webstract['contributors'] = self.contributors
 
     @property
     def title_html(self):
-        return self._pandoc.webstract.facade.title
+        return self.webstract.facade.title
+
+    @property
+    def has_abstract(self):
+        return "abstract" in self.webstract
 
     @property
     def abstract_html(self):
-        if self.has_abstract:
-            return self._pandoc.webstract.facade.abstract
-        return None
+        return self.webstract.facade.abstract
 
     @property
     def body_html(self):
-        return self._pandoc.webstract.facade.body
-
-    @property
-    def date(self):
-        ret = None
-        if self._dates:
-            ret = datetime.fromtimestamp(mktime(self._dates[0]["date"])).date()
-        return ret
+        return self.webstract.facade.body
 
     @property
     def authors(self):
         ret = []
-        for c in self._contributors:
+        for c in self.contributors:
             ret.append(c["given-names"] + " " + c["surname"])
         return ret
 
-    @property
-    def contributors(self):
-        return self._contributors
-
     def to_webstract(self):
-        ret = self._pandoc.webstract
-        ret['source'] = Source(path=self._src)
-        ret['date'] = self.date
-        ret['contributors'] = copy.deepcopy(self._contributors)
-        for c in ret['contributors']:
-            c['orcid'] = c['orcid'].rsplit("/", 1)[-1]
-        return ret
+        return self.webstract
 
 
 class Eprint:
@@ -148,7 +129,10 @@ class Eprint:
     def make_pdf(self, target):
         target = Path(target)
         os.environ.update(self._source_date_epoch())
-        weasyprint.HTML(self._get_html()).write_pdf(target)
+        html_path = self._get_html()
+        if os.environ.get("EPIJATS_SKIP_PDF"):
+            return
+        weasyprint.HTML(html_path).write_pdf(target)
         return target
 
     def _source_date_epoch(self):

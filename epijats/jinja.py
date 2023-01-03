@@ -5,37 +5,41 @@ import jinja2
 
 class DocEditionVars:
     def __init__(self, doc, edition=None):
-        self.doc = doc
+        self.webface = doc.webstract.facade
         self.edition = edition
         self.is_jats = DocLoader.is_jats(doc)
 
     @property
     def title(self):
-        return self.doc.title_html
+        return self.webface.title
 
     @property
     def date(self):
-        return self.doc.date
+        return self.webface.date
 
     @property
     def authors(self):
-        return self.doc.authors
+        return self.webface.authors
 
     @property
     def contributors(self):
-        return self.doc.contributors
+        return self.webface.contributors
 
     @property
     def abstract(self):
-        return self.doc.abstract_html
+        return self.webface.abstract
 
     @property
     def body(self):
-        return self.doc.body_html
+        return self.webface.body
+
+    @property
+    def hash_scheme(self):
+        return self.webface.hash_scheme
 
     @property
     def hexhash(self):
-        return self.doc.git_hash
+        return self.webface.hexhash
 
     @property
     def obsolete(self):
@@ -62,13 +66,22 @@ class DocEditionVars:
         latest = self.edition.suc.latest(self.edition.unlisted)
         return latest.edid if latest else None
 
+
+class SuccessionFacade:
+    def __init__(self, succession):
+        self.succession = succession
+
+    @property
+    def dsi(self):
+        return self.succession.dsi
+
     @property
     def ref_commit(self):
-        return self.edition.suc.ref_commit
+        return self.succession.ref_commit.hexsha
 
     @property
     def sign_key(self):
-        fingerprint = self.edition.suc.sign_key_fingerprint
+        fingerprint = self.succession.sign_key_fingerprint
         return fingerprint.hex().upper()
 
 

@@ -20,10 +20,6 @@ def copytree_nostat(src, dst):
     return dst
 
 
-def git_hash_object(path):
-    return git.Git().hash_object(path)
-
-
 def swhid_from_files(path):
     if not path.is_dir():
         return "swh:1:cnt:" + git.Git().hash_object(path)

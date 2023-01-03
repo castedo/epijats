@@ -16,7 +16,6 @@ class DocLoader:
             from .pdf import PdfDocument
 
             ret = PdfDocument(work_path)
-            assert ret.git_hash == edition.hexsha
 
         return ret
 

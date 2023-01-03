@@ -1,10 +1,12 @@
 from .util import swhid_from_files
-import jsoml
 
 import copy, json, os
 from pathlib import Path
 from datetime import date
 from warnings import warn
+
+
+SWHID_SCHEME_LENGTH = len("shw:1:abc:")
 
 
 class Source:
@@ -18,7 +20,17 @@ class Source:
     def swhid(self):
         if self._swhid is None:
             self._swhid = swhid_from_files(self.path)
+            if not self._swhid.startswith("swh:1:"):
+                raise ValueError("Source not identified by SWHID v1")
         return self._swhid
+
+    @property
+    def hash_scheme(self):
+        return self.swhid[:SWHID_SCHEME_LENGTH]
+
+    @property
+    def hexhash(self):
+        return self.swhid[SWHID_SCHEME_LENGTH:]
 
     def __str__(self):
         return self.swhid
@@ -50,6 +62,7 @@ class Webstract(dict):
 
     def __init__(self, init=None):
         super().__init__()
+        self['contributors'] = list()
         if init is None:
             init = dict()
         for key, value in init.items():
@@ -74,8 +87,11 @@ class Webstract(dict):
         if value is None:
             warn(f"Skip set of None for webstract key '{key}'", RuntimeWarning)
             return
-        elif key == "source" and not isinstance(value, Source):
-            value = Source(value)
+        elif key == "source":
+            if isinstance(value, Path):
+                value = Source(path=value)
+            elif not isinstance(value, Source):
+                value = Source(value)
         elif key == "date" and not isinstance(value, date):
             value = date.fromisoformat(value)
         super().__setitem__(key, value)
@@ -103,13 +119,16 @@ class Webstract(dict):
         """Write XML to path."""
 
         with open(path, "w") as file:
+            import jsoml
+
             jsoml.dump(self, file)
             file.write("\n")
 
     @staticmethod
     def load_xml(path):
-        return Webstract(jsoml.load(Path(path)))
+        import jsoml
 
+        return Webstract(jsoml.load(Path(path)))
 
 def add_webstract_key_properties(cls):
     def make_getter(key):
@@ -133,16 +152,9 @@ class WebstractFacade:
         return ret
 
     @property
-    def swhid_halves(self):
-        if not self.source.swhid.startswith("swh:1:"):
-            raise ValueError("Source not identified by SWHID v1")
-        i = 1 + self.source.swhid.rfind(":")
-        return self.source.swhid[i:]
-
-    @property
-    def swhid_scheme(self):
-        return self.swhid_split[0]
+    def hash_scheme(self):
+        return self.source.hash_scheme
 
     @property
     def hexhash(self):
-        return self.swhid_halves[1]
+        return self.source.hexhash

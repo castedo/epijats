@@ -1,9 +1,11 @@
+from .webstract import Webstract
+
 import pikepdf
-from .util import git_hash_object
 
 # standard library
 import html
 from datetime import datetime
+from pathlib import Path
 
 
 class PdfDocument:
@@ -15,5 +17,9 @@ class PdfDocument:
         self.date = datetime.strptime(str(md)[2:10], "%Y%m%d").date()
         self.abstract_html = None
         self.body_html = None
-        self.git_hash = git_hash_object(src_path)
         #TODO: extract author and set authors/contributors
+        self.webstract = Webstract(dict(source=Path(src_path)))
+        if self.date:
+            self.webstract['date'] = self.date
+        if self.title_html:
+            self.webstract['title'] = self.title_html
