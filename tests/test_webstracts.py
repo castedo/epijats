@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from epijats import util
-from epijats.jats import JatsBaseprint
+from epijats.jats import webstract_from_jats
 from epijats.webstract import Webstract
 
 
@@ -14,9 +14,8 @@ test_cases = os.listdir(CASES_DIR)
 
 
 @pytest.mark.parametrize("case", test_cases)
-def test_webstracts(case, tmp_path):
-    bp = JatsBaseprint(CASES_DIR / case / "input", tmp_path, [])
-    got = bp.to_webstract()
+def test_webstracts(case):
+    got = webstract_from_jats(CASES_DIR / case / "input", pandoc_opts=[])
     expect = Webstract.load_json(CASES_DIR / case / "output.json")
     assert got == expect
 

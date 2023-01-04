@@ -1,2 +1,3 @@
 from .doc import DocLoader
-from .jats import EprinterConfig, Eprint, JatsBaseprint
+from .eprint import EprinterConfig, Eprint
+from .webstract import Webstract

@@ -128,7 +128,7 @@ class Webstract(dict):
     def load_xml(path):
         import jsoml
 
-        return Webstract(jsoml.load(Path(path)))
+        return Webstract(jsoml.load(path))
 
 def add_webstract_key_properties(cls):
     def make_getter(key):

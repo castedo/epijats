@@ -1,13 +1,10 @@
-from .doc import DocLoader
-
 import jinja2
 
 
 class DocEditionVars:
-    def __init__(self, doc, edition=None):
-        self.webface = doc.webstract.facade
+    def __init__(self, webstract, edition):
+        self.webface = webstract.facade
         self.edition = edition
-        self.is_jats = DocLoader.is_jats(doc)
 
     @property
     def title(self):

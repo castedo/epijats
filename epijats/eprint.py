@@ -1,0 +1,84 @@
+from .jinja import WebPageGenerator
+
+import weasyprint
+
+#std library
+import os, tempfile
+from datetime import datetime, date, time, timezone
+from pathlib import Path
+from pkg_resources import resource_filename
+
+
+# WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
+# file has relative URLs in anchor hrefs.
+# This hardcoded meaningless HACK_WEASY_PATH is to ensure these local file paths are
+# meaningless and constant (across similar operating systems).
+HACK_WEASY_PATH = Path(tempfile.gettempdir()) / "mZ3iBmnGae1f4Wcgt2QstZn9VYx"
+
+
+class EprinterConfig:
+    def __init__(self, theme_dir=None, dsi_base_url=None, math_css_url=None):
+        self.urls = dict(
+            dsi_base_url=(dsi_base_url.rstrip("/") if dsi_base_url else None),
+            math_css_url=(math_css_url or "static/katex/katex.css"),
+        )
+        self.pandoc_opts = []
+        if theme_dir:
+            self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
+        self.article_style = 'lyon'
+        self.embed_web_fonts = True
+        self._gen = WebPageGenerator()
+
+
+class Eprint:
+    def __init__(self, webstract, tmp, config=None):
+        if config is None:
+            config = EprinterConfig()
+        self._tmp = Path(tmp)
+        self._html_ctx = config.urls
+        self._html_ctx["article_style"] = config.article_style
+        self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
+        self._gen = config._gen
+        self.webstract = webstract
+
+    def _get_static_dir(self):
+        return Path(resource_filename(__name__, "static/"))
+
+    def _get_html(self):
+        html_dir = self._tmp
+        os.makedirs(html_dir, exist_ok=True)
+        ret = html_dir / "article.html"
+        # for now just assume math is always needed
+        ctx = dict(doc=self.webstract.facade, **self._html_ctx, has_math=True)
+        self._gen.render_file('article.html.jinja', ret, ctx)
+        if not ret.with_name("static").exists():
+            os.symlink(self._get_static_dir(), ret.with_name("static"))
+        if self.webstract.source.subpath_exists("pass"):
+            self.webstract.source.symlink_subpath(html_dir / "pass", "pass")
+        return ret
+
+    def make_html_dir(self, target):
+        copytree_nostat(self._get_html().parent, target)
+
+    def make_pdf(self, target):
+        target = Path(target)
+        os.environ.update(self._source_date_epoch())
+        html_path = self._get_html()
+        if os.environ.get("EPIJATS_SKIP_PDF"):
+            return
+        try:
+            os.remove(HACK_WEASY_PATH)
+        except FileNotFoundError:
+            pass
+        os.symlink(html_path.parent.resolve(), HACK_WEASY_PATH)
+        weasyprint.HTML(HACK_WEASY_PATH / html_path.name).write_pdf(target)
+        return target
+
+    def _source_date_epoch(self):
+        ret = dict()
+        assert isinstance(self.webstract.date, date)
+        doc_date = datetime.combine(self.webstract.date, time(0), timezone.utc)
+        source_mtime = doc_date.timestamp()
+        if source_mtime:
+            ret["SOURCE_DATE_EPOCH"] = "{:.0f}".format(source_mtime)
+        return ret

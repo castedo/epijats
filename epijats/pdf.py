@@ -8,18 +8,24 @@ from datetime import datetime
 from pathlib import Path
 
 
-class PdfDocument:
-    def __init__(self, src_path):
-        pdf = pikepdf.open(src_path)
+def is_pdf(src_path):
+    src_path = Path(src_path)
+    if src_path.is_dir():
+        return False
+    try:
+        pikepdf.open(src_path).close()
+    except pikepdf.PdfError:
+        return False
+    return True
+
+
+def webstract_from_pdf(src_path):
+    ret = Webstract(dict(source=Path(src_path)))
+    with pikepdf.open(src_path) as pdf:
         title = pdf.open_metadata().get("dc:title")
-        self.title_html = html.escape(title) if title else None
+        if title:
+            ret['title'] = html.escape(title)
         md = pdf.docinfo[pikepdf.Name("/ModDate")]
-        self.date = datetime.strptime(str(md)[2:10], "%Y%m%d").date()
-        self.abstract_html = None
-        self.body_html = None
+        ret['date'] = datetime.strptime(str(md)[2:10], "%Y%m%d").date()
         #TODO: extract author and set authors/contributors
-        self.webstract = Webstract(dict(source=Path(src_path)))
-        if self.date:
-            self.webstract['date'] = self.date
-        if self.title_html:
-            self.webstract['title'] = self.title_html
+    return ret
