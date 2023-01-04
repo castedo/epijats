@@ -13,6 +13,10 @@
         }
     ],
     "date": "2022-04-14",
+    "edition": {
+        "base_dsi": "fUKGv5s9_mYQgkmX5W0O_7eTaTU",
+        "edid": "1.1"
+    },
     "source": "swh:1:dir:7a05d41c586ea4cbfa5a5e0021bc2a00ac8998ba",
     "title": "On testing"
 }

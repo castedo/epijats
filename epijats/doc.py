@@ -23,6 +23,14 @@ class DocLoader:
                 ret = jats.webstract_from_jats(work_path, self.pandoc_opts)
             else:
                 ret = pdf.webstract_from_pdf(work_path)
+
+            edidata = dict(edid=str(edition.edid), base_dsi=str(edition.suc.dsi))
+            latest_edid = edition.suc.latest(edition.unlisted).edid
+            if latest_edid > edition.edid:
+                edidata["newer_edid"] = str(latest_edid)
+            ret['edition'] = edidata
+
             os.makedirs(cached.parent, exist_ok=True)
             ret.dump_xml(cached)
+
         return ret

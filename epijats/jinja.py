@@ -1,69 +1,6 @@
 import jinja2
 
 
-class DocEditionVars:
-    def __init__(self, webstract, edition):
-        self.webface = webstract.facade
-        self.edition = edition
-
-    @property
-    def title(self):
-        return self.webface.title
-
-    @property
-    def date(self):
-        return self.webface.date
-
-    @property
-    def authors(self):
-        return self.webface.authors
-
-    @property
-    def contributors(self):
-        return self.webface.contributors
-
-    @property
-    def abstract(self):
-        return self.webface.abstract
-
-    @property
-    def body(self):
-        return self.webface.body
-
-    @property
-    def hash_scheme(self):
-        return self.webface.hash_scheme
-
-    @property
-    def hexhash(self):
-        return self.webface.hexhash
-
-    @property
-    def obsolete(self):
-        return self.edition.obsolete
-
-    @property
-    def base_dsi(self):
-        return str(self.edition.suc.dsi)
-
-    @property
-    def dsi(self):
-        return str(self.edition.dsi)
-
-    @property
-    def edid(self):
-        return str(self.edition.edid)
-
-    @property
-    def seq_edid(self):
-        return str(self.edition.up.edid) if self.edition.up else None
-
-    @property
-    def latest_edid(self):
-        latest = self.edition.suc.latest(self.edition.unlisted)
-        return latest.edid if latest else None
-
-
 class SuccessionFacade:
     def __init__(self, succession):
         self.succession = succession

@@ -1,5 +1,3 @@
-from .util import up_to_date, copytree_nostat, swhid_from_files
-
 from elifetools import parseJATS
 from .webstract import Webstract, Source
 

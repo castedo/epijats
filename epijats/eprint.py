@@ -1,4 +1,6 @@
 from .jinja import WebPageGenerator
+from .util import copytree_nostat
+
 
 import weasyprint
 
@@ -49,8 +51,8 @@ class Eprint:
         os.makedirs(html_dir, exist_ok=True)
         ret = html_dir / "article.html"
         # for now just assume math is always needed
-        ctx = dict(doc=self.webstract.facade, **self._html_ctx, has_math=True)
-        self._gen.render_file('article.html.jinja', ret, ctx)
+        ctx = dict(doc=self.webstract.facade, has_math=True, **self._html_ctx)
+        self._gen.render_file("article.html.jinja", ret, ctx)
         if not ret.with_name("static").exists():
             os.symlink(self._get_static_dir(), ret.with_name("static"))
         if self.webstract.source.subpath_exists("pass"):

@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 TESTS_DIR = Path(__file__).parent
-WEBSTRACT_DIR = TESTS_DIR / "cases-webstract"
+WEBSTRACT_DIR = TESTS_DIR / "cases/webstract"
 
 
 @pytest.mark.parametrize("case", os.listdir(WEBSTRACT_DIR))

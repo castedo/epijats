@@ -1,4 +1,5 @@
-from .jats import Eprint, JatsBaseprint, EprinterConfig
+import epijats
+from epijats.jats import webstract_from_jats
 
 from weasyprint import LOGGER
 
@@ -21,13 +22,12 @@ args = parser.parse_args()
 LOGGER.setLevel(logging.INFO)
 LOGGER.addHandler(logging.StreamHandler())
 
-config = EprinterConfig(dsi_base_url="https://perm.pub")
+config = epijats.EprinterConfig(dsi_base_url="https://perm.pub")
 config.embed_web_fonts = not args.no_web_fonts
 
 with tempfile.TemporaryDirectory() as tempdir:
-    tempdir = Path(tempdir)
-    bp = JatsBaseprint(args.source, tempdir / "base", config.pandoc_opts)
-    eprint = Eprint(bp.to_webstract(), tempdir / "html", config)
+    webstract = webstract_from_jats(args.source, config.pandoc_opts)
+    eprint = epijats.Eprint(webstract, Path(tempdir) / "html", config)
     os.makedirs(args.target , exist_ok=True)
     eprint.make_html_dir(args.target)
     eprint.make_pdf(args.target / "article.pdf")

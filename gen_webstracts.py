@@ -10,8 +10,8 @@ from epijats import jats
 
 
 HERE_DIR = Path(__file__).parent
-CASES_DIR = HERE_DIR / "tests/cases-webstract"
-SUCC_DIR = HERE_DIR / "tests/cases-succession"
+CASES_DIR = HERE_DIR / "tests/cases/webstract"
+SUCC_DIR = HERE_DIR / "tests/cases/succession"
 
 
 config = EprinterConfig()

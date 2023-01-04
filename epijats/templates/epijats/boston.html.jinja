@@ -4,7 +4,7 @@
 {% macro article_layout(doc, dsi_base_url) %}
 <article lang="en">
   <header>
-    {% if doc.dsi %}
+    {% if doc.dsi and dsi_base_url == "" %}
     <div class="article-dsi">
       <a href="{{dsi_base_url}}/{{doc.base_dsi}}">
         <b>dsi:</b>&thinsp;<code>{{doc.base_dsi}}</code>

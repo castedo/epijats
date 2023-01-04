@@ -1,5 +1,7 @@
 from .util import swhid_from_files
 
+from hidos.dsi import EditionId
+
 import copy, json, os
 from pathlib import Path
 from datetime import date
@@ -58,11 +60,11 @@ class Source:
 
 
 class Webstract(dict):
-    KEYS = ["abstract", "body", "contributors", "date", "source", "title"]
+    KEYS = ["abstract", "body", "contributors", "date", "edition", "source", "title"]
 
     def __init__(self, init=None):
         super().__init__()
-        self['contributors'] = list()
+        self["contributors"] = list()
         if init is None:
             init = dict()
         for key, value in init.items():
@@ -130,6 +132,7 @@ class Webstract(dict):
 
         return Webstract(jsoml.load(path))
 
+
 def add_webstract_key_properties(cls):
     def make_getter(key):
         return lambda self: self._webstract.get(key)
@@ -145,6 +148,10 @@ class WebstractFacade:
         self._webstract = webstract
 
     @property
+    def _edidata(self):
+        return self._webstract.get('edition', dict())
+
+    @property
     def authors(self):
         ret = []
         for c in self.contributors:
@@ -158,3 +165,34 @@ class WebstractFacade:
     @property
     def hexhash(self):
         return self.source.hexhash
+
+    @property
+    def obsolete(self):
+        return "newer_edid" in self._edidata
+
+    @property
+    def base_dsi(self):
+        return self._edidata.get("base_dsi")
+
+    @property
+    def dsi(self):
+        return (self.base_dsi + "/" + self.edid) if self._edidata else None
+
+    @property
+    def edid(self):
+        return self._edidata.get("edid")
+
+    @property
+    def seq_edid(self):
+        edid = self._edidata.get("edid")
+        if not edid:
+            return None
+        edid = EditionId(edid)
+        return str(EditionId(edid[:-1]))
+
+    @property
+    def latest_edid(self):
+        if self.obsolete:
+            return self._edidata.get("newer_edid")
+        else:
+            return self.edid
