@@ -9,3 +9,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Fira+Mono&family=Fira+Sans&family=Fira+Sans+Condensed&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Fira+Mono&family=Fira+Sans+Condensed&family=Fira+Sans:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
 {% endmacro %}
+
+
+{% macro contributors_list(contributors) %}
+<dl class="contributors">
+  {% for contributor in contributors %}
+    <dt>
+      {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
+      {% if contributor.orcid %}
+        <a class="orcid" href="{{ orcid_url(contributor.orcid) }}"><i class="orcid-icon"></i></a>
+      {%- endif -%}
+    </dt>
+    {% if contributor.email %}
+      <dd><a href="mailto:{{ contributor.email[0] | escape }}">{{ contributor.email | join(', ') | escape }}</a></dd>
+    {% endif %}
+  {% endfor %}
+</dl>
+{% endmacro %}

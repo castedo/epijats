@@ -1,41 +1,31 @@
 {% extends 'epijats/_common.html.jinja' %}
 
 
-{% macro article_layout(jats, dsi_base_url) %}
-  {% set jats_dsi = jats.dsi or "0123456789abcdefghijklmnopq/0" %}
+{% macro article_layout(doc, dsi_base_url) %}
   <article lang="en">
     <header>
-      <div id="article-dsi">
-        <a href="{{ dsi_base_url }}/{{ jats_dsi }}">
-          {{ dsi_base_url }}/<strong>dsi:</strong> <code>{{ jats_dsi }}</code>
+      {% if doc.dsi %}
+      <div class="article-dsi">
+        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+          {{ dsi_base_url }}/<strong>dsi:</strong><code>{{ doc.dsi }}</code>
         </a>
-        <img class="cc-icon" src="static/cc.svg">
       </div>
-      <div id="edition-number">Edition {{ jats.edition or 0 }}.</div>
-      <div id="online-msg">Additional formats and editions available online.</div>
+      <div class="edition-number">Edition {{ doc.edid }}</div>
+      <div class="online-msg">Additional formats and editions available online.</div>
+      {% endif %}
     </header>
 
-    <h1>{{ jats.title or "No Title" }}</h1>
+    <div class="article-main">
 
-    <dl id="authors">
-      {% for contributor in jats.contributors %}
-        <dt>
-          {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
-          {% if contributor.orcid %}
-            <a class="orcid" href="{{ orcid_url(contributor.orcid) }}"><i class="orcid-icon"></i></a>
-          {%- endif -%}
-        </dt>
-        {% if contributor.email %}
-          <dd><a href="mailto:{{ contributor.email[0] | escape }}">{{ contributor.email | join(', ') | escape }}</a></dd>
-        {% endif %}
-      {% endfor %}
-    </dl>
+      <h1 class="title">{{ doc.title or "No Title" }}</h1>
+
+      {{contributors_list(doc.contributors)}}
 
     <aside>
       <dl>
-        {% if jats.date %}
-          <dt>Authored</dt>
-          <dd>{{ jats.date }}</dd>
+        {% if doc.date %}
+        <dt>Authored</dt>
+        <dd>{{ doc.date }}</dd>
         {% endif %}
 
         <dt>Archived</dt>
@@ -43,28 +33,29 @@
 
         <dt>Citation</dt>
         <dd>
-          {% for contributor in jats.contributors %}
+          {% for contributor in doc.contributors %}
             {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
           {% endfor %}
           (2022)
-          "{{ jats.title }}"
+          "{{ doc.title }}"
           perm.pub
-          {{ dsi_base_url }}/<wbr>dsi:<code>{{ jats_dsi }}</code>
+          {{ dsi_base_url }}/<wbr>dsi:<code>{{ doc.dsi }}</code>
         </dd>
       </dl>
     </aside>
 
-    <main>
-      {% if jats.abstract %}
-        <section id="abstract">
-          <h2>Abstract</h2>
-          {{ jats.abstract }}
-        </section>
-      {% endif %}
+      <section class="abstract">
+        {% if doc.abstract %}
+        <h2>Abstract</h2>
+        {{ doc.abstract }}
+        {% endif %}
+      </section>
 
-      {% if jats.body %}
-        {{ jats.body }}
-      {% endif %}
+      <div class="article-body">
+        {% if doc.body %}
+        {{ doc.body }}
+        {% endif %}
+      </div>
 
       <footer>
         <p>
@@ -79,7 +70,8 @@
           license.
         </p>
       </footer>
-    </main>
+
+    </div><!-- article-main -->
   </article>
 {% endmacro %}
 
@@ -104,7 +96,7 @@
       font-weight: 300;
       line-height: 1.2;
       margin: 1in 0.5in;
-      size: letter;
+      size: A4 portrait;
 
       @bottom-left {
         border-top: 0.005in solid;
@@ -128,7 +120,7 @@
       margin: 1.5in 0.5in 1in;
 
       @top-left {
-        background: url(static/cc.svg) left bottom / 1in 1in no-repeat;
+        background: url(static/cc.svg) left center / 0.8in 0.8in no-repeat;
         content: "";
         width: 40%;
       }
@@ -147,7 +139,7 @@
     article {
       margin-left: 25%;
     }
-    main {
+    .article-main {
       margin: 4em 0 1em;
     }
 
@@ -232,17 +224,17 @@
 
     /* Titles */
 
-    h1, h2, h3, h4 {
+    article h1, article h2, article h3, article h4 {
       font-weight: 300;
       line-height: 1;
       margin: 1.4em 0 0.6em 0;
     }
-    h1 {
+    article h1 {
       font-size: 2.6em;
       letter-spacing: -0.03em;
       margin-top: 0.7em;
     }
-    h1::after {
+    article h1.title::after {
       border-bottom: 0.05in solid;
       border-color: var(--main-color);
       content: "";
@@ -251,14 +243,14 @@
       margin: 0.5em 0;
       width: 2em;
     }
-    h2 {
+    article h2 {
       font-size: 1.8em;
       letter-spacing: -0.02em;
     }
-    h3 {
+    article h3 {
       font-size: 1.45em;
     }
-    h4 {
+    article h4 {
       font-size: 1.25em;
     }
 
@@ -295,17 +287,11 @@
       white-space: pre-line;
     }
 
-    header {
+    article header {
       color: var(--light-text-color);
       font-weight: 300;
       line-height: 1.2;
       position: running(header);
-    }
-    header img {
-      display: inline-block;
-      height: 1em;
-      margin: 0;
-      vertical-align: -10%;
     }
 
     footer {
@@ -326,27 +312,27 @@
 
     /* Specific Elements */
 
-    #authors dt, #authors dd {
+    article .contributors dt, article .contributors dd {
       display: inline;
       margin: 0;
     }
-    #authors dt:has(+ dt)::after {
+    article .contributors dt:has(+ dt)::after {
       content: ",";
     }
-    #authors dd::before {
+    article .contributors dd::before {
       content: "(";
     }
-    #authors dd::after {
+    article .contributors dd::after {
       content: "),";
     }
-    #authors dd:last-child::after {
+    article .contributors dd:last-child::after {
       content: ")";
     }
-    #abstract {
+    article .abstract {
       border-bottom: 0.005in solid;
       margin-bottom: 3em;
     }
-    #edition-number, #online-msg {
+    .edition-number, .online-msg {
       display: inline;
     }
     div.csl-entry {

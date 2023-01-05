@@ -2,18 +2,46 @@
 
 
 {% macro article_layout(doc, dsi_base_url) %}
-<article lang="en">
-  <header>
-    {% if doc.dsi and dsi_base_url == "" %}
-    <div class="article-dsi">
-      <a href="{{dsi_base_url}}/{{doc.base_dsi}}">
-        <b>dsi:</b>&thinsp;<code>{{doc.base_dsi}}</code>
-      </a>
-    </div>
-    {% endif %}
-  </header>
-{{article_main_layout(doc)-}}
-</article>
+  <article lang="en">
+    <header>
+      {% if doc.dsi %}
+      <div class="article-dsi">
+        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+          {{ dsi_base_url }}/<strong>dsi:</strong><code>{{ doc.dsi }}</code>
+        </a>
+      </div>
+      <div class="edition-number">Edition {{ doc.edid }}</div>
+      <div class="online-msg">Additional formats and editions available online.</div>
+      {% endif %}
+    </header>
+
+    <div class="article-main">
+
+      <h1 class="title">{{ doc.title or "No Title" }}</h1>
+
+      <div class="article-date">
+        {% if doc.date %}
+        {{ doc.date }}
+        {% endif %}
+      </div>
+
+      {{contributors_list(doc.contributors)}}
+
+      <section class="abstract">
+        {% if doc.abstract %}
+        <h2>Abstract</h2>
+        {{ doc.abstract }}
+        {% endif %}
+      </section>
+
+      <div class="article-body">
+        {% if doc.body %}
+        {{ doc.body }}
+        {% endif %}
+      </div>
+
+    </div><!-- article-main -->
+  </article>
 {% endmacro %}
 
 {% macro article_css_style() %}
@@ -48,6 +76,7 @@ a:visited {
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
     }
 
+
     /* Page */
 
     @page {
@@ -57,14 +86,30 @@ a:visited {
       font-weight: 300;
       line-height: 1.2;
       margin: 1in 0.5in;
-      size: letter;
+      size: A4 portrait;
 
-      @bottom-right{
+      @bottom-right {
         content: counter(page) " of " counter(pages);
         margin-top: 1em;
         padding-top: 1em;
         vertical-align: top;
         width: 40%;
+      }
+    }
+
+    @page:first {
+      margin: 1.5in 0.5in 1in;
+
+      @top-right {
+        background: url(static/cc.svg) right center / 0.8in 0.8in no-repeat;
+        content: "";
+        width: 30%;
+      }
+
+      @top-left {
+        content: element(header);
+        vertical-align: top;
+        width: 70%;
       }
     }
 
@@ -78,14 +123,19 @@ a:visited {
       color: var(--text-color);
       font-family: var(--eprint-font-sans);
       line-height: 1.4;
+      margin: 0;
+      hyphens: manual;
+      overflow-wrap: normal;
     }
     @media print {
       article {
         font-size: 10pt;
+        margin-left: 2%;
+        margin-right: 2%;
       }
     }
     @media screen {
-      article > header {
+      article header {
           display: none;
       }
     }
@@ -93,45 +143,85 @@ a:visited {
 
     /* Titles */
 
-    h1, h2, h3, h4 {
+    article h1, article h2, article h3, article h4 {
       font-weight: 300;
       line-height: 1;
       margin: 1.4em 0 0.6em 0;
     }
-    h1 {
+    article h1 {
       font-size: 2.6em;
       letter-spacing: -0.03em;
       margin-top: 0.7em;
     }
-    h2 {
+    article h1.title::after {
+      border-bottom: 0.05in solid;
+      border-color: var(--main-color);
+      content: "";
+      display: block;
+      height: 0;
+      margin: 0.5em 0;
+      width: 2em;
+    }
+    article h2 {
       font-size: 1.8em;
       letter-spacing: -0.02em;
     }
-    h3 {
+    article h3 {
       font-size: 1.45em;
     }
-    h4 {
+    article h4 {
       font-size: 1.25em;
     }
-  </style>
-<style>
-.article-main {
-  hyphens: manual;
-  overflow-wrap: normal;
-}
-.article-main p {
-  text-align: justify;
-}
-.article-title {
-  text-align: center;
-}
-.article-date {
-  margin-top: 24px;
-  text-align: center;
-}
-.author {
-  text-align: center;
-}
+
+
+    /* Specific Structure Blocks */
+
+    article header {
+      color: var(--light-text-color);
+      font-size: 13pt;
+      font-weight: 300;
+      line-height: 1.2;
+      position: running(header);
+      text-align: left;
+      margin-top: 0.4in;
+    }
+
+    /* Specific Elements */
+
+    .article-dsi code {
+      margin-left: 3px;
+    }
+
+    article dl.contributors {
+      margin-bottom: 40px;
+    }
+    article .contributors dt, article .contributors dd {
+      display: inline;
+      margin: 0;
+    }
+    article .contributors dt:has(+ dt)::after {
+      content: ",";
+    }
+    article .contributors dd::before {
+      content: "(";
+    }
+    article .contributors dd::after {
+      content: "),";
+    }
+    article .contributors dd:last-child::after {
+      content: ")";
+    }
+    article .abstract {
+      border-bottom: 0.005in solid;
+      padding-bottom: 8px;
+      margin-bottom: 64px;
+    }
+    .article-main p {
+      text-align: justify;
+    }
+    .article-date {
+      margin-bottom: 12px;
+    }
     div.csl-entry {
       break-inside: avoid;
     }
@@ -150,46 +240,4 @@ a:visited {
       width: 1em;
     }
   </style>
-{% endmacro %}
-
-{% macro article_main_layout(doc) %}
-<div class="article-main">
-
-<h1 class="article-title">
-{{doc.title or "No Title"}}
-</h1>
-
-{% for c in doc.contributors %}
-<div class="author">
-{{ (c['given-names'] ~ ' ' ~ c.surname ) | escape }}
-{% if c.orcid %}
-<a class="orcid" href="{{orcid_url(c.orcid)}}"><i class="orcid-icon"></i></a>
-{% endif %}
-{% if c.email %}
-<br>
-{{c.email | join(', ') | escape}}
-{% endif %}
-</div>
-{% endfor %}
-
-<div class="article-date">
-{% if doc.date %}
-  {{doc.date}}
-{% endif %}
-</div>
-
-{% if doc.abstract %}
-<h2>Abstract</h2>
-<div class="jats-abstract">
-{{doc.abstract}}
-</div>
-{% endif %}
-
-{% if doc.body %}
-<div class="jats-body">
-{{doc.body}}
-</div>
-{% endif %}
-
-</div><!-- article-main -->
 {% endmacro %}
