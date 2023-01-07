@@ -19,7 +19,7 @@
 
       <h1 class="title">{{ doc.title or "No Title" }}</h1>
 
-      {{contributors_list(doc.contributors)}}
+      {{ contributors_list(doc.contributors) }}
 
     <aside>
       <dl>
@@ -38,8 +38,9 @@
           {% endfor %}
           (2022)
           "{{ doc.title }}"
-          perm.pub
-          {{ dsi_base_url }}/<wbr>dsi:<code>{{ doc.dsi }}</code>
+          perm.pub<br/>
+          {{ dsi_base_url }}/<br/>
+          dsi:<code>{{ doc.dsi }}</code>
         </dd>
       </dl>
     </aside>
@@ -76,6 +77,8 @@
 {% endmacro %}
 
 {% macro article_css_style() %}
+  {{- common_css() }}
+  {{- pandoc_class_css() }}
   <style>
     :root {
       --eprint-font-sans: 'Fira Sans', sans-serif;
@@ -143,16 +146,9 @@
       margin: 4em 0 1em;
     }
 
-    a {
-      color: var(--main-color);
-      text-decoration: inherit;
-    }
     p {
       hyphens: auto;
       hyphenate-limit-chars: 3 3;
-    }
-    code {
-      font-family: var(--eprint-font-mono);
     }
 
     ul li::marker {
@@ -160,65 +156,6 @@
     }
     li p {
       margin: 0;
-    }
-
-    img {
-      display: block;
-      max-height: 6in;
-      max-width: 90%;
-      margin: 1em auto;
-    }
-    p img {
-      display: inline;
-      margin: 0;
-    }
-    figure {
-      break-inside: avoid;
-      margin: 2em 0 2em -20%;
-      width: 120%;
-    }
-    figcaption {
-      font-size: 0.8em;
-      font-style: italic;
-      margin: auto;
-      width: 80%;
-    }
-
-    table {
-      border-collapse: collapse;
-      font-size: 0.8em;
-    }
-    tr {
-      break-inside: avoid;
-    }
-    td, th {
-      border: 0.005in solid;
-      border-color: var(--light-text-color);
-      padding: 0.5em;
-      vertical-align: top;
-    }
-    sub, sup {
-      line-height: 0;
-    }
-
-    blockquote {
-      border-color: var(--main-color);
-      border-left: 0.005in solid;
-      font-style: italic;
-      margin: 1.5em;
-      padding: 0.5em 1em;
-    }
-    blockquote > :first-child {
-      margin-top: 0;
-    }
-    blockquote > :last-child {
-      margin-bottom: 0;
-    }
-
-    hr {
-      border: 0;
-      border-color: var(--text-color);
-      border-top: 0.005in solid;
     }
 
 
@@ -258,13 +195,13 @@
     /* Specific Structure Blocks */
 
     aside {
+      position: absolute;
+      left: 0;
       bottom: 0;
       font-size: 0.8em;
       font-family: var(--eprint-font-condensed);
       font-stretch: condensed;
-      left: 0;
       overflow-wrap: anywhere;
-      position: absolute;
       width: 20%;
     }
     aside dl {
@@ -334,12 +271,6 @@
     }
     .edition-number, .online-msg {
       display: inline;
-    }
-    div.csl-entry {
-      break-inside: avoid;
-    }
-    article pre {
-      break-inside: avoid;
     }
     .katex {
       break-before: avoid;

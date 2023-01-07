@@ -25,7 +25,7 @@
         {% endif %}
       </div>
 
-      {{contributors_list(doc.contributors)}}
+      {{ contributors_list(doc.contributors) }}
 
       <section class="abstract">
         {% if doc.abstract %}
@@ -44,17 +44,18 @@
   </article>
 {% endmacro %}
 
+{# article_css_style is used to generated standalone HTML page and eprint PDF #}
 {% macro article_css_style() %}
+  <style>
+    html {
+      font-size: 16px;
+    }
+    body {
+      margin: 0;
+    }
+  </style>
+  {{- article_main_css_style() }}
 <style>
-{% include 'pandoc.css' %}
-</style>
-<style>
-html {
-  font-size: 16px;
-}
-body {
-  max-width: 720px;
-}
 a {
   text-decoration: none;
 }
@@ -65,10 +66,12 @@ a:visited {
   color: #208;
 }
 </style>
-{{article_main_css_style()-}}
 {% endmacro %}
 
+{# article_main_css_style is used by popgen.es website #}
 {% macro article_main_css_style() %}
+  {{- common_css() }}
+  {{- pandoc_class_css() }}
   <style>
     :root {
       --eprint-font-sans: 'Fira Sans', sans-serif;
@@ -85,7 +88,6 @@ a:visited {
       font-size: 10pt;
       font-weight: 300;
       line-height: 1.2;
-      margin: 1in 0.5in;
       size: A4 portrait;
 
       @bottom-right {
@@ -98,18 +100,20 @@ a:visited {
     }
 
     @page:first {
-      margin: 1.5in 0.5in 1in;
+      margin-top: 144px;
 
       @top-right {
         background: url(static/cc.svg) right center / 0.8in 0.8in no-repeat;
         content: "";
-        width: 30%;
+        width: 20%;
+        margin-top: 48px;
       }
 
       @top-left {
         content: element(header);
         vertical-align: top;
-        width: 70%;
+        width: 80%;
+        margin-top: 28px;
       }
     }
 
@@ -120,18 +124,18 @@ a:visited {
       --main-color: #04b;
       --text-color: black;
       --light-text-color: #555;
+      max-width: 60rem; /* 720px with 12px root font */
       color: var(--text-color);
       font-family: var(--eprint-font-sans);
       line-height: 1.4;
       margin: 0;
       hyphens: manual;
       overflow-wrap: normal;
+      padding-top: 64px;
     }
     @media print {
       article {
         font-size: 10pt;
-        margin-left: 2%;
-        margin-right: 2%;
       }
     }
     @media screen {
