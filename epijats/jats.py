@@ -44,6 +44,7 @@ def webstract_from_jats(src, pandoc_opts):
 
     ret['contributors'] = parseJATS.contributors(soup)
     for c in ret['contributors']:
-        c['orcid'] = c['orcid'].rsplit("/", 1)[-1]
+        if 'orcid' in c:
+            c['orcid'] = c['orcid'].rsplit("/", 1)[-1]
 
     return ret

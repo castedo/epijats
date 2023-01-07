@@ -1,0 +1,15 @@
+contributors:
+- type: author
+  orcid: 0000-0002-5014-4809
+  email:
+  - begona@example.com
+  surname: Sagües
+  given-names: Begoña José
+abstract: <p>Here we test.</p>
+body: "<h2 id=\"summary\">Summary</h2>\n<p>Begoña José Sagües is test.</p>"
+title: On testing
+source: swh:1:dir:7a05d41c586ea4cbfa5a5e0021bc2a00ac8998ba
+date: 2022-04-14
+edition:
+  edid: '1.1'
+  base_dsi: fUKGv5s9_mYQgkmX5W0O_7eTaTU

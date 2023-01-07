@@ -1,4 +1,4 @@
-from . import pdf, jats, webstract
+from . import webstract
 
 # standard library
 import os
@@ -20,8 +20,12 @@ class DocLoader:
             if not work_path.exists():
                 edition.work_copy(work_path)
             if work_path.is_dir():
+                from . import jats
+
                 ret = jats.webstract_from_jats(work_path, self.pandoc_opts)
             else:
+                from . import pdf
+
                 ret = pdf.webstract_from_pdf(work_path)
 
             edidata = dict(edid=str(edition.edid), base_dsi=str(edition.suc.dsi))

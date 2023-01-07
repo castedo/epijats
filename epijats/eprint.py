@@ -1,8 +1,5 @@
-from .jinja import WebPageGenerator
 from .util import copytree_nostat
 
-
-import weasyprint
 
 #std library
 import os, tempfile
@@ -29,10 +26,12 @@ class EprinterConfig:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
         self.article_style = 'lyon'
         self.embed_web_fonts = True
-        self._gen = WebPageGenerator()
 
 
 class Eprint:
+
+    _gen = None
+
     def __init__(self, webstract, tmp, config=None):
         if config is None:
             config = EprinterConfig()
@@ -40,8 +39,11 @@ class Eprint:
         self._html_ctx = config.urls
         self._html_ctx["article_style"] = config.article_style
         self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
-        self._gen = config._gen
         self.webstract = webstract
+        if Eprint._gen is None:
+            from . import jinja
+
+            Eprint._gen = jinja.WebPageGenerator()
 
     def _get_static_dir(self):
         return Path(resource_filename(__name__, "static/"))
@@ -62,6 +64,12 @@ class Eprint:
     def make_html_dir(self, target):
         copytree_nostat(self._get_html().parent, target)
 
+    @staticmethod
+    def html_to_pdf(source, target):
+        import weasyprint
+
+        weasyprint.HTML(source).write_pdf(target)
+
     def make_pdf(self, target):
         target = Path(target)
         os.environ.update(self._source_date_epoch())
@@ -73,7 +81,7 @@ class Eprint:
         except FileNotFoundError:
             pass
         os.symlink(html_path.parent.resolve(), HACK_WEASY_PATH)
-        weasyprint.HTML(HACK_WEASY_PATH / html_path.name).write_pdf(target)
+        Eprint.html_to_pdf(HACK_WEASY_PATH / html_path.name, target)
         return target
 
     def _source_date_epoch(self):

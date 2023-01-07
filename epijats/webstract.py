@@ -1,7 +1,5 @@
 from .util import swhid_from_files
 
-from hidos.dsi import EditionId
-
 import copy, json, os
 from pathlib import Path
 from datetime import date
@@ -117,12 +115,32 @@ class Webstract(dict):
         with open(path) as f:
             return Webstract(json.load(f))
 
+    def dump_yaml(self, path):
+        from ruamel.yaml import YAML
+
+        if isinstance(path, str):
+            path = Path(path)
+        if not isinstance(path, Path):
+            raise NotImplementedError
+        yaml = YAML()
+        with open(path, "w") as file:
+            plain = dict(copy.deepcopy(self))
+            if "source" in plain:
+                plain["source"] = str(plain["source"])
+            yaml.dump(plain, file) 
+
+    @staticmethod
+    def load_yaml(source):
+        from ruamel.yaml import YAML
+
+        return Webstract(YAML(typ='safe').load(source))
+
     def dump_xml(self, path):
         """Write XML to path."""
 
-        with open(path, "w") as file:
-            import jsoml
+        import jsoml
 
+        with open(path, "w") as file:
             jsoml.dump(self, file)
             file.write("\n")
 
@@ -184,6 +202,8 @@ class WebstractFacade:
 
     @property
     def seq_edid(self):
+        from hidos.dsi import EditionId
+
         edid = self._edidata.get("edid")
         if not edid:
             return None
