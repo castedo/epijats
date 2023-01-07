@@ -52,22 +52,29 @@ python3 -m epijats git+https://gitlab.com/perm.pub/epijats.git
 
 Different dependencies are required depending on which formats are processed.
 
-JATS
-: [pandoc](https://pandoc.org)
-: `elifetools` Python package
-: `pandoc-katex-filter` Node.js NPM package
-: GitPython Python package
-
-YAML
-: `ruamel.yaml` Python package
-
-JSOML
-: [`jsoml`](gitlab.org/castedo/jsoml) Python package
-
-HTML
-: `jinja2` Python package
-
-PDF
-: `weasyprint` Python package
-: `jinja2` Python package
-
+<dl>
+<dt>JATS</dt>
+<dd><ul>
+  <li> [pandoc](https://pandoc.org)
+  <li> elifetools Python package
+  <li> pandoc-katex-filter Node.js NPM package
+  <li> GitPython Python package
+</ul></dd>
+<dt>YAML</dt>
+<dd><ul>
+  <li> ruamel.yaml Python package
+</ul></dd>
+<dt>JSOML</dt>
+<dd><ul>
+  <li> [jsoml](gitlab.org/castedo/jsoml) Python package
+</ul></dd>
+<dt>HTML</dt>
+<dd><ul>
+  <li> jinja2 Python package
+</ul><dd>
+<dt>PDF</dt>
+<dd><ul>
+  <li> weasyprint Python package
+  <li> jinja2 Python package
+</ul></dd>
+</dl>
