@@ -11,7 +11,7 @@
 {% endmacro %}
 
 
-{% macro contributors_list(contributors) %}
+{% macro contributors_list(contributors, show_email=True) %}
 <dl class="contributors">
   {% for contributor in contributors %}
     <dt>
@@ -20,7 +20,7 @@
         <a class="orcid" href="{{ orcid_url(contributor.orcid) }}"><i class="orcid-icon"></i></a>
       {%- endif -%}
     </dt>
-    {% if contributor.email %}
+    {% if contributor.email and show_email %}
       <dd><a href="mailto:{{ contributor.email[0] | escape }}">{{ contributor.email | join(', ') | escape }}</a></dd>
     {% endif %}
   {% endfor %}

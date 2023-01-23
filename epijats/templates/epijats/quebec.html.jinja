@@ -6,44 +6,98 @@
     <header>
       {% if doc.dsi %}
       <div class="article-dsi">
-        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-          {{ dsi_base_url }}/<strong>dsi:</strong><code>{{ doc.dsi }}</code>
+        <a href="https://perm.pub/{{ doc.dsi }}">
+          <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
         </a>
       </div>
-      <div class="edition-number">Edition {{ doc.edid }}</div>
-      <div class="online-msg">Additional formats and editions available online.</div>
       {% endif %}
     </header>
 
     <div class="article-main">
 
+      <aside>
+        <dl>
+          {% if doc.edid %}
+          <big><big><big>
+          <dt>Edition</dt>
+          <dd>{{ doc.edid }}</dd>
+          </big>
+          </big>
+          </big>
+          {% endif %}
+
+          <dt>Digital Succession Identifier</dt>
+          <dd>
+            <p>
+              <a href="{{ dsi_base_url }}/dsi:{{ doc.dsi }}">
+                <code>{{ doc.dsi }}</code>
+              </a>
+              Additional formats and editions available online.
+            </p>
+          </dd>
+
+          <dt>Correspondence</dt>
+          <dd>
+          {% for contributor in doc.contributors %}
+            {% if contributor.email %}
+            <a href="mailto:{{ contributor.email[0] | escape }}">
+              {{ contributor.email | join(', ') | escape }}
+            </a>
+            {% endif %}
+          {% endfor %}
+          </dd>
+
+          {% if doc.date %}
+          <dt>Authored</dt>
+          <dd>{{ doc.date }}</dd>
+          {% endif %}
+
+          <dt>Archived</dt>
+          <dd class="date">2099-12-31</dd>
+
+          <dt>Source baseprint</dt>
+          <dd>
+            <p>
+              <a href="https://archive.softwareheritage.org/{{ doc.hash_scheme }}{{ doc.hexhash }}">
+                {{ doc.hash_scheme }} <br/>
+                <code style="font-size: 0.66rem">{{ doc.hexhash }}</code>
+              </a>
+            </p>
+          </dd>
+
+          <dt>Citation</dt>
+          <dd>
+            <p>
+              {% for contributor in doc.contributors %}
+                {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
+              {% endfor %}
+              (2022)
+              "{{ doc.title }}"
+              perm.pub {{ dsi_base_url }}/<br/>
+              dsi:<code>{{ doc.dsi }}</code>
+            </p>
+          </dd>
+
+          <dt>Copyright</dt>
+          <dd>
+            <p>
+              <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
+                https://creativecommons.org/licenses/by/4.0/
+              </a>
+            </p>
+            <p>
+              2022 © The Authors.
+              This document is distributed under a Creative Commons Attribution 4.0 International
+              license.
+            </p>
+          </dd>
+
+        </dl>
+      </aside>
+
       <h1 class="title">{{ doc.title or "No Title" }}</h1>
 
-      {{ contributors_list(doc.contributors) }}
-
-    <aside>
-      <dl>
-        {% if doc.date %}
-        <dt>Authored</dt>
-        <dd>{{ doc.date }}</dd>
-        {% endif %}
-
-        <dt>Archived</dt>
-        <dd>2099-12-31</dd>
-
-        <dt>Citation</dt>
-        <dd>
-          {% for contributor in doc.contributors %}
-            {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
-          {% endfor %}
-          (2022)
-          "{{ doc.title }}"
-          perm.pub<br/>
-          {{ dsi_base_url }}/<br/>
-          dsi:<code>{{ doc.dsi }}</code>
-        </dd>
-      </dl>
-    </aside>
+      {{ contributors_list(doc.contributors, show_email=False) }}
 
       <section class="abstract">
         {% if doc.abstract %}
@@ -58,25 +112,28 @@
         {% endif %}
       </div>
 
-      <footer>
-        <p>
-          <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
-            <img alt="CC BY 4.0" src="https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg">
-            https://creativecommons.org/licenses/by/4.0/
-          </a>
-        </p>
-        <p>
-          2022 © The Authors.
-          This document is distributed under a Creative Commons Attribution 4.0 International
-          license.
-        </p>
-      </footer>
-
     </div><!-- article-main -->
   </article>
 {% endmacro %}
 
+{# article_css_style is used to generated standalone HTML page and eprint PDF #}
 {% macro article_css_style() %}
+  <style>
+    html {
+      font-size: 12px;
+    }
+    body {
+      margin: 0;
+    }
+    *, ::after, ::before {
+      box-sizing: border-box;
+    }
+  </style>
+  {{- article_main_css_style() }}
+{% endmacro %}
+
+{# article_main_css_style is used by popgen.es website #}
+{% macro article_main_css_style() %}
   {{- common_css() }}
   {{- pandoc_class_css() }}
   <style>
@@ -84,7 +141,8 @@
       --eprint-font-sans: 'Fira Sans', sans-serif;
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
-      --main-color: #04b;
+      --accent-color: #a6ce39;
+      --main-color: #0645ad;
       --text-color: black;
       --light-text-color: #555;
     }
@@ -101,16 +159,7 @@
       size: A4 portrait;
       margin: 96px 36.85px; /* = A4 @page width of 720px */
 
-      @bottom-left {
-        border-top: 0.005in solid;
-        content: element(header);
-        margin-top: 1em;
-        padding-top: 1em;
-        vertical-align: top;
-        width: 60%;
-      }
       @bottom-right {
-        border-top: 0.005in solid;
         content: counter(page) " of " counter(pages);
         margin-top: 1em;
         padding-top: 1em;
@@ -122,41 +171,33 @@
     @page:first {
       margin-top: 128px;
 
-      @top-left {
-        background: url(static/cc.svg) left center / 0.8in 0.8in no-repeat;
+      @top-right {
+        background: url(static/cc.svg) right center / 0.8in 0.8in no-repeat;
         content: "";
-        width: 40%;
+        width: 20%;
+        margin-top: 48px;
+      }
+
+      @top-left {
+        content: element(header);
+        vertical-align: top;
+        width: 80%;
+        margin-top: 24px;
       }
     }
 
 
-    /* Common */
+    /* Article */
 
-    body {
+    article {
       max-width: 60rem; /* 720px with 12px root font */
       color: var(--text-color);
       font-family: var(--eprint-font-sans);
-      font-size: 10pt;
       line-height: 1.4;
       margin: 0;
-    }
-    article {
-      margin-left: 25%;
-    }
-    .article-main {
-      margin: 4em 0 1em;
-    }
-
-    p {
-      hyphens: auto;
-      hyphenate-limit-chars: 3 3;
-    }
-
-    ul li::marker {
-      content: "–  ";
-    }
-    li p {
-      margin: 0;
+      hyphens: manual;
+      overflow-wrap: normal;
+      padding-top: 64px;
     }
 
 
@@ -174,7 +215,7 @@
     }
     article h1.title::after {
       border-bottom: 0.05in solid;
-      border-color: var(--main-color);
+      border-color: var(--accent-color);
       content: "";
       display: block;
       height: 0;
@@ -195,61 +236,83 @@
 
     /* Specific Structure Blocks */
 
+    article .article-main {
+      width: 70%;
+      margin-left: 30%;
+    }
+
     aside {
       position: absolute;
       left: 0;
-      bottom: 0;
-      font-size: 0.8em;
       font-family: var(--eprint-font-condensed);
       font-stretch: condensed;
       overflow-wrap: anywhere;
-      width: 20%;
+      max-width: 18rem; /* = 30% of article max-width 60rem */
+      width: 30%;
+      padding-right: 2rem;
+      text-align: left;
+    }
+    aside dl p {
+      text-align: left;
+      font-size: 0.8rem;
+      margin: 0;
     }
     aside dl {
-      margin: 1em 0;
+      margin: 0 0 1rem;
     }
     aside dt {
-      display: inline-block;
       font-weight: bold;
-      padding-top: 0.5em;
     }
     aside dt::after {
       content: ": ";
     }
     aside dd {
-      display: inline;
       margin: 0;
+      margin-bottom: 1rem;
     }
     aside dd::after {
       content: '\A';
       white-space: pre-line;
     }
 
+    @media screen {
+      article header {
+          display: none;
+      }
+    }
     article header {
       color: var(--light-text-color);
+      font-size: 1.5rem;
       font-weight: 300;
       line-height: 1.2;
       position: running(header);
+      text-align: left;
+      margin-top: 32px;
     }
-
-    footer {
-      border-top: 0.005in solid;
-      break-inside: avoid;
-      color: var(--light-text-color);
-      font-weight: 300;
-      margin-top: 3em;
-      padding-top: 1em;
-    }
-    footer p {
-      margin: 0;
-    }
-    footer img {
-      vertical-align: bottom;
-    }
-
 
     /* Specific Elements */
 
+    article header .article-dsi {
+      display: inline-block;
+      padding-top: 12px;
+      margin-right: 64px;
+    }
+    article header .article-dsi code {
+      margin: 0;
+    }
+    article header .logotype {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+
+    .article-dsi code {
+      margin-left: 3px;
+    }
+
+    article dl.contributors {
+      margin-bottom: 40px;
+    }
     article .contributors dt, article .contributors dd {
       display: inline;
       margin: 0;
@@ -268,10 +331,17 @@
     }
     article .abstract {
       border-bottom: 0.005in solid;
-      margin-bottom: 3em;
+      padding-bottom: 8px;
+      margin-bottom: 64px;
     }
-    .edition-number, .online-msg {
-      display: inline;
+    .article-main p {
+      text-align: justify;
+    }
+    @media print {
+      .article-main p {
+        hyphens: auto;
+        hyphenate-limit-chars: 12 6;
+      }
     }
     .katex {
       break-before: avoid;

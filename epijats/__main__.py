@@ -32,7 +32,7 @@ class Main:
             help="Do not use online web fonts",
         )
         self.parser.add_argument(
-            "--style", choices=["boston", "lyon"], default=None, help="Article style"
+            "--style", choices=["boston", "lyon", "quebec"], default=None, help="Article style"
         )
         self.parser.parse_args(cmd_line_args, self)
 
