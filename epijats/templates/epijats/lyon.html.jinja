@@ -76,7 +76,13 @@
   </article>
 {% endmacro %}
 
+{# article_css_style is used to generated standalone HTML page and eprint PDF #}
 {% macro article_css_style() %}
+  {{- article_main_css_style() }}
+{% endmacro %}
+
+{# article_main_css_style is used by popgen.es website #}
+{% macro article_main_css_style() %}
   {{- common_css() }}
   {{- pandoc_class_css() }}
   <style>
