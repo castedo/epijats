@@ -36,7 +36,7 @@ class Eprint:
         if config is None:
             config = EprinterConfig()
         self._tmp = Path(tmp)
-        self._html_ctx = config.urls
+        self._html_ctx = dict(config.urls)
         self._html_ctx["article_style"] = config.article_style
         self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
         self.webstract = webstract
