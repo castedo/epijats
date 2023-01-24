@@ -45,7 +45,7 @@ Installation
 ------------
 
 ```
-python3 -m epijats git+https://gitlab.com/perm.pub/epijats.git
+python3 -m pip install git+https://gitlab.com/perm.pub/epijats.git
 ```
 
 #### Requirements per format
