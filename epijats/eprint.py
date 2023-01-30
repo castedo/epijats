@@ -1,4 +1,5 @@
 from .util import copytree_nostat
+from .jinja import PackagePageGenerator
 
 
 #std library
@@ -41,9 +42,7 @@ class Eprint:
         self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
         self.webstract = webstract
         if Eprint._gen is None:
-            from . import jinja
-
-            Eprint._gen = jinja.WebPageGenerator()
+            Eprint._gen = PackagePageGenerator()
 
     def _get_static_dir(self):
         return Path(resource_filename(__name__, "static/"))
