@@ -1,8 +1,8 @@
 {% extends 'epijats/_common.html.jinja' %}
 
 
-{% macro article_layout(doc, dsi_base_url) %}
-  <article lang="en">
+{% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
+  <article lang="en" class="eprint">
     <header>
       {% if doc.dsi %}
       <div class="article-dsi">
@@ -141,10 +141,12 @@
       --eprint-font-sans: 'Fira Sans', sans-serif;
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
-      --accent-color: #a6ce39;
       --main-color: #0645ad;
       --text-color: black;
       --light-text-color: #555;
+    }
+    .eprint {
+      --accent-color: #a6ce39;
     }
 
 
@@ -339,11 +341,9 @@
     .article-main p {
       text-align: justify;
     }
-    @media print {
-      .article-main p {
-        hyphens: auto;
-        hyphenate-limit-chars: 12 6;
-      }
+    .article-main p {
+      hyphens: auto;
+      hyphenate-limit-chars: 9 3;
     }
     .katex {
       break-before: avoid;

@@ -1,7 +1,7 @@
 {% extends 'epijats/_common.html.jinja' %}
 
 
-{% macro article_layout(doc, dsi_base_url) %}
+{% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
   <article lang="en">
     <header>
       {% if doc.dsi %}

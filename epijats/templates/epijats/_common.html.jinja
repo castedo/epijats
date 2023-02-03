@@ -2,6 +2,7 @@
 {% if not orcid.startswith("http") %}https://orcid.org/{% endif %}{{orcid | escape}}
 {%- endmacro %}
 
+{% set swh_archive_url = "https://archive.softwareheritage.org/" %}
 
 {% macro link_fonts() %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -146,6 +147,43 @@
     }
     article div.csl-indent {
       margin-left: 2em;
+    }
+  </style>
+{% endmacro %}
+
+{% macro var_base_font_css() %}
+  <style>
+    :root {
+      /* calculated variables to use */
+
+      --min-body-width: calc(var(--min-body-width-rem) * 1rem);
+
+      --base-font-size: max(
+        var(--min-font-size-rem) * 1rem,
+        min(var(--var-font-size), var(--max-font-size))
+      );
+
+
+      /* input variables for calculated variables */
+
+      --max-font-size: 1.25rem;
+      --min-font-size-rem: 0.875;
+      --min-body-width-rem: 22.5;     /* 360px when rem is 16px */
+      --unit-font-view-width-rem: 66; /* viewport width when base font reach 1rem */
+
+
+      /* bunch of calculation variables for --base-font-size */
+
+      --var-font-ratio: calc(
+        (1 - var(--min-font-size-rem)) /
+        (var(--unit-font-view-width-rem) - var(--min-body-width-rem))
+      );
+      --var-font-const: calc(
+        var(--min-font-size-rem) - var(--var-font-ratio) * var(--min-body-width-rem)
+      );
+      --var-font-size: calc(
+        var(--var-font-const) * 1rem + var(--var-font-ratio) * 100vw 
+      );
     }
   </style>
 {% endmacro %}

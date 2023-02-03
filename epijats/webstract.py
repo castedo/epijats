@@ -58,7 +58,16 @@ class Source:
 
 
 class Webstract(dict):
-    KEYS = ["abstract", "body", "contributors", "date", "edition", "source", "title"]
+    KEYS = [
+        "abstract",
+        "archive_date",
+        "body",
+        "contributors",
+        "date",
+        "edition",
+        "source",
+        "title",
+    ]
 
     def __init__(self, init=None):
         super().__init__()
@@ -93,6 +102,8 @@ class Webstract(dict):
             elif not isinstance(value, Source):
                 value = Source(value)
         elif key == "date" and not isinstance(value, date):
+            value = date.fromisoformat(value)
+        elif key == "archive_date" and not isinstance(value, date):
             value = date.fromisoformat(value)
         super().__setitem__(key, value)
 
