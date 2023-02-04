@@ -16,7 +16,7 @@
       {% endif %}
     </header>
 
-    <div class="article-main">
+    <main>
 
       <aside>
         {{- top_metadata_layout(doc, dsi_base_url) }}
@@ -86,7 +86,7 @@
         {% endif %}
       </div>
 
-    </div><!-- article-main -->
+    </main>
   </article>
 {% endmacro %}
 
@@ -222,7 +222,7 @@
 
     /* Specific Structure Blocks */
 
-    article .article-main {
+    article main {
       width: 70%;
       margin-left: 30%;
     }
@@ -361,10 +361,10 @@
       padding-bottom: 8px;
       margin-bottom: 64px;
     }
-    .article-main p {
+    main p {
       text-align: justify;
     }
-    .article-main p {
+    main p {
       hyphens: auto;
       hyphenate-limit-chars: 9 3;
     }

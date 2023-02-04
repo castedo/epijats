@@ -18,7 +18,7 @@
 
     {{- top_metadata_layout(doc, dsi_base_url) }}
 
-    <div class="article-main">
+    <main>
 
       <h1 class="title">{{ doc.title or "No Title" }}</h1>
 
@@ -42,7 +42,7 @@
         {% endif %}
       </div>
 
-    </div><!-- article-main -->
+    </main>
   </article>
 {% endmacro %}
 
@@ -198,7 +198,7 @@
     }
     @media print {
       .top-metadata {
-        margin-top: 3rem;
+        margin-top: 3em;
       }
     }
 
@@ -231,6 +231,9 @@
       font-size: 0.825em;
     }
 
+    .edition-band {
+      margin: 0.825rem 0;
+    }
     .edition-number {
       display: inline-block;
       font-size: 1.75em;
@@ -292,10 +295,10 @@
       padding-bottom: 8px;
       margin-bottom: 64px;
     }
-    .article-main p {
+    main p {
       text-align: justify;
     }
-    .article-main p {
+    main p {
       hyphens: auto;
       hyphenate-limit-chars: 9 3;
     }

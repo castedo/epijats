@@ -14,7 +14,7 @@
       {% endif %}
     </header>
 
-    <div class="article-main">
+    <main>
 
       <aside>
         {{- top_metadata_layout(doc, dsi_base_url) }}
@@ -99,7 +99,7 @@
         </p>
       </footer>
 
-    </div><!-- article-main -->
+    </main>
   </article>
 {% endmacro %}
 
@@ -192,7 +192,7 @@
     article {
       margin-left: 25%;
     }
-    .article-main {
+    main {
       margin: 4em 0 1em;
     }
 
@@ -344,10 +344,10 @@
     .edition-number, .online-msg {
       display: inline;
     }
-    .article-main p {
+    main p {
       text-align: justify;
     }
-    .article-main p {
+    main p {
       hyphens: auto;
       hyphenate-limit-chars: 9 3;
     }
