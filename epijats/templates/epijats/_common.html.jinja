@@ -12,6 +12,44 @@
 {% endmacro %}
 
 
+{% macro obsolete_alert() %}
+  <div class="edition-obsolete" role="alert">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16" role="img" aria-label="Warning:">
+      <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+    </svg>Obsolete
+  </div>
+{% endmacro %}
+
+{% macro top_metadata_layout(doc, dsi_base_url) %}
+  <div class="top-metadata">
+    <div class="edition-band">
+      <div class="edition-number">Edition&nbsp;{{ doc.edid }}</div>
+      {% if doc.obsolete %}
+        {{- obsolete_alert() }}
+      {% endif %}
+    </div>
+
+    <dl class="article-dates">
+      {% if doc.date %}
+      <dt>Author date</dt>
+      <dd>{{ doc.date }}</dd>
+      {% endif %}
+      {% if doc.archive_date %}
+      <dt>Archive date</dt>
+      <dd>{{ doc.archive_date }}</dd>
+      {% endif %}
+    </dl>
+
+    <div class="article-swhid">
+      <b>Archived baseprint:</b><br>
+      <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
+        <strong>{{ doc.hash_scheme }}</strong><code>{{ doc.hexhash }}</code>
+      </a>
+    </div>
+  </div>
+{% endmacro %}
+
+
 {% macro contributors_list(contributors, show_email=True) %}
 <dl class="contributors">
   {% for contributor in contributors %}

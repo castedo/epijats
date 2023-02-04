@@ -2,48 +2,75 @@
 
 
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
-  <article lang="en">
+  <article lang="en" class="eprint">
     <header>
       {% if doc.dsi %}
       <div class="article-dsi">
         <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-          {{ dsi_base_url }}/<strong>dsi:</strong><code>{{ doc.dsi }}</code>
+          <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
         </a>
       </div>
-      <div class="edition-number">Edition {{ doc.edid }}</div>
       <div class="online-msg">Additional formats and editions available online.</div>
       {% endif %}
     </header>
 
     <div class="article-main">
 
-      <h1 class="title">{{ doc.title or "No Title" }}</h1>
+      <aside>
+        {{- top_metadata_layout(doc, dsi_base_url) }}
 
-      {{ contributors_list(doc.contributors) }}
-
-    <aside>
-      <dl>
-        {% if doc.date %}
-        <dt>Authored</dt>
-        <dd>{{ doc.date }}</dd>
+        {% if website_hooks %}
+          {{ website_hooks.correspond() }}
+          {{ website_hooks.cite() }}
         {% endif %}
 
-        <dt>Archived</dt>
-        <dd>2099-12-31</dd>
+        <dl>
 
-        <dt>Citation</dt>
-        <dd>
+          {% if not website_hooks %}
+          <dt>Correspondence</dt>
+          <dd>
           {% for contributor in doc.contributors %}
-            {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
+            {% if contributor.email %}
+            <a href="mailto:{{ contributor.email[0] | escape }}">
+              {{ contributor.email | join(', ') | escape }}
+            </a>
+            {% endif %}
           {% endfor %}
-          (2022)
-          "{{ doc.title }}"
-          perm.pub<br/>
-          {{ dsi_base_url }}/<br/>
-          dsi:<code>{{ doc.dsi }}</code>
-        </dd>
-      </dl>
-    </aside>
+          </dd>
+
+          <dt>Citation</dt>
+          <dd>
+            {% for contributor in doc.contributors %}
+              {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
+            {% endfor %}
+            (2022)
+            "{{ doc.title }}"
+            perm.pub<br/>
+            {{ dsi_base_url }}/<br/>
+            dsi:<code>{{ doc.dsi }}</code>
+          </dd>
+          {% endif %}
+
+          <dt>Copyright</dt>
+          <dd>
+            <p>
+              <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
+                https://creativecommons.org/licenses/by/4.0/
+              </a>
+            </p>
+            <p>
+              2022 © The Authors.
+              This document is distributed under a Creative Commons Attribution 4.0 International
+              license.
+            </p>
+          </dd>
+
+        </dl>
+      </aside>
+
+      <h1 class="title">{{ doc.title or "No Title" }}</h1>
+
+      {{ contributors_list(doc.contributors, show_email=False) }}
 
       <section class="abstract">
         {% if doc.abstract %}
@@ -76,10 +103,17 @@
   </article>
 {% endmacro %}
 
+
 {# article_css_style is used to generated standalone HTML page and eprint PDF #}
 {% macro article_css_style() %}
+  <style>
+    html {
+      font-size: 12px;
+    }
+  </style>
   {{- article_main_css_style() }}
 {% endmacro %}
+
 
 {# article_main_css_style is used by popgen.es website #}
 {% macro article_main_css_style() %}
@@ -90,9 +124,12 @@
       --eprint-font-sans: 'Fira Sans', sans-serif;
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
+    }
+    .eprint {
       --main-color: #04b;
       --text-color: black;
       --light-text-color: #555;
+      --accent-color: #04b;
     }
 
 
@@ -101,7 +138,7 @@
     @page {
       color: #555;
       font-family: var(--eprint-font-sans);
-      font-size: 10pt;
+      font-size: 1.1rem;
       font-weight: 300;
       line-height: 1.2;
       size: A4 portrait;
@@ -136,15 +173,21 @@
     }
 
 
-    /* Common */
+    /* Article */
 
-    body {
-      max-width: 60rem; /* 720px with 12px root font */
+    article {
       color: var(--text-color);
       font-family: var(--eprint-font-sans);
-      font-size: 10pt;
       line-height: 1.4;
       margin: 0;
+    }
+    @media screen {
+      article header .online-msg {
+          display: none;
+      }
+      .logotype {
+          display: none;
+      }
     }
     article {
       margin-left: 25%;
@@ -153,14 +196,6 @@
       margin: 4em 0 1em;
     }
 
-    p {
-      hyphens: auto;
-      hyphenate-limit-chars: 3 3;
-    }
-
-    ul li::marker {
-      content: "–  ";
-    }
     li p {
       margin: 0;
     }
@@ -181,8 +216,8 @@
       margin-top: 0.7em;
     }
     article h1.title::after {
-      border-bottom: 0.05in solid;
-      border-color: var(--main-color);
+      border-bottom: 0.375rem solid;
+      border-color: var(--accent-color);
       content: "";
       display: block;
       height: 0;
@@ -206,7 +241,6 @@
     aside {
       position: absolute;
       left: 0;
-      bottom: 0;
       font-size: 0.8em;
       font-family: var(--eprint-font-condensed);
       font-stretch: condensed;
@@ -258,6 +292,35 @@
 
     /* Specific Elements */
 
+    .article-dsi, .article-swhid {
+      margin-bottom: 8px;
+    }
+    .article-dsi code, .article-swhid code {
+      margin-left: 3px;
+    }
+    .article-swhid {
+      word-break: break-all;
+    }
+    .article-swhid code {
+      font-size: 0.825em;
+    }
+
+    .edition-number {
+      display: inline-block;
+      font-size: 1.75em;
+      font-weight: 300;
+      margin-right: 24px;
+    }
+    .edition-obsolete {
+      display: inline-block;
+      font-size: 1.5rem;
+      color: #ff2116;
+    }
+    .edition-obsolete svg {
+      vertical-align: baseline;
+      margin-bottom: -2px;
+    }
+
     article .contributors dt, article .contributors dd {
       display: inline;
       margin: 0;
@@ -280,6 +343,13 @@
     }
     .edition-number, .online-msg {
       display: inline;
+    }
+    .article-main p {
+      text-align: justify;
+    }
+    .article-main p {
+      hyphens: auto;
+      hyphenate-limit-chars: 9 3;
     }
     .katex {
       break-before: avoid;

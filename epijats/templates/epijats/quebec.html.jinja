@@ -5,10 +5,13 @@
   <article lang="en" class="eprint">
     <header>
       {% if doc.dsi %}
-      <div class="article-dsi">
-        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-          <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
-        </a>
+      <div class="page-left">
+        <div class="article-dsi">
+          <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+            <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
+          </a>
+        </div>
+        <div class="online-msg">Additional formats and editions available online.</div>
       </div>
       {% endif %}
     </header>
@@ -16,26 +19,16 @@
     <div class="article-main">
 
       <aside>
+        {{- top_metadata_layout(doc, dsi_base_url) }}
+
+        {% if website_hooks %}
+          {{ website_hooks.correspond() }}
+          {{ website_hooks.cite() }}
+        {% endif %}
+
         <dl>
-          {% if doc.edid %}
-          <big><big><big>
-          <dt>Edition</dt>
-          <dd>{{ doc.edid }}</dd>
-          </big>
-          </big>
-          </big>
-          {% endif %}
 
-          <dt>Digital Succession Identifier</dt>
-          <dd>
-            <p>
-              <a href="{{ dsi_base_url }}/dsi:{{ doc.dsi }}">
-                <code>{{ doc.dsi }}</code>
-              </a>
-              Additional formats and editions available online.
-            </p>
-          </dd>
-
+          {% if not website_hooks %}
           <dt>Correspondence</dt>
           <dd>
           {% for contributor in doc.contributors %}
@@ -47,36 +40,17 @@
           {% endfor %}
           </dd>
 
-          {% if doc.date %}
-          <dt>Authored</dt>
-          <dd>{{ doc.date }}</dd>
-          {% endif %}
-
-          <dt>Archived</dt>
-          <dd class="date">2099-12-31</dd>
-
-          <dt>Source baseprint</dt>
-          <dd>
-            <p>
-              <a href="https://archive.softwareheritage.org/{{ doc.hash_scheme }}{{ doc.hexhash }}">
-                {{ doc.hash_scheme }} <br/>
-                <code style="font-size: 0.66rem">{{ doc.hexhash }}</code>
-              </a>
-            </p>
-          </dd>
-
           <dt>Citation</dt>
           <dd>
-            <p>
-              {% for contributor in doc.contributors %}
-                {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
-              {% endfor %}
-              (2022)
-              "{{ doc.title }}"
-              perm.pub {{ dsi_base_url }}/<br/>
-              dsi:<code>{{ doc.dsi }}</code>
-            </p>
+            {% for contributor in doc.contributors %}
+              {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
+            {% endfor %}
+            (2022)
+            "{{ doc.title }}"
+            perm.pub {{ dsi_base_url }}/<br/>
+            dsi:<code>{{ doc.dsi }}</code>
           </dd>
+          {% endif %}
 
           <dt>Copyright</dt>
           <dd>
@@ -116,6 +90,7 @@
   </article>
 {% endmacro %}
 
+
 {# article_css_style is used to generated standalone HTML page and eprint PDF #}
 {% macro article_css_style() %}
   <style>
@@ -132,6 +107,7 @@
   {{- article_main_css_style() }}
 {% endmacro %}
 
+
 {# article_main_css_style is used by popgen.es website #}
 {% macro article_main_css_style() %}
   {{- common_css() }}
@@ -141,11 +117,11 @@
       --eprint-font-sans: 'Fira Sans', sans-serif;
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
+    }
+    .eprint {
       --main-color: #0645ad;
       --text-color: black;
       --light-text-color: #555;
-    }
-    .eprint {
       --accent-color: #a6ce39;
     }
 
@@ -155,7 +131,7 @@
     @page {
       color: #555;
       font-family: var(--eprint-font-sans);
-      font-size: 10pt;
+      font-size: 1.1rem;
       font-weight: 300;
       line-height: 1.2;
       size: A4 portrait;
@@ -174,16 +150,15 @@
       margin-top: 128px;
 
       @top-right {
-        background: url(static/cc.svg) right center / 0.8in 0.8in no-repeat;
+        background: url(static/cc.svg) right center / 76px 76px no-repeat;
         content: "";
-        width: 20%;
+        width: 76px;
         margin-top: 48px;
       }
 
       @top-left {
-        content: element(header);
+        content: element(top-left);
         vertical-align: top;
-        width: 80%;
         margin-top: 24px;
       }
     }
@@ -192,7 +167,6 @@
     /* Article */
 
     article {
-      max-width: 60rem; /* 720px with 12px root font */
       color: var(--text-color);
       font-family: var(--eprint-font-sans);
       line-height: 1.4;
@@ -200,6 +174,14 @@
       hyphens: manual;
       overflow-wrap: normal;
       padding-top: 64px;
+    }
+    @media screen {
+      article header .online-msg {
+          display: none;
+      }
+      .logotype {
+          display: none;
+      }
     }
 
 
@@ -215,10 +197,10 @@
       letter-spacing: -0.03em;
     }
     article h1.title {
-      margin-top: 0.7em;
+      margin-top: 2em;
     }
     article h1.title::after {
-      border-bottom: 0.05in solid;
+      border-bottom: 0.375rem solid;
       border-color: var(--accent-color);
       content: "";
       display: block;
@@ -279,20 +261,15 @@
       white-space: pre-line;
     }
 
-    @media screen {
-      article header {
-          display: none;
-      }
-    }
-    article header {
+    article header .page-left {
       color: var(--light-text-color);
       font-size: 1.5rem;
       font-weight: 300;
       line-height: 1.2;
-      position: running(header);
-      text-align: left;
+      position: running(top-left);
       margin-top: 32px;
     }
+
 
     /* Specific Elements */
 
@@ -310,8 +287,54 @@
       color: var(--accent-color);
     }
 
-    .article-dsi code {
+    .article-dsi, .article-swhid {
+      margin-bottom: 8px;
+    }
+    .article-dsi code, .article-swhid code {
       margin-left: 3px;
+    }
+    .article-swhid {
+      word-break: break-all;
+    }
+    .article-swhid code {
+      font-size: 0.825em;
+    }
+
+    .edition-number {
+      display: inline-block;
+      font-size: 1.75em;
+      font-weight: 300;
+      margin-right: 24px;
+    }
+    .edition-obsolete {
+      display: inline-block;
+      font-size: 1.5rem;
+      color: #ff2116;
+    }
+    .edition-obsolete svg {
+      vertical-align: baseline;
+      margin-bottom: -2px;
+    }
+
+    dl.article-dates {
+      margin-bottom: 0.5rem;
+    }
+    dl.article-dates dt::after {
+      content: ": ";
+    }
+    dl.article-dates dt {
+      display: inline-block;
+      font-weight: bold;
+      padding-bottom: 0.5em;
+      min-width: 6.25rem;
+    }
+    dl.article-dates dd {
+      display: inline;
+      margin: 0;
+    }
+    dl.article-dates dd::after {
+      content: '\A';
+      white-space: pre-line;
     }
 
     article dl.contributors {
