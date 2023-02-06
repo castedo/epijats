@@ -16,7 +16,16 @@
       {% endif %}
     </header>
 
-    {{- top_metadata_layout(doc, dsi_base_url) }}
+    <div class="top-metadata">
+      {{edition_band(doc)}}
+      {{article_dates(doc)}}
+      <div class="article-swhid">
+        <b>Archived baseprint:</b><br>
+        <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
+          <strong>{{ doc.hash_scheme }}</strong><code>{{ doc.hexhash }}</code>
+        </a>
+      </div>
+    </div>
 
     <main>
 
@@ -42,6 +51,10 @@
         {% endif %}
       </div>
 
+      <footer class="copyright">
+        {{- copyright(doc) }}
+      </footer>
+
     </main>
   </article>
 {% endmacro %}
@@ -61,11 +74,6 @@
     }
   </style>
   {{- article_main_css_style() }}
-  <style>
-  a {
-    text-decoration: none;
-  }
-  </style>
 {% endmacro %}
 
 
@@ -202,6 +210,18 @@
       }
     }
 
+    footer.copyright {
+      border-top: 0.005in solid;
+      break-inside: avoid;
+      color: var(--light-text-color);
+      font-weight: 300;
+      margin-top: 3em;
+      padding-top: 1em;
+    }
+    footer.copyright p {
+      margin: 0;
+    }
+
 
     /* Specific Elements */
 
@@ -292,8 +312,8 @@
     }
     article .abstract {
       border-bottom: 0.005in solid;
-      padding-bottom: 8px;
-      margin-bottom: 64px;
+      padding-bottom: 0.5em;
+      margin-bottom: 4em;
     }
     main p {
       text-align: justify;

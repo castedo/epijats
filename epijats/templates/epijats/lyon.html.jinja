@@ -7,21 +7,40 @@
       {% if doc.dsi %}
       <div class="article-dsi">
         <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-          <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
+          <strong>dsi:</strong><code>{{ doc.dsi }}</code>
         </a>
       </div>
       <div class="online-msg">Additional formats and editions available online.</div>
       {% endif %}
     </header>
 
+    <div class="top-metadata">
+      {{edition_band(doc)}}
+      {{article_dates(doc)}}
+    </div>
+
+    <footer class="swhid">
+      <div class="article-swhid">
+        <b>Archived baseprint:</b><br>
+        <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
+          <strong>{{ doc.hash_scheme }}</strong><code>{{ doc.hexhash }}</code>
+        </a>
+      </div>
+    </footer>
+
     <main>
 
       <aside>
-        {{- top_metadata_layout(doc, dsi_base_url) }}
+
+        {{edition_band(doc)}}
+
+        {{article_dates(doc)}}
 
         {% if website_hooks %}
+        <div class="article-buttons">
           {{ website_hooks.correspond() }}
           {{ website_hooks.cite() }}
+        </div>
         {% endif %}
 
         <dl>
@@ -45,24 +64,14 @@
             {% endfor %}
             (2022)
             "{{ doc.title }}"
-            perm.pub<br/>
-            {{ dsi_base_url }}/<br/>
+            perm.pub {{ dsi_base_url }}/<br/>
             dsi:<code>{{ doc.dsi }}</code>
           </dd>
           {% endif %}
 
           <dt>Copyright</dt>
           <dd>
-            <p>
-              <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
-                https://creativecommons.org/licenses/by/4.0/
-              </a>
-            </p>
-            <p>
-              2022 © The Authors.
-              This document is distributed under a Creative Commons Attribution 4.0 International
-              license.
-            </p>
+            {{ copyright(doc) }}
           </dd>
 
         </dl>
@@ -71,6 +80,13 @@
       <h1 class="title">{{ doc.title or "No Title" }}</h1>
 
       {{ contributors_list(doc.contributors, show_email=False) }}
+
+      {% if website_hooks %}
+      <div class="article-buttons">
+        {{ website_hooks.correspond() }}
+        {{ website_hooks.cite() }}
+      </div>
+      {% endif %}
 
       <section class="abstract">
         {% if doc.abstract %}
@@ -85,18 +101,8 @@
         {% endif %}
       </div>
 
-      <footer>
-        <p>
-          <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
-            <img alt="CC BY 4.0" src="https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg">
-            https://creativecommons.org/licenses/by/4.0/
-          </a>
-        </p>
-        <p>
-          2022 © The Authors.
-          This document is distributed under a Creative Commons Attribution 4.0 International
-          license.
-        </p>
+      <footer class="copyright">
+        {{- copyright(doc) }}
       </footer>
 
     </main>
@@ -125,6 +131,10 @@
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
     }
+
+
+    /* .eprint class for embedding website to control variable scope */
+
     .eprint {
       --main-color: #04b;
       --text-color: black;
@@ -146,7 +156,7 @@
 
       @bottom-left {
         border-top: 0.005in solid;
-        content: element(header);
+        content: element(footer);
         margin-top: 1em;
         padding-top: 1em;
         vertical-align: top;
@@ -160,6 +170,14 @@
         vertical-align: top;
         width: 40%;
       }
+      @top-left {
+        border-bottom: 0.005in solid;
+        content: element(header);
+        margin-bottom: 1em;
+        padding-bottom: 1em;
+        vertical-align: top;
+        margin-top: 24px;
+      }
     }
 
     @page:first {
@@ -167,8 +185,18 @@
 
       @top-left {
         background: url(static/cc.svg) left center / 0.8in 0.8in no-repeat;
+        border-bottom: 0;
         content: "";
-        width: 40%;
+        width: 30%;
+      }
+      @top-right {
+        content: element(header);
+        vertical-align: top;
+        margin-top: 24px;
+        width: 70%;
+        font-size: 1.5rem;
+        font-weight: 300;
+        line-height: 1.2;
       }
     }
 
@@ -185,19 +213,43 @@
       article header .online-msg {
           display: none;
       }
-      .logotype {
-          display: none;
-      }
-    }
-    article {
-      margin-left: 25%;
-    }
-    main {
-      margin: 4em 0 1em;
     }
 
-    li p {
-      margin: 0;
+
+    /* Media responsive logic */
+
+    aside {
+      display: none;
+    }
+
+    @media print {
+      aside {
+        display: block;
+      }
+      article {
+        margin-left: 25%;
+      }
+      .top-metadata {
+        display: none;
+      }
+      footer.copyright {
+        display: none;
+      }
+    }
+
+    @media (min-width: 66em) {
+      aside {
+        display: block;
+      }
+      .top-metadata {
+        display: none;
+      }
+      main .article-buttons {
+        display: none;
+      }
+      footer.copyright {
+        display: none;
+      }
     }
 
 
@@ -211,9 +263,6 @@
     article h1 {
       font-size: 2.6em;
       letter-spacing: -0.03em;
-    }
-    article h1.title {
-      margin-top: 0.7em;
     }
     article h1.title::after {
       border-bottom: 0.375rem solid;
@@ -238,6 +287,10 @@
 
     /* Specific Structure Blocks */
 
+    main {
+      margin: 4em 0 1em;
+    }
+
     aside {
       position: absolute;
       left: 0;
@@ -246,6 +299,9 @@
       font-stretch: condensed;
       overflow-wrap: anywhere;
       width: 20%;
+    }
+    aside dl p {
+      margin: 0;
     }
     aside dl {
       margin: 1em 0;
@@ -269,12 +325,17 @@
 
     article header {
       color: var(--light-text-color);
-      font-weight: 300;
-      line-height: 1.2;
       position: running(header);
     }
 
-    footer {
+    footer.swhid {
+      color: var(--light-text-color);
+      font-weight: 300;
+      line-height: 1.2;
+      position: running(footer);
+    }
+
+    footer.copyright {
       border-top: 0.005in solid;
       break-inside: avoid;
       color: var(--light-text-color);
@@ -282,15 +343,21 @@
       margin-top: 3em;
       padding-top: 1em;
     }
-    footer p {
+    footer.copyright p {
       margin: 0;
-    }
-    footer img {
-      vertical-align: bottom;
     }
 
 
     /* Specific Elements */
+
+    article header .article-dsi {
+      display: inline-block;
+      padding-top: 12px;
+      margin-right: 64px;
+    }
+    article header .article-dsi code {
+      margin: 0;
+    }
 
     .article-dsi, .article-swhid {
       margin-bottom: 8px;
@@ -339,10 +406,8 @@
     }
     article .abstract {
       border-bottom: 0.005in solid;
-      margin-bottom: 3em;
-    }
-    .edition-number, .online-msg {
-      display: inline;
+      padding-bottom: 0.5em;
+      margin-bottom: 4em;
     }
     main p {
       text-align: justify;

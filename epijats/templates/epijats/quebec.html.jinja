@@ -5,25 +5,42 @@
   <article lang="en" class="eprint">
     <header>
       {% if doc.dsi %}
-      <div class="page-left">
-        <div class="article-dsi">
-          <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-            <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
-          </a>
-        </div>
-        <div class="online-msg">Additional formats and editions available online.</div>
+      <div class="article-dsi">
+        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+          <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
+        </a>
       </div>
+      <div class="online-msg">Additional formats and editions available online.</div>
       {% endif %}
     </header>
+
+    <div class="top-metadata">
+      {{edition_band(doc)}}
+      {{article_dates(doc)}}
+    </div>
+
+    <footer class="swhid">
+      <div class="article-swhid">
+        <b>Archived baseprint:</b><br>
+        <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
+          <strong>{{ doc.hash_scheme }}</strong><code>{{ doc.hexhash }}</code>
+        </a>
+      </div>
+    </footer>
 
     <main>
 
       <aside>
-        {{- top_metadata_layout(doc, dsi_base_url) }}
+
+        {{edition_band(doc)}}
+
+        {{article_dates(doc)}}
 
         {% if website_hooks %}
+        <div class="article-buttons">
           {{ website_hooks.correspond() }}
           {{ website_hooks.cite() }}
+        </div>
         {% endif %}
 
         <dl>
@@ -54,16 +71,7 @@
 
           <dt>Copyright</dt>
           <dd>
-            <p>
-              <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
-                https://creativecommons.org/licenses/by/4.0/
-              </a>
-            </p>
-            <p>
-              2022 © The Authors.
-              This document is distributed under a Creative Commons Attribution 4.0 International
-              license.
-            </p>
+            {{ copyright(doc) }}
           </dd>
 
         </dl>
@@ -72,6 +80,13 @@
       <h1 class="title">{{ doc.title or "No Title" }}</h1>
 
       {{ contributors_list(doc.contributors, show_email=False) }}
+
+      {% if website_hooks %}
+      <div class="article-buttons">
+        {{ website_hooks.correspond() }}
+        {{ website_hooks.cite() }}
+      </div>
+      {% endif %}
 
       <section class="abstract">
         {% if doc.abstract %}
@@ -86,6 +101,10 @@
         {% endif %}
       </div>
 
+      <footer class="copyright">
+        {{- copyright(doc) }}
+      </footer>
+
     </main>
   </article>
 {% endmacro %}
@@ -96,12 +115,6 @@
   <style>
     html {
       font-size: 12px;
-    }
-    body {
-      margin: 0;
-    }
-    *, ::after, ::before {
-      box-sizing: border-box;
     }
   </style>
   {{- article_main_css_style() }}
@@ -118,6 +131,10 @@
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
     }
+
+
+    /* .eprint class for embedding website to control variable scope */
+
     .eprint {
       --main-color: #0645ad;
       --text-color: black;
@@ -137,6 +154,13 @@
       size: A4 portrait;
       margin: 96px 36.85px; /* = A4 @page width of 720px */
 
+      @bottom-left {
+        content: element(footer);
+        margin-top: 1em;
+        padding-top: 1em;
+        vertical-align: top;
+        width: 60%;
+      }
       @bottom-right {
         content: counter(page) " of " counter(pages);
         margin-top: 1em;
@@ -157,9 +181,9 @@
       }
 
       @top-left {
-        content: element(top-left);
+        content: element(header);
         vertical-align: top;
-        margin-top: 24px;
+        margin-top: 1.25rem;
       }
     }
 
@@ -171,9 +195,6 @@
       font-family: var(--eprint-font-sans);
       line-height: 1.4;
       margin: 0;
-      hyphens: manual;
-      overflow-wrap: normal;
-      padding-top: 64px;
     }
     @media screen {
       article header .online-msg {
@@ -181,6 +202,43 @@
       }
       .logotype {
           display: none;
+      }
+    }
+
+
+    /* Media responsive logic */
+
+    aside {
+      display: none;
+    }
+
+    @media print {
+      aside {
+        display: block;
+      }
+      article main {
+        margin-left: 30%;
+      }
+      .top-metadata {
+        display: none;
+      }
+      footer.copyright {
+        display: none;
+      }
+    }
+
+    @media (min-width: 66em) {
+      aside {
+        display: block;
+      }
+      .top-metadata {
+        display: none;
+      }
+      main .article-buttons {
+        display: none;
+      }
+      footer.copyright {
+        display: none;
       }
     }
 
@@ -195,9 +253,6 @@
     article h1 {
       font-size: 2.6em;
       letter-spacing: -0.03em;
-    }
-    article h1.title {
-      margin-top: 2em;
     }
     article h1.title::after {
       border-bottom: 0.375rem solid;
@@ -222,9 +277,8 @@
 
     /* Specific Structure Blocks */
 
-    article main {
-      width: 70%;
-      margin-left: 30%;
+    main {
+      margin: 4em 0 1em;
     }
 
     aside {
@@ -233,10 +287,8 @@
       font-family: var(--eprint-font-condensed);
       font-stretch: condensed;
       overflow-wrap: anywhere;
-      max-width: 18rem; /* = 30% of article max-width 60rem */
       width: 30%;
       padding-right: 2rem;
-      text-align: left;
     }
     aside dl p {
       text-align: left;
@@ -261,13 +313,32 @@
       white-space: pre-line;
     }
 
-    article header .page-left {
+    article header {
       color: var(--light-text-color);
       font-size: 1.5rem;
       font-weight: 300;
       line-height: 1.2;
-      position: running(top-left);
+      position: running(header);
       margin-top: 32px;
+    }
+
+    footer.swhid {
+      color: var(--light-text-color);
+      font-weight: 300;
+      line-height: 1.2;
+      position: running(footer);
+    }
+
+    footer.copyright {
+      border-top: 0.005in solid;
+      break-inside: avoid;
+      color: var(--light-text-color);
+      font-weight: 300;
+      margin-top: 3em;
+      padding-top: 1em;
+    }
+    footer.copyright p {
+      margin: 0;
     }
 
 
@@ -358,8 +429,8 @@
     }
     article .abstract {
       border-bottom: 0.005in solid;
-      padding-bottom: 8px;
-      margin-bottom: 64px;
+      padding-bottom: 0.5em;
+      margin-bottom: 4em;
     }
     main p {
       text-align: justify;

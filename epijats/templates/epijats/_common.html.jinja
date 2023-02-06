@@ -20,15 +20,18 @@
   </div>
 {% endmacro %}
 
-{% macro top_metadata_layout(doc, dsi_base_url) %}
-  <div class="top-metadata">
+
+{% macro edition_band(doc) %}
     <div class="edition-band">
       <div class="edition-number">Edition&nbsp;{{ doc.edid }}</div>
       {% if doc.obsolete %}
         {{- obsolete_alert() }}
       {% endif %}
     </div>
+{% endmacro %}
 
+
+{% macro article_dates(doc) %}
     <dl class="article-dates">
       {% if doc.date %}
       <dt>Author date</dt>
@@ -39,14 +42,20 @@
       <dd>{{ doc.archive_date }}</dd>
       {% endif %}
     </dl>
+{% endmacro %}
 
-    <div class="article-swhid">
-      <b>Archived baseprint:</b><br>
-      <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
-        <strong>{{ doc.hash_scheme }}</strong><code>{{ doc.hexhash }}</code>
-      </a>
-    </div>
-  </div>
+
+{% macro copyright(doc) %}
+  <p>
+    <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
+      https://creativecommons.org/licenses/by/4.0/
+    </a>
+  </p>
+  <p>
+    2023 © The Authors.
+    This document is distributed under a Creative Commons Attribution 4.0 International
+    license.
+  </p>
 {% endmacro %}
 
 
