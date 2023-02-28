@@ -76,6 +76,148 @@
 {% endmacro %}
 
 
+{% macro printstrap_css() %}
+  <style>
+    :root {
+      --ps-paper-width: 210mm; /* A4 paper width */
+      --ps-paper-height: 297mm; /* A4 paper height */
+      --ps-paper-margin: 2mm; /* margin around outside of fake physical paper */
+
+      /* page margins of CSS page box for print media */
+      --ps-page-margin-top: 20mm;
+      --ps-page-margin-right: 20mm;
+      --ps-page-margin-bottom: 20mm;
+      --ps-page-margin-left: 20mm;
+    }
+
+    @page {
+      margin-top: var(--ps-page-margin-top);
+      margin-right: var(--ps-page-margin-right);
+      margin-bottom: var(--ps-page-margin-bottom);
+      margin-left: var(--ps-page-margin-left);
+
+      @top-left {
+        content: element(top-left);
+        box-sizing: border-box;
+        vertical-align: bottom;
+      }
+      @top-center {
+        content: element(top-center);
+        box-sizing: border-box;
+        vertical-align: bottom;
+      }
+      @top-right{
+        content: element(top-right);
+        box-sizing: border-box;
+        vertical-align: bottom;
+      }
+      @bottom-left {
+        content: element(bottom-left);
+        box-sizing: border-box;
+        vertical-align: top;
+      }
+      @bottom-center {
+        content: element(bottom-center);
+        box-sizing: border-box;
+        vertical-align: top;
+      }
+      @bottom-right {
+        content: element(bottom-right);
+        box-sizing: border-box;
+        vertical-align: top;
+      }
+    }
+
+    .page-center {
+      text-align: center;
+    }
+
+    .page-right {
+      text-align: right;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+      }
+      header .page-left {
+        position: running(top-left);
+      }
+      header .page-center {
+        position: running(top-center);
+      }
+      header .page-right {
+        position: running(top-right);
+      }
+      footer .page-left {
+        position: running(bottom-left);
+      }
+      footer .page-center {
+        position: running(bottom-center);
+      }
+      footer .page-right {
+        position: running(bottom-right);
+      }
+    }
+
+    @media screen {
+      /* Show fake single physical paper page that is:
+       * A4 paper width and
+       * A4 paper length OR as long as the content.
+       */
+
+      html {
+        background-color: #eee;
+      }
+      body {
+        background-color: white;
+        box-shadow: rgba(0, 0, 0, 0.15) 0 0 1.5em 0.5em;
+        margin: var(--ps-paper-margin) auto;
+        min-height: var(--ps-paper-height);
+        position: relative;
+        padding: var(--ps-page-margin-top) var(--ps-page-margin-right) var(--ps-page-margin-bottom) var(--ps-page-margin-left);
+        width: var(--ps-paper-width);
+      }
+      header, footer {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        position: absolute;
+        left: var(--ps-page-margin-left);
+        width: calc(100% - var(--ps-page-margin-left) - var(--ps-page-margin-right));
+      }
+      header {
+        height: var(--ps-page-margin-top);
+        top: 0;
+      }
+      footer {
+        height: var(--ps-page-margin-bottom);
+        bottom: 0;
+      }
+      :is(header, footer) :is(.page-left, .page-center, .page-right) {
+        flex: 1;
+      }
+
+    }
+
+
+    /* some browser CSS resetting like Bootstrap 5 */
+
+    *, ::after, ::before {
+      box-sizing: border-box;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 0;
+      margin-bottom: .5rem;
+    }
+    p {
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+  </style>
+{% endmacro %}
+
+
 {% macro common_css() %}
   <style>
     article a, article a:visited {
