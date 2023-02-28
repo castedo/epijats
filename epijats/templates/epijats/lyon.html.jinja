@@ -4,14 +4,16 @@
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
   <article lang="en" class="eprint">
     <header>
-      {% if doc.dsi %}
-      <div class="article-dsi">
-        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-          <strong>dsi:</strong><code>{{ doc.dsi }}</code>
-        </a>
+      <div class="page-right">
+        {% if doc.dsi %}
+          <p class="article-dsi">
+            <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+              <strong>dsi:</strong><code>{{ doc.dsi }}</code>
+            </a>
+          </p>
+        {% endif %}
+        <p class="online-msg">Additional formats and editions available online.</p>
       </div>
-      <div class="online-msg">Additional formats and editions available online.</div>
-      {% endif %}
     </header>
 
     <div class="top-metadata">
@@ -19,9 +21,9 @@
       {{article_dates(doc)}}
     </div>
 
-    <footer class="swhid">
-      <div class="article-swhid">
-        <b>Archived baseprint:</b><br>
+    <footer>
+      <div class="article-swhid page-left">
+        <b>Archived baseprint:</b>
         <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
           <strong>{{ doc.hash_scheme }}</strong><code>{{ doc.hexhash }}</code>
         </a>
@@ -37,36 +39,36 @@
         {{article_dates(doc)}}
 
         {% if website_hooks %}
-        <div class="article-buttons">
-          {{ website_hooks.correspond() }}
-          {{ website_hooks.cite() }}
-        </div>
+          <div class="article-buttons">
+            {{ website_hooks.correspond() }}
+            {{ website_hooks.cite() }}
+          </div>
         {% endif %}
 
         <dl>
 
           {% if not website_hooks %}
-          <dt>Correspondence</dt>
-          <dd>
-          {% for contributor in doc.contributors %}
-            {% if contributor.email %}
-            <a href="mailto:{{ contributor.email[0] | escape }}">
-              {{ contributor.email | join(', ') | escape }}
-            </a>
-            {% endif %}
-          {% endfor %}
-          </dd>
+            <dt>Correspondence</dt>
+            <dd>
+              {% for contributor in doc.contributors %}
+                {% if contributor.email %}
+                  <a href="mailto:{{ contributor.email[0] | escape }}">
+                    {{ contributor.email | join(', ') | escape }}
+                  </a>
+                {% endif %}
+              {% endfor %}
+            </dd>
 
-          <dt>Citation</dt>
-          <dd>
-            {% for contributor in doc.contributors %}
-              {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
-            {% endfor %}
-            (2022)
-            "{{ doc.title }}"
-            perm.pub {{ dsi_base_url }}/<br/>
-            dsi:<code>{{ doc.dsi }}</code>
-          </dd>
+            <dt>Citation</dt>
+            <dd>
+              {% for contributor in doc.contributors %}
+                {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
+              {% endfor %}
+              (2022)
+              "{{ doc.title }}"
+              perm.pub {{ dsi_base_url }}/<br/>
+              dsi:<code>{{ doc.dsi }}</code>
+            </dd>
           {% endif %}
 
           <dt>Copyright</dt>
@@ -82,30 +84,30 @@
       {{ contributors_list(doc.contributors, show_email=False) }}
 
       {% if website_hooks %}
-      <div class="article-buttons">
-        {{ website_hooks.correspond() }}
-        {{ website_hooks.cite() }}
-      </div>
+        <div class="article-buttons">
+          {{ website_hooks.correspond() }}
+          {{ website_hooks.cite() }}
+        </div>
       {% endif %}
 
       <section class="abstract">
         {% if doc.abstract %}
-        <h2>Abstract</h2>
-        {{ doc.abstract }}
+          <h2>Abstract</h2>
+          {{ doc.abstract }}
         {% endif %}
       </section>
 
       <div class="article-body">
         {% if doc.body %}
-        {{ doc.body }}
+          {{ doc.body }}
         {% endif %}
       </div>
 
-      <footer class="copyright">
-        {{- copyright(doc) }}
-      </footer>
-
     </main>
+
+    <footer class="copyright">
+      {{- copyright(doc) }}
+    </footer>
   </article>
 {% endmacro %}
 
@@ -117,6 +119,7 @@
       font-size: 12px;
     }
   </style>
+  {{- printstrap_css() }}
   {{- article_main_css_style() }}
 {% endmacro %}
 
@@ -156,10 +159,8 @@
 
       @bottom-left {
         border-top: 0.005in solid;
-        content: element(footer);
         margin-top: 1em;
         padding-top: 1em;
-        vertical-align: top;
         width: 60%;
       }
       @bottom-right {
@@ -167,16 +168,10 @@
         content: counter(page) " of " counter(pages);
         margin-top: 1em;
         padding-top: 1em;
-        vertical-align: top;
         width: 40%;
       }
-      @top-left {
-        border-bottom: 0.005in solid;
-        content: element(header);
-        margin-bottom: 1em;
-        padding-bottom: 1em;
-        vertical-align: top;
-        margin-top: 24px;
+      @top-right {
+        padding-bottom: 2rem;
       }
     }
 
@@ -184,19 +179,12 @@
       margin-top: 128px;
 
       @top-left {
-        background: url(static/cc.svg) left center / 0.8in 0.8in no-repeat;
-        border-bottom: 0;
+        background: url(static/cc.svg) left bottom / 0.8in 0.8in no-repeat;
         content: "";
         width: 30%;
       }
       @top-right {
-        content: element(header);
-        vertical-align: top;
-        margin-top: 24px;
-        width: 70%;
-        font-size: 1.5rem;
-        font-weight: 300;
-        line-height: 1.2;
+        content: "";
       }
     }
 
@@ -207,47 +195,16 @@
       color: var(--text-color);
       font-family: var(--eprint-font-sans);
       line-height: 1.4;
-      margin: 0;
     }
+
+
+    /* Screen-only tweaks */
+
     @media screen {
-      article header .online-msg {
-          display: none;
-      }
-    }
-
-
-    /* Media responsive logic */
-
-    aside {
-      display: none;
-    }
-
-    @media print {
-      aside {
-        display: block;
-      }
       article {
-        margin-left: 25%;
+        background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDEzLjAuMiwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMTQ5NDgpICAtLT4KPCFET0NUWVBFIHN2ZyBQVUJMSUMgIi0vL1czQy8vRFREIFNWRyAxLjAvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvVFIvMjAwMS9SRUMtU1ZHLTIwMDEwOTA0L0RURC9zdmcxMC5kdGQiPgo8c3ZnIHZlcnNpb249IjEuMCIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHdpZHRoPSI2NHB4IiBoZWlnaHQ9IjY0cHgiIHZpZXdCb3g9IjUuNSAtMy41IDY0IDY0IiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDUuNSAtMy41IDY0IDY0IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPGc-Cgk8Y2lyY2xlIGZpbGw9IiNGRkZGRkYiIGN4PSIzNy43ODUiIGN5PSIyOC41MDEiIHI9IjI4LjgzNiIvPgoJPHBhdGggZD0iTTM3LjQ0MS0zLjVjOC45NTEsMCwxNi41NzIsMy4xMjUsMjIuODU3LDkuMzcyYzMuMDA4LDMuMDA5LDUuMjk1LDYuNDQ4LDYuODU3LDEwLjMxNAoJCWMxLjU2MSwzLjg2NywyLjM0NCw3Ljk3MSwyLjM0NCwxMi4zMTRjMCw0LjM4MS0wLjc3Myw4LjQ4Ni0yLjMxNCwxMi4zMTNjLTEuNTQzLDMuODI4LTMuODIsNy4yMS02LjgyOCwxMC4xNDMKCQljLTMuMTIzLDMuMDg1LTYuNjY2LDUuNDQ4LTEwLjYyOSw3LjA4NmMtMy45NjEsMS42MzgtOC4wNTcsMi40NTctMTIuMjg1LDIuNDU3cy04LjI3Ni0wLjgwOC0xMi4xNDMtMi40MjkKCQljLTMuODY2LTEuNjE4LTcuMzMzLTMuOTYxLTEwLjQtNy4wMjdjLTMuMDY3LTMuMDY2LTUuNC02LjUyNC03LTEwLjM3MlM1LjUsMzIuNzY3LDUuNSwyOC41YzAtNC4yMjksMC44MDktOC4yOTUsMi40MjgtMTIuMgoJCWMxLjYxOS0zLjkwNSwzLjk3Mi03LjQsNy4wNTctMTAuNDg2QzIxLjA4LTAuMzk0LDI4LjU2NS0zLjUsMzcuNDQxLTMuNXogTTM3LjU1NywyLjI3MmMtNy4zMTQsMC0xMy40NjcsMi41NTMtMTguNDU4LDcuNjU3CgkJYy0yLjUxNSwyLjU1My00LjQ0OCw1LjQxOS01LjgsOC42Yy0xLjM1NCwzLjE4MS0yLjAyOSw2LjUwNS0yLjAyOSw5Ljk3MmMwLDMuNDI5LDAuNjc1LDYuNzM0LDIuMDI5LDkuOTEzCgkJYzEuMzUzLDMuMTgzLDMuMjg1LDYuMDIxLDUuOCw4LjUxNmMyLjUxNCwyLjQ5Niw1LjM1MSw0LjM5OSw4LjUxNSw1LjcxNWMzLjE2MSwxLjMxNCw2LjQ3NiwxLjk3MSw5Ljk0MywxLjk3MQoJCWMzLjQyOCwwLDYuNzUtMC42NjUsOS45NzMtMS45OTljMy4yMTktMS4zMzUsNi4xMjEtMy4yNTcsOC43MTMtNS43NzFjNC45OS00Ljg3Niw3LjQ4NC0xMC45OSw3LjQ4NC0xOC4zNDQKCQljMC0zLjU0My0wLjY0OC02Ljg5NS0xLjk0My0xMC4wNTdjLTEuMjkzLTMuMTYyLTMuMTgtNS45OC01LjY1NC04LjQ1OEM1MC45ODQsNC44NDQsNDQuNzk1LDIuMjcyLDM3LjU1NywyLjI3MnogTTM3LjE1NiwyMy4xODcKCQlsLTQuMjg3LDIuMjI5Yy0wLjQ1OC0wLjk1MS0xLjAxOS0xLjYxOS0xLjY4NS0yYy0wLjY2Ny0wLjM4LTEuMjg2LTAuNTcxLTEuODU4LTAuNTcxYy0yLjg1NiwwLTQuMjg2LDEuODg1LTQuMjg2LDUuNjU3CgkJYzAsMS43MTQsMC4zNjIsMy4wODQsMS4wODUsNC4xMTNjMC43MjQsMS4wMjksMS43OTEsMS41NDQsMy4yMDEsMS41NDRjMS44NjcsMCwzLjE4MS0wLjkxNSwzLjk0NC0yLjc0M2wzLjk0MiwyCgkJYy0wLjgzOCwxLjU2My0yLDIuNzkxLTMuNDg2LDMuNjg2Yy0xLjQ4NCwwLjg5Ni0zLjEyMywxLjM0My00LjkxNCwxLjM0M2MtMi44NTcsMC01LjE2My0wLjg3NS02LjkxNS0yLjYyOQoJCWMtMS43NTItMS43NTItMi42MjgtNC4xOS0yLjYyOC03LjMxM2MwLTMuMDQ4LDAuODg2LTUuNDY2LDIuNjU3LTcuMjU3YzEuNzcxLTEuNzksNC4wMDktMi42ODYsNi43MTUtMi42ODYKCQlDMzIuNjA0LDE4LjU1OCwzNS40NDEsMjAuMTAxLDM3LjE1NiwyMy4xODd6IE01NS42MTMsMjMuMTg3bC00LjIyOSwyLjIyOWMtMC40NTctMC45NTEtMS4wMi0xLjYxOS0xLjY4Ni0yCgkJYy0wLjY2OC0wLjM4LTEuMzA3LTAuNTcxLTEuOTE0LTAuNTcxYy0yLjg1NywwLTQuMjg3LDEuODg1LTQuMjg3LDUuNjU3YzAsMS43MTQsMC4zNjMsMy4wODQsMS4wODYsNC4xMTMKCQljMC43MjMsMS4wMjksMS43ODksMS41NDQsMy4yMDEsMS41NDRjMS44NjUsMCwzLjE4LTAuOTE1LDMuOTQxLTIuNzQzbDQsMmMtMC44NzUsMS41NjMtMi4wNTcsMi43OTEtMy41NDEsMy42ODYKCQljLTEuNDg2LDAuODk2LTMuMTA1LDEuMzQzLTQuODU3LDEuMzQzYy0yLjg5NiwwLTUuMjA5LTAuODc1LTYuOTQxLTIuNjI5Yy0xLjczNi0xLjc1Mi0yLjYwMi00LjE5LTIuNjAyLTcuMzEzCgkJYzAtMy4wNDgsMC44ODUtNS40NjYsMi42NTgtNy4yNTdjMS43Ny0xLjc5LDQuMDA4LTIuNjg2LDYuNzEzLTIuNjg2QzUxLjExNywxOC41NTgsNTMuOTM4LDIwLjEwMSw1NS42MTMsMjMuMTg3eiIvPgo8L2c-Cjwvc3ZnPgo=) calc(100% - 5mm) 5mm / 20mm 20mm no-repeat white;
       }
-      .top-metadata {
-        display: none;
-      }
-      footer.copyright {
-        display: none;
-      }
-    }
-
-    @media (min-width: 66em) {
-      aside {
-        display: block;
-      }
-      .top-metadata {
-        display: none;
-      }
-      main .article-buttons {
-        display: none;
-      }
-      footer.copyright {
+      article header .online-msg {
         display: none;
       }
     }
@@ -287,11 +244,11 @@
 
     /* Specific Structure Blocks */
 
-    main {
+    article main {
       margin: 4em 0 1em;
     }
 
-    aside {
+    article aside {
       position: absolute;
       left: 0;
       font-size: 0.8em;
@@ -300,42 +257,38 @@
       overflow-wrap: anywhere;
       width: 20%;
     }
-    aside dl p {
+    article aside dl p {
       margin: 0;
     }
-    aside dl {
+    article aside dl {
       margin: 1em 0;
     }
-    aside dt {
+    article aside dt {
       display: inline-block;
       font-weight: bold;
-      padding-top: 0.5em;
     }
-    aside dt::after {
+    article aside dt::before {
+      content: "";
+      display: block;
+      height: 0.5em;
+    }
+    article aside dt::after {
       content: ": ";
     }
-    aside dd {
+    article aside dd {
       display: inline;
       margin: 0;
     }
-    aside dd::after {
+    article aside dd::after {
       content: '\A';
       white-space: pre-line;
     }
 
     article header {
       color: var(--light-text-color);
-      position: running(header);
     }
 
-    footer.swhid {
-      color: var(--light-text-color);
-      font-weight: 300;
-      line-height: 1.2;
-      position: running(footer);
-    }
-
-    footer.copyright {
+    article footer .copyright {
       border-top: 0.005in solid;
       break-inside: avoid;
       color: var(--light-text-color);
@@ -343,47 +296,51 @@
       margin-top: 3em;
       padding-top: 1em;
     }
-    footer.copyright p {
+    article footer .copyright p {
       margin: 0;
     }
 
 
     /* Specific Elements */
 
-    article header .article-dsi {
-      display: inline-block;
-      padding-top: 12px;
-      margin-right: 64px;
+    article header p {
+      margin: 12px 0;
     }
     article header .article-dsi code {
       margin: 0;
     }
 
-    .article-dsi, .article-swhid {
+    article .article-dsi, .article-swhid {
       margin-bottom: 8px;
     }
-    .article-dsi code, .article-swhid code {
+    article .article-dsi code, .article-swhid code {
       margin-left: 3px;
     }
-    .article-swhid {
+    article .article-swhid {
+      color: var(--light-text-color);
+      font-weight: 300;
+      line-height: 1.2;
       word-break: break-all;
     }
-    .article-swhid code {
+    article .article-swhid a {
+      display: block;
+    }
+    article .article-swhid code {
       font-size: 0.825em;
     }
 
-    .edition-number {
+    article .edition-number {
       display: inline-block;
       font-size: 1.75em;
       font-weight: 300;
       margin-right: 24px;
     }
-    .edition-obsolete {
+    article .edition-obsolete {
       display: inline-block;
       font-size: 1.5rem;
       color: #ff2116;
     }
-    .edition-obsolete svg {
+    article .edition-obsolete svg {
       vertical-align: baseline;
       margin-bottom: -2px;
     }
@@ -409,23 +366,71 @@
       padding-bottom: 0.5em;
       margin-bottom: 4em;
     }
-    main p {
-      text-align: justify;
-    }
-    main p {
+    article main p {
       hyphens: auto;
       hyphenate-limit-chars: 9 3;
+      text-align: justify;
     }
-    .katex {
+    article .katex {
       break-before: avoid;
     }
-    .orcid-icon::before {
+    article .orcid-icon::before {
       background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjU2IDI1NjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNBNkNFMzk7fQoJLnN0MXtmaWxsOiNGRkZGRkY7fQo8L3N0eWxlPgo8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjU2LDEyOGMwLDcwLjctNTcuMywxMjgtMTI4LDEyOEM1Ny4zLDI1NiwwLDE5OC43LDAsMTI4QzAsNTcuMyw1Ny4zLDAsMTI4LDBDMTk4LjcsMCwyNTYsNTcuMywyNTYsMTI4eiIvPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04Ni4zLDE4Ni4ySDcwLjlWNzkuMWgxNS40djQ4LjRWMTg2LjJ6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTA4LjksNzkuMWg0MS42YzM5LjYsMCw1NywyOC4zLDU3LDUzLjZjMCwyNy41LTIxLjUsNTMuNi01Ni44LDUzLjZoLTQxLjhWNzkuMXogTTEyNC4zLDE3Mi40aDI0LjUgICBjMzQuOSwwLDQyLjktMjYuNSw0Mi45LTM5LjdjMC0yMS41LTEzLjctMzkuNy00My43LTM5LjdoLTIzLjdWMTcyLjR6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNODguNyw1Ni44YzAsNS41LTQuNSwxMC4xLTEwLjEsMTAuMWMtNS42LDAtMTAuMS00LjYtMTAuMS0xMC4xYzAtNS42LDQuNS0xMC4xLDEwLjEtMTAuMSAgIEM4NC4yLDQ2LjcsODguNyw1MS4zLDg4LjcsNTYuOHoiLz4KPC9nPgo8L3N2Zz4=") no-repeat;
       content: "";
       display: inline-block;
       height: 1em;
       vertical-align: -10%;
       width: 1em;
+    }
+
+
+    /* Media responsive logic */
+
+    article aside {
+      display: none;
+    }
+
+    @media print {
+      article header .article-dsi, article header .online-msg {
+        margin: 0;
+      }
+      article aside {
+        display: block;
+      }
+      article main {
+        margin-left: 25%;
+      }
+      article .top-metadata {
+        display: none;
+      }
+      article footer .copyright {
+        display: none;
+      }
+      article main footer {
+        display: none;
+      }
+    }
+
+    @media screen and (min-width: 66em) {
+      article aside {
+        display: block;
+        left: 2.5%;
+      }
+      article main {
+        margin-left: 25%;
+      }
+      article .top-metadata {
+        display: none;
+      }
+      article main .article-buttons {
+        display: none;
+      }
+      article footer .copyright {
+        display: none;
+      }
+      article main footer {
+        display: none;
+      }
     }
   </style>
 {% endmacro %}
