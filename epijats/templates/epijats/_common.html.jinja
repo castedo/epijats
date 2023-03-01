@@ -220,92 +220,92 @@
 
 {% macro common_css() %}
   <style>
-    a, a:visited {
+    article a, article a:visited {
       color: var(--main-color);
       text-decoration: inherit;
     }
-    img {
+    article img {
       display: block;
       max-height: 6in;
       max-width: 90%;
       margin: 1em auto;
     }
-    p img {
+    article p img {
       display: inline;
       margin: 0;
     }
-    ol, ul {
+    article ol, article ul {
       padding-left: 1.7em;
       margin-top: 1em;
     }
-    li > ol, li > ul {
+    article li > ol, article li > ul {
       margin-top: 0;
     }
-    code {
+    article code {
       font-family: var(--eprint-font-mono);
       white-space: pre-wrap;
       hyphens: none;
       break-inside: avoid;
     }
 
-    figure {
+    article figure {
       break-inside: avoid;
       margin: 2em 0 2em -20%;
       width: 120%;
     }
-    figcaption {
+    article figcaption {
       font-size: 0.8em;
       font-style: italic;
       margin: auto;
       width: 80%;
     }
 
-    blockquote {
+    article blockquote {
       border-color: var(--main-color);
       border-left: 2px solid;
       font-style: italic;
       margin: 1.5em;
       padding: 0.5em 1em;
     }
-    blockquote > :first-child {
+    article blockquote > :first-child {
       margin-top: 0;
     }
-    blockquote > :last-child {
+    article blockquote > :last-child {
       margin-bottom: 0;
     }
 
-    pre {
+    article pre {
       margin: 1em 0;
       overflow: auto;
       break-inside: avoid;
       hyphens: none;
     }
-    pre code {
+    article pre code {
       padding: 0;
       overflow: visible;
       overflow-wrap: normal;
     }
 
-    table {
+    article table {
       border-collapse: collapse;
       font-size: 0.8em;
       overflow-x: auto;
     }
-    tr {
+    article tr {
       break-inside: avoid;
     }
-    td, th {
+    article td, article th {
       border: 0.005in solid;
       border-color: var(--light-text-color);
       padding: 0.5em;
       vertical-align: top;
     }
 
-    sub, sup {
+    article sub, article sup {
       line-height: 0;
     }
 
-    hr {
+    article hr {
       border: 0;
       border-color: var(--text-color);
       border-top: 0.005in solid;
@@ -318,23 +318,23 @@
   <style>
     /* bibliographic references */
 
-    div.csl-entry {
+    article div.csl-entry {
       clear: both;
       break-inside: avoid;
     }
-    .hanging div.csl-entry {
+    article .hanging div.csl-entry {
       margin-left:2em;
       text-indent:-2em;
     }
-    div.csl-left-margin {
+    article div.csl-left-margin {
       min-width:2em;
       float:left;
     }
-    div.csl-right-inline {
+    article div.csl-right-inline {
       margin-left:2em;
       padding-left:1em;
     }
-    div.csl-indent {
+    article div.csl-indent {
       margin-left: 2em;
     }
   </style>
