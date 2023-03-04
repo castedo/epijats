@@ -23,7 +23,9 @@
 
 {% macro edition_band(doc) %}
     <div class="edition-band">
+      {% if doc.edid %}
       <div class="edition-number">Edition&nbsp;{{ doc.edid }}</div>
+      {% endif %}
       {% if doc.obsolete %}
         {{- obsolete_alert() }}
       {% endif %}
