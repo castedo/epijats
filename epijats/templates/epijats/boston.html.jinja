@@ -5,14 +5,14 @@
   <article lang="en" class="eprint">
     <header>
       {% if doc.dsi %}
-      <div class="page-left">
-        <div class="article-dsi">
-          <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-            <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
-          </a>
+        <div class="page-left">
+          <div class="article-dsi">
+            <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+              <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
+            </a>
+          </div>
+          <div class="online-msg">Additional formats and editions available online.</div>
         </div>
-        <div class="online-msg">Additional formats and editions available online.</div>
-      </div>
       {% endif %}
     </header>
 
@@ -40,14 +40,14 @@
 
       <section class="abstract">
         {% if doc.abstract %}
-        <h2>Abstract</h2>
-        {{ doc.abstract }}
+          <h2>Abstract</h2>
+          {{ doc.abstract }}
         {% endif %}
       </section>
 
       <div class="article-body">
         {% if doc.body %}
-        {{ doc.body }}
+          {{ doc.body }}
         {% endif %}
       </div>
 
@@ -66,12 +66,7 @@
     html {
       font-size: 12px;
     }
-    body {
-      margin: 0;
-    }
-    *, ::after, ::before {
-      box-sizing: border-box;
-    }
+    {% include "epijats/printstrap.css" %}
   </style>
   {{- article_main_css_style() }}
 {% endmacro %}
@@ -106,6 +101,10 @@
       size: A4 portrait;
       margin: 80px 96.85px; /* = A4 @page width of 600px */
 
+      @top-left {
+        content: none;
+      }
+
       @bottom-right {
         content: counter(page) " of " counter(pages);
         margin-top: 1em;
@@ -118,17 +117,18 @@
     @page:first {
       margin-top: 144px;
 
+      @top-left {
+        content: element(top-left);
+        vertical-align: top;
+        margin-top: 36px;
+        width: 500px;
+      }
+
       @top-right {
         background: url(static/cc.svg) right center / 76px 76px no-repeat;
         content: "";
         width: 76px;
         margin-top: 48px;
-      }
-
-      @top-left {
-        content: element(top-left);
-        vertical-align: top;
-        margin-top: 36px;
       }
     }
 
@@ -139,7 +139,6 @@
       color: var(--text-color);
       font-family: var(--eprint-font-sans);
       line-height: 1.4;
-      margin: 0;
       hyphens: manual;
       overflow-wrap: normal;
     }
@@ -150,10 +149,10 @@
     }
     @media screen {
       article header .online-msg {
-          display: none;
+        display: none;
       }
       .logotype {
-          display: none;
+        display: none;
       }
     }
 
@@ -201,16 +200,20 @@
       margin-top: 32px;
     }
 
-    .top-metadata {
+    article .top-metadata {
       margin-top: 0.825rem;
     }
     @media print {
-      .top-metadata {
+      article .top-metadata {
         margin-top: 3em;
       }
     }
 
-    footer.copyright {
+    article main {
+      padding-bottom: 2rem;
+    }
+
+    article footer.copyright {
       border-top: 0.005in solid;
       break-inside: avoid;
       color: var(--light-text-color);
@@ -218,8 +221,13 @@
       margin-top: 3em;
       padding-top: 1em;
     }
-    footer.copyright p {
+    article footer.copyright p {
       margin: 0;
+    }
+    @media screen {
+      article footer.copyright {
+        display: block;
+      }
     }
 
 
@@ -230,63 +238,61 @@
       font-weight: bold;
       color: var(--accent-color);
     }
-    .article-dsi {
+    article .article-dsi {
       font-size: 1.2em;
     }
     article header .online-msg {
       color: var(--light-text-color);
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 300;
     }
-    .article-dsi, .article-swhid {
+    article .article-dsi, article .article-swhid {
       margin-bottom: 8px;
-    }
-    .article-dsi code, .article-swhid code {
-      margin-left: 3px;
-    }
-    .article-swhid {
       word-break: break-all;
     }
-    .article-swhid code {
-      font-size: 0.825em;
+    article .article-dsi code, article .article-swhid code {
+      margin-left: 3px;
+    }
+    article .article-swhid code {
+      font-size: 0.8em;
     }
 
-    .edition-band {
+    article .edition-band {
       margin: 0.825rem 0;
     }
-    .edition-number {
+    article .edition-number {
       display: inline-block;
       font-size: 1.75em;
       font-weight: 300;
       margin-right: 24px;
     }
-    .edition-obsolete {
+    article .edition-obsolete {
       display: inline-block;
       font-size: 1.5rem;
       color: #ff2116;
     }
-    .edition-obsolete svg {
+    article .edition-obsolete svg {
       vertical-align: baseline;
       margin-bottom: -2px;
     }
 
-    dl.article-dates {
+    article dl.article-dates {
       margin-bottom: 0.5rem;
     }
-    dl.article-dates dt::after {
+    article dl.article-dates dt::after {
       content: ": ";
     }
-    dl.article-dates dt {
+    article dl.article-dates dt {
       display: inline-block;
       font-weight: bold;
       padding-bottom: 0.5em;
       min-width: 6.25rem;
     }
-    dl.article-dates dd {
+    article dl.article-dates dd {
       display: inline;
       margin: 0;
     }
-    dl.article-dates dd::after {
+    article dl.article-dates dd::after {
       content: '\A';
       white-space: pre-line;
     }
@@ -315,17 +321,15 @@
       padding-bottom: 0.5em;
       margin-bottom: 4em;
     }
-    main p {
-      text-align: justify;
-    }
-    main p {
+    article main p {
       hyphens: auto;
       hyphenate-limit-chars: 9 3;
+      text-align: justify;
     }
-    .katex {
+    article .katex {
       break-before: avoid;
     }
-    .orcid-icon::before {
+    article .orcid-icon::before {
       background: url("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDE5LjEuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjU2IDI1NjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNBNkNFMzk7fQoJLnN0MXtmaWxsOiNGRkZGRkY7fQo8L3N0eWxlPgo8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjU2LDEyOGMwLDcwLjctNTcuMywxMjgtMTI4LDEyOEM1Ny4zLDI1NiwwLDE5OC43LDAsMTI4QzAsNTcuMyw1Ny4zLDAsMTI4LDBDMTk4LjcsMCwyNTYsNTcuMywyNTYsMTI4eiIvPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04Ni4zLDE4Ni4ySDcwLjlWNzkuMWgxNS40djQ4LjRWMTg2LjJ6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMTA4LjksNzkuMWg0MS42YzM5LjYsMCw1NywyOC4zLDU3LDUzLjZjMCwyNy41LTIxLjUsNTMuNi01Ni44LDUzLjZoLTQxLjhWNzkuMXogTTEyNC4zLDE3Mi40aDI0LjUgICBjMzQuOSwwLDQyLjktMjYuNSw0Mi45LTM5LjdjMC0yMS41LTEzLjctMzkuNy00My43LTM5LjdoLTIzLjdWMTcyLjR6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNODguNyw1Ni44YzAsNS41LTQuNSwxMC4xLTEwLjEsMTAuMWMtNS42LDAtMTAuMS00LjYtMTAuMS0xMC4xYzAtNS42LDQuNS0xMC4xLDEwLjEtMTAuMSAgIEM4NC4yLDQ2LjcsODguNyw1MS4zLDg4LjcsNTYuOHoiLz4KPC9nPgo8L3N2Zz4=") no-repeat;
       content: "";
       display: inline-block;
