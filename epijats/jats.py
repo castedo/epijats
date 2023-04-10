@@ -21,6 +21,8 @@ def pandoc_jats_to_webstract(jats_src, pandoc_opts):
     args = [jats_src, "--from=jats", "-s", '--to', 'html']
     tmpl = resource_filename(__name__, "templates/webstract.pandoc")
     args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
+    args += ["--metadata", "reference-section-title=References"]
+    args += ["--metadata", "link-citations=true"]
     args += ["--shift-heading-level-by=1", "--wrap=preserve"]
     return run_pandoc(args + pandoc_opts)
 
