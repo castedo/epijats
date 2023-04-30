@@ -91,7 +91,7 @@ class Main:
 
     def load_webstract(self):
         if self.inform == "jats":
-            self.check_imports(["elifetools"], "read")
+            self.check_imports(["elifetools", "jsoml"], "read")
             from epijats.jats import webstract_from_jats
             return webstract_from_jats(self.inpath, self.config.pandoc_opts)
         elif self.inform == "json":

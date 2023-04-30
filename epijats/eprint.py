@@ -69,10 +69,10 @@ class Eprint:
 
         weasyprint.HTML(source).write_pdf(target)
 
-    def make_pdf(self, target):
+    @staticmethod
+    def stable_html_to_pdf(html_path, target, source_date):
         target = Path(target)
-        os.environ.update(self._source_date_epoch())
-        html_path = self._get_html()
+        os.environ.update(source_date)
         if os.environ.get("EPIJATS_SKIP_PDF"):
             return
         try:
@@ -82,6 +82,14 @@ class Eprint:
         os.symlink(html_path.parent.resolve(), HACK_WEASY_PATH)
         Eprint.html_to_pdf(HACK_WEASY_PATH / html_path.name, target)
         return target
+
+    def make_pdf(self, target):
+        Eprint.stable_html_to_pdf(self._get_html(), target, self._source_date_epoch())
+
+    def make_html_and_pdf(self, html_target, pdf_target):
+        html_path = self._get_html()
+        copytree_nostat(html_path.parent, html_target)
+        Eprint.stable_html_to_pdf(html_path, pdf_target, self._source_date_epoch())
 
     def _source_date_epoch(self):
         ret = dict()
