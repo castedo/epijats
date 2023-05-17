@@ -81,6 +81,7 @@ class Eprint:
             pass
         os.symlink(html_path.parent.resolve(), HACK_WEASY_PATH)
         Eprint.html_to_pdf(HACK_WEASY_PATH / html_path.name, target)
+        os.remove(HACK_WEASY_PATH)
         return target
 
     def make_pdf(self, target):
