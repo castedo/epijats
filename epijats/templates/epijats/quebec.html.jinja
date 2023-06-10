@@ -4,14 +4,16 @@
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
   <article lang="en" class="eprint">
     <header>
-      {% if doc.dsi %}
-        <div class="article-dsi">
-          <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-            <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
-          </a>
-          <p class="online-msg">Additional formats and editions available online.</p>
-        </div>
-      {% endif %}
+      <div class="page-right">
+        {% if doc.dsi %}
+          <div class="article-dsi">
+            <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+              <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
+            </a>
+            <p class="online-msg">Additional formats and editions available online.</p>
+          </div>
+        {% endif %}
+      </div>
     </header>
 
     <div class="top-metadata">
@@ -82,10 +84,10 @@
       {{ contributors_list(doc.contributors, show_email=False) }}
 
       {% if website_hooks %}
-      <div class="article-buttons">
-        {{ website_hooks.correspond() }}
-        {{ website_hooks.cite() }}
-      </div>
+        <div class="article-buttons">
+          {{ website_hooks.correspond() }}
+          {{ website_hooks.cite() }}
+        </div>
       {% endif %}
 
       <section class="abstract">
@@ -137,7 +139,7 @@
     /* .eprint class for embedding website to control variable scope */
 
     .eprint {
-      --main-color: #0645ad;
+      --main-color: #04b;
       --text-color: black;
       --light-text-color: #555;
       --accent-color: #a6ce39;
@@ -153,18 +155,22 @@
       font-weight: 300;
       line-height: 1.2;
       size: A4 portrait;
-      margin: 96px 36.85px; /* = A4 @page width of 720px */
 
       @bottom-left {
+        border-top: 0.005in solid;
         margin-top: 1em;
         padding-top: 1em;
         width: 60%;
       }
       @bottom-right {
+        border-top: 0.005in solid;
         content: counter(page) " of " counter(pages);
         margin-top: 1em;
         padding-top: 1em;
         width: 40%;
+      }
+      @top-right {
+        padding-bottom: 2rem;
       }
     }
 
@@ -172,16 +178,16 @@
       margin-top: 128px;
 
       @top-left {
+        background: url(static/cc.svg) left bottom / 0.8in 0.8in no-repeat;
+        content: "";
+        width: 20%;
+      }
+      @top-right {
+        content: "";
         content: element(header);
         margin-top: 1.25rem;
         vertical-align: top;
         width: 80%;
-      }
-      @top-right {
-        background: url(static/cc.svg) right center / 76px 76px no-repeat;
-        content: "";
-        margin-top: 48px;
-        width: 20%;
       }
     }
 
@@ -194,6 +200,9 @@
       line-height: 1.4;
       margin: 0;
     }
+
+    /* Screen-only tweaks */
+
     @media screen {
       article header {
         background: url(static/cc.svg) right center / 60px 60px no-repeat;
@@ -286,10 +295,11 @@
     article aside {
       position: absolute;
       left: 0;
+      font-size: 0.8em;
       font-family: var(--eprint-font-condensed);
       font-stretch: condensed;
       overflow-wrap: anywhere;
-      width: 30%;
+      width: 20%;
       padding-right: 2rem;
     }
     article aside dl p {
@@ -301,12 +311,19 @@
       margin: 0 0 1rem;
     }
     article aside dt {
+      display: inline-block;
       font-weight: bold;
+    }
+    article aside dt::before {
+      content: "";
+      display: block;
+      height: 0.5em;
     }
     article aside dt::after {
       content: ": ";
     }
     article aside dd {
+      display: inline;
       margin: 0;
       margin-bottom: 1rem;
     }
@@ -356,6 +373,7 @@
     }
     article .article-dsi, article .article-swhid {
       margin-bottom: 8px;
+      word-break: break-all;
     }
     article .article-dsi code, article .article-swhid code {
       margin-left: 3px;
@@ -364,6 +382,9 @@
       color: var(--light-text-color);
       font-weight: 300;
       line-height: 1.2;
+    }
+    article .article-swhid a {
+      display: block;
     }
     article .article-swhid code {
       font-size: 0.825em;
@@ -431,11 +452,9 @@
       margin-bottom: 4em;
     }
     article main p {
-      text-align: justify;
-    }
-    article main p {
       hyphens: auto;
       hyphenate-limit-chars: 9 3;
+      text-align: justify;
     }
     article .katex {
       break-before: avoid;
@@ -448,6 +467,7 @@
       vertical-align: -10%;
       width: 1em;
     }
+
 
     /* Media responsive logic */
 
@@ -463,7 +483,7 @@
         display: block;
       }
       article main {
-        margin-left: 30%;
+        margin-left: 25%;
       }
       article .top-metadata {
         display: none;
@@ -482,7 +502,7 @@
         left: 2.5%;
       }
       article main {
-        margin-left: 30%;
+        margin-left: 25%;
       }
       article .top-metadata {
         display: none;

@@ -1,16 +1,43 @@
+/* Customizable CSS variables */
+
 :root {
-  --ps-paper-width: 210mm; /* A4 paper width */
-  --ps-paper-height: 297mm; /* A4 paper height */
-  --ps-paper-margin: 2mm; /* margin around outside of fake physical paper */
+  --ps-paper-height: 297mm; /* 297mm = A4 paper height */
 
   /* page margins of CSS page box for print media */
   --ps-page-margin-top: 20mm;
-  --ps-page-margin-right: 20mm;
   --ps-page-margin-bottom: 20mm;
+
+  /* To work around https://github.com/Kozea/WeasyPrint/issues/1219
+   * the following three must sum to width of paper */
   --ps-page-margin-left: 20mm;
+  --ps-page-margin-right: 20mm;
+  --ps-page-area-width: 170mm;
+  /* 20mm + 170mm + 20mm = 210mm = A4 paper width */
+
+  /* fixed widths of page margin boxes above and below page area */
+  --ps-page-top-left-width: 33.3333333333%;
+  --ps-page-top-center-width: 33.3333333333%;
+  --ps-page-top-right-width: 33.3333333333%;
+  --ps-page-bottom-left-width: 33.3333333333%;
+  --ps-page-bottom-center-width: 33.3333333333%;
+  --ps-page-bottom-right-width: 33.3333333333%;
+
+  /* First page specific overrides. */
+  /* To use, add second <header> element and
+  /* add class="ps-first-page-top" to html root element. */
+  --ps-first-page-margin-top: 20mm;
+  --ps-first-page-top-left-width: var(--ps-page-top-left-width);
+  --ps-first-page-top-center-width: var(--ps-page-top-center-width);
+  --ps-first-page-top-right-width: var(--ps-page-top-right-width);
 }
 
+
+/* printstrap CSS implementation */
+
 @page {
+  size: auto var(--ps-paper-height);
+  width: var(--ps-page-area-width);
+
   margin-top: var(--ps-page-margin-top);
   margin-right: var(--ps-page-margin-right);
   margin-bottom: var(--ps-page-margin-bottom);
@@ -20,31 +47,37 @@
     content: element(top-left);
     box-sizing: border-box;
     vertical-align: bottom;
+    width: var(--ps-page-top-left-width);
   }
   @top-center {
     content: element(top-center);
     box-sizing: border-box;
     vertical-align: bottom;
+    width: var(--ps-page-top-center-width);
   }
   @top-right{
     content: element(top-right);
     box-sizing: border-box;
     vertical-align: bottom;
+    width: var(--ps-page-top-right-width);
   }
   @bottom-left {
     content: element(bottom-left);
     box-sizing: border-box;
     vertical-align: top;
+    width: var(--ps-page-bottom-left-width);
   }
   @bottom-center {
     content: element(bottom-center);
     box-sizing: border-box;
     vertical-align: top;
+    width: var(--ps-page-bottom-center-width);
   }
   @bottom-right {
     content: element(bottom-right);
     box-sizing: border-box;
     vertical-align: top;
+    width: var(--ps-page-bottom-right-width);
   }
 }
 
@@ -86,6 +119,13 @@
        * A4 paper length OR as long as the content.
    */
 
+  :root {
+    --ps-paper-margin: 2mm; /* margin around outside of fake physical paper */
+    --ps-paper-width: calc(
+      var(--ps-page-area-width) + var(--ps-page-margin-left) + var(--ps-page-margin-right)
+    );
+  }
+
   html {
     background-color: #eee;
   }
@@ -95,41 +135,167 @@
     margin: var(--ps-paper-margin) auto;
     min-height: var(--ps-paper-height);
     position: relative;
-    padding: var(--ps-page-margin-top) var(--ps-page-margin-right) var(--ps-page-margin-bottom) var(--ps-page-margin-left);
+    padding: var(--ps-first-page-margin-top) var(--ps-page-margin-right) var(--ps-page-margin-bottom) var(--ps-page-margin-left);
     width: var(--ps-paper-width);
   }
   header, footer {
-    align-items: center;
     display: flex;
     justify-content: space-between;
     position: absolute;
-    left: var(--ps-page-margin-left);
-    width: calc(100% - var(--ps-page-margin-left) - var(--ps-page-margin-right));
+    left: 0;
+    width: 100%;
+    padding-left: var(--ps-page-margin-left);
+    padding-right: var(--ps-page-margin-right);
   }
   header {
-    height: var(--ps-page-margin-top);
+    align-items: flex-end;
+    height: var(--ps-first-page-margin-top);
     top: 0;
   }
   footer {
+    align-items: flex-start;
     height: var(--ps-page-margin-bottom);
     bottom: 0;
   }
-  :is(header, footer) :is(.page-left, .page-center, .page-right) {
-    flex: 1;
+  header .page-left {
+    width: var(--ps-first-page-top-left-width);
+  }
+  header .page-center {
+    width: var(--ps-first-page-top-center-width);
+  }
+  header .page-right {
+    width: var(--ps-first-page-top-right-width);
+  }
+  footer .page-left {
+    width: var(--ps-page-bottom-left-width);
+  }
+  footer .page-center {
+    width: var(--ps-page-bottom-center-width);
+  }
+  footer .page-right {
+    width: var(--ps-page-bottom-right-width);
   }
 }
 
 
-/* some browser CSS resetting like Bootstrap 5 */
+/* First page top margin feature */
 
-*, ::after, ::before {
+/* If first page margin top has different content,
+ * then add class="ps-first-page-top" to html root element
+ * and add second <header> element.
+ * */
+
+:root {
+  --ps-content-first-page-top-left: element(top-left);
+  --ps-content-first-page-top-center: element(top-center);
+  --ps-content-first-page-top-right: element(top-right);
+}
+
+:root.ps-first-page-top {
+  --ps-content-first-page-top-left: element(first-top-left);
+  --ps-content-first-page-top-center: element(first-top-center);
+  --ps-content-first-page-top-right: element(first-top-right);
+}
+
+@page:first {
+  margin-top: var(--ps-first-page-margin-top);
+
+  @top-left {
+    content: var(--ps-content-first-page-top-left);
+    width: var(--ps-first-page-top-left-width);
+  }
+  @top-center {
+    content: var(--ps-content-first-page-top-center);
+    width: var(--ps-first-page-top-center-width);
+  }
+  @top-right {
+    content: var(--ps-content-first-page-top-right);
+    width: var(--ps-first-page-top-right-width);
+  }
+}
+
+@media print {
+  header:first-of-type .page-left {
+    position: running(first-top-left);
+  }
+  header:first-of-type .page-center {
+    position: running(first-top-center);
+  }
+  header:first-of-type .page-right {
+    position: running(first-top-right);
+  }
+  header:last-of-type .page-left {
+    position: running(top-left);
+  }
+  header:last-of-type .page-center {
+    position: running(top-center);
+  }
+  header:last-of-type .page-right {
+    position: running(top-right);
+  }
+}
+
+@media screen {
+  header:not(:first-of-type) {
+    /* Glimpse of top margin of fake 2nd page */
+    background-color: white;
+    top: auto;
+    bottom: calc(-1rem - var(--ps-page-margin-top) - 2 * var(--ps-paper-margin));
+    height: calc(1rem + var(--ps-page-margin-top));
+    padding-bottom: 1rem;
+  }
+  header:not(:first-of-type) .page-left {
+    width: var(--ps-page-top-left-width);
+  }
+  header:not(:first-of-type) .page-center {
+    width: var(--ps-page-top-center-width);
+  }
+  header:not(:first-of-type) .page-right {
+    width: var(--ps-page-top-right-width);
+  }
+}
+
+
+/* Some browser CSS resetting from Bootstrap 5 */
+/*!
+ * Bootstrap Reboot v5.2.1 (https://getbootstrap.com/)
+ * Copyright 2011-2022 The Bootstrap Authors
+ * Copyright 2011-2022 Twitter, Inc.
+ * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
+ */
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
-h1, h2, h3, h4, h5, h6 {
+
+h6, h5, h4, h3, h2, h1 {
   margin-top: 0;
-  margin-bottom: .5rem;
+  margin-bottom: 0.5rem;
 }
+
 p {
   margin-top: 0;
   margin-bottom: 1rem;
+}
+
+dl {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+dt {
+  font-weight: 700;
+}
+
+dd {
+  margin-bottom: 0.5rem;
+  margin-left: 0;
+}
+
+.clearfix::after {
+  display: block;
+  clear: both;
+  content: "";
 }
