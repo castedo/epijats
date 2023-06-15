@@ -32,6 +32,7 @@ class EprinterConfig:
 class Eprint:
 
     _gen = None
+    _static_dir = Path(resource_filename(__name__, "static/"))
 
     def __init__(self, webstract, tmp, config=None):
         if config is None:
@@ -44,9 +45,6 @@ class Eprint:
         if Eprint._gen is None:
             Eprint._gen = PackagePageGenerator()
 
-    def _get_static_dir(self):
-        return Path(resource_filename(__name__, "static/"))
-
     def _get_html(self):
         html_dir = self._tmp
         os.makedirs(html_dir, exist_ok=True)
@@ -55,13 +53,17 @@ class Eprint:
         ctx = dict(doc=self.webstract.facade, has_math=True, **self._html_ctx)
         self._gen.render_file("article.html.jinja", ret, ctx)
         if not ret.with_name("static").exists():
-            os.symlink(self._get_static_dir(), ret.with_name("static"))
+            os.symlink(Eprint._static_dir, ret.with_name("static"))
         if self.webstract.source.subpath_exists("pass"):
             self.webstract.source.symlink_subpath(html_dir / "pass", "pass")
         return ret
 
     def make_html_dir(self, target):
         copytree_nostat(self._get_html().parent, target)
+
+    @staticmethod
+    def copy_static_dir(target):
+        copytree_nostat(Eprint._static_dir, target)
 
     @staticmethod
     def html_to_pdf(source, target):

@@ -1,22 +1,49 @@
 {% extends 'epijats/_common.html.jinja' %}
 
+{% macro article_preview(doc, dsi_base_url) %}
+  <div class="eprint">
+    {{- article_layout(doc, dsi_base_url) }}
+  </div><!-- eprint -->
+{% endmacro %}
 
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
-  <article lang="en" class="eprint">
-    <header>
-      {% if doc.dsi %}
-        <div class="page-left">
-          <div class="article-dsi">
-            <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-              <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
-            </a>
-          </div>
-          <div class="online-msg">Additional formats and editions available online.</div>
-        </div>
-      {% endif %}
-    </header>
+  <header>
+    <div class="page-left">
+    {% if doc.dsi %}
+      <div class="article-dsi">
+        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+          <span class="logotype">perm.pub/</span><strong>dsi:</strong><code>{{ doc.dsi }}</code>
+        </a>
+        <div class="online-msg">Additional formats and editions available online.</div>
+      </div>
+    {% endif %}
+    </div>
+    <div class="page-center"></div>
+    <div class="page-right">
+      <img class="logo logo-cc" src="static/cc.svg">
+    </div>
+  </header>
+
+  <footer>
+    <div class="page-left"></div>
+    <div class="page-center"></div>
+    <div class="page-right">0 of 0</div>
+  </footer>
+
+  <header>
+    <div class="page-left"></div>
+    <div class="page-center"></div>
+    <div class="page-right"></div>
+  </header>
+
+  <article lang="en">
 
     <div class="top-metadata">
+      <div class="article-dsi">
+        <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+          <strong>dsi:</strong><code>{{ doc.dsi }}</code>
+        </a>
+      </div>
       {{edition_band(doc)}}
       {{article_dates(doc)}}
       <div class="article-swhid">
@@ -51,9 +78,9 @@
         {% endif %}
       </div>
 
-      <footer class="copyright">
+      <div class="article-footer">
         {{- copyright(doc) }}
-      </footer>
+      </div>
 
     </main>
   </article>
@@ -64,10 +91,10 @@
 {% macro article_css_style() %}
   <style>
     html {
-      font-size: 12px;
+      font-size: 15px;
     }
-    {% include "epijats/printstrap.css" %}
   </style>
+  <link href="static/printstrap.css" rel="stylesheet">
   {{- article_main_css_style() }}
 {% endmacro %}
 
@@ -76,11 +103,15 @@
 {% macro article_main_css_style() %}
   {{- common_css() }}
   {{- pandoc_class_css() }}
+  {{- var_base_font_css() -}}
   <style>
     :root {
       --eprint-font-sans: 'Fira Sans', sans-serif;
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
+    }
+    .webpaper .eprint {
+      font-size: var(--base-font-size);
     }
     .eprint {
       --main-color: #04b;
@@ -92,67 +123,35 @@
 
     /* Page */
 
-    @page {
-      color: #555;
+    :root {
+      --ps-page-margin-left: 25mm;
+      --ps-page-margin-right: 25mm;
+      --ps-page-area-width: 160mm;
+      /* 25mm + 160mm + 25mm = 210mm = A4 paper width */
+
+      --ps-first-page-margin-top: 38mm;
+
+      --ps-first-page-top-left-width: 90%;
+      --ps-first-page-top-center-width: 0%;
+      --ps-first-page-top-right-width: 10%;
+    }
+    .eprint {
+      color: var(--text-color);
       font-family: var(--eprint-font-sans);
-      font-size: 1.25rem;
       font-weight: 300;
       line-height: 1.2;
-      size: A4 portrait;
-
-      @top-left {
-        content: none;
-      }
-
-      @bottom-right {
-        content: counter(page) " of " counter(pages);
-        margin-top: 1em;
-        padding-top: 1em;
-        vertical-align: top;
-        width: 40%;
-      }
     }
-
-    @page:first {
-      margin-top: 144px;
-
-      @top-left {
-        content: element(top-left);
-        vertical-align: top;
-        margin-top: 36px;
-        width: 500px;
-      }
-
-      @top-right {
-        background: url(static/cc.svg) right center / 76px 76px no-repeat;
-        content: "";
-        width: 76px;
-        margin-top: 48px;
-      }
+    .eprint footer .page-right {
+      content: counter(page) " of " counter(pages);
     }
 
 
     /* Article */
 
     article {
-      color: var(--text-color);
-      font-family: var(--eprint-font-sans);
       line-height: 1.4;
       hyphens: manual;
       overflow-wrap: normal;
-    }
-    @media print {
-      article {
-        font-size: 1.25rem;
-      }
-    }
-    @media screen {
-      article header .online-msg {
-        display: none;
-      }
-      .logotype {
-        display: none;
-      }
     }
 
 
@@ -193,26 +192,30 @@
 
     /* Specific Structure Blocks */
 
-    article header .page-left {
-      line-height: 1.2;
-      position: running(top-left);
-      margin-top: 32px;
+    @media screen {
+      .webpaper .eprint :is(header, footer) {
+        display: none;
+      }
     }
 
     article .top-metadata {
+      margin-top: 3em;
+    }
+    .webpaper article .top-metadata {
       margin-top: 0.825rem;
     }
-    @media print {
-      article .top-metadata {
-        margin-top: 3em;
-      }
+    article .top-metadata .article-dsi {
+      display: none;
+    }
+    .webpaper article .top-metadata .article-dsi {
+      display: block;
     }
 
     article main {
       padding-bottom: 2rem;
     }
 
-    article footer.copyright {
+    article .article-footer {
       border-top: 0.005in solid;
       break-inside: avoid;
       color: var(--light-text-color);
@@ -220,40 +223,36 @@
       margin-top: 3em;
       padding-top: 1em;
     }
-    article footer.copyright p {
+    article .article-footer p {
       margin: 0;
-    }
-    @media screen {
-      article footer.copyright {
-        display: block;
-      }
     }
 
 
     /* Specific Elements */
 
-    article header .logotype {
+    .eprint header .logotype {
       font-size: 1.5em;
       font-weight: bold;
       color: var(--accent-color);
     }
-    article .article-dsi {
+    .eprint .article-dsi {
       font-size: 1.2em;
     }
-    article header .online-msg {
+    .eprint header .online-msg {
       color: var(--light-text-color);
       font-size: 1.25rem;
       font-weight: 300;
     }
-    article .article-dsi, article .article-swhid {
-      margin-bottom: 8px;
+    .eprint .article-dsi,
+    .eprint .article-swhid {
       word-break: break-all;
     }
-    article .article-dsi code, article .article-swhid code {
-      margin-left: 3px;
+    .eprint .article-dsi code,
+    .eprint .article-swhid code {
+      margin-left: 0.125em;
     }
-    article .article-swhid code {
-      font-size: 0.8em;
+    .eprint .article-swhid code {
+      font-size: 0.825em;
     }
 
     article .edition-band {
@@ -263,7 +262,7 @@
       display: inline-block;
       font-size: 1.75em;
       font-weight: 300;
-      margin-right: 24px;
+      margin-right: 2rem;
     }
     article .edition-obsolete {
       display: inline-block;
@@ -272,7 +271,7 @@
     }
     article .edition-obsolete svg {
       vertical-align: baseline;
-      margin-bottom: -2px;
+      margin-bottom: -0.125rem;
     }
 
     article dl.article-dates {
@@ -297,7 +296,7 @@
     }
 
     article dl.contributors {
-      margin-bottom: 40px;
+      margin-bottom: 3rem;
     }
     article .contributors dt, article .contributors dd {
       display: inline;

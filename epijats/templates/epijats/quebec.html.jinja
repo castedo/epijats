@@ -1,5 +1,10 @@
 {% extends 'epijats/_common.html.jinja' %}
 
+{% macro article_preview(doc, dsi_base_url) %}
+  <div class="eprint">
+    {{- article_layout(doc, dsi_base_url) }}
+  </div><!-- eprint -->
+{% endmacro %}
 
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
   <article lang="en" class="eprint">
@@ -118,8 +123,8 @@
     html {
       font-size: 12px;
     }
-    {% include "epijats/printstrap.css" %}
   </style>
+  <link href="static/printstrap.css" rel="stylesheet">
   {{- article_main_css_style() }}
 {% endmacro %}
 
@@ -128,11 +133,15 @@
 {% macro article_main_css_style() %}
   {{- common_css() }}
   {{- pandoc_class_css() }}
+  {{- var_base_font_css() -}}
   <style>
     :root {
       --eprint-font-sans: 'Fira Sans', sans-serif;
       --eprint-font-mono: 'Fira Mono', monospace;
       --eprint-font-condensed: 'Fira Sans Condensed', sans-serif;
+    }
+    .webpaper .eprint {
+      font-size: var(--base-font-size);
     }
 
 

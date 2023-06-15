@@ -1,0 +1,92 @@
+/* Customizable CSS variables */
+
+:root {
+  --ps-print-root-font-size: 14px;  /* 14px = 10.5pt */
+  --ps-print-root-font-size-px: 14; /* must match --print-root-font-size */
+  --ps-web-root-font-size-px: 16;
+
+  /* input variables for --ps-base-font-size calculated variable */
+
+  --ps-max-font-size: 1.25rem;
+  --ps-min-font-size-rem: 0.875;
+  --ps-body-min-width-rem: 22.5;     /* 360px = 22.5 * 16px */
+
+  --ps-page-margin-left-mm: 20;   /* must match --ps-page-margin-left */
+  --ps-page-margin-right-mm: 20;  /* must match --ps-page-margin-right */
+  --ps-paper-width-mm: 210;       /* must match --ps-paper-width */
+}
+
+
+/* printstrap CSS implementation */
+
+:root {
+  /* bunch of calculation variables for --ps-base-font-size */
+  
+  --ps-rem-per-print-mm: calc(
+    96 / 25.4 / var(--ps-print-root-font-size-px)
+  );
+  /* 96 CSS "pixels" = 25.4 CSS "mm" */
+
+  --ps-unit-font-view-width-rem: calc(
+    var(--ps-paper-width-mm) * var(--ps-rem-per-print-mm)
+  );
+
+  --ps-var-font-ratio: calc(
+    (1 - var(--ps-min-font-size-rem)) /
+    (var(--ps-unit-font-view-width-rem) - var(--ps-body-min-width-rem))
+  );
+  --ps-var-font-const: calc(
+    var(--ps-min-font-size-rem) - var(--ps-var-font-ratio) * var(--ps-body-min-width-rem)
+  );
+  --ps-var-font-size: calc(
+    var(--ps-var-font-const) * 1rem + var(--ps-var-font-ratio) * 100vw 
+  );
+  --ps-base-font-size: max(
+    var(--ps-min-font-size-rem) * 1rem,
+    min(var(--ps-var-font-size), var(--ps-max-font-size))
+  );
+}
+
+html {
+  font-size: var(--ps-print-root-font-size);
+}
+
+@media screen {
+
+  :root {
+    --ps-device-margin-left: calc(
+      100% * var(--ps-page-margin-left-mm) / var(--ps-paper-width-mm)
+    );
+    --ps-device-margin-right: calc(
+      100% * var(--ps-page-margin-right-mm) / var(--ps-paper-width-mm)
+    );
+  }
+
+  html.webpaper {
+    font-size: calc(var(--ps-web-root-font-size-px) * 1px);
+  }
+  .webpaper body {
+    min-width: calc(var(--ps-body-min-width-rem) * 1rem);
+    width: 100%;
+  }
+  .webpaper .eprint {
+    font-size: var(--ps-base-font-size);
+    padding-left: var(--ps-device-margin-left);
+    padding-right: var(--ps-device-margin-right);
+  }
+  .webpaper .eprint :is(header, footer) {
+    display: none;
+  }
+
+}
+
+
+/* helper utility classes */
+
+.webpaper .webpaper-none {
+  display: none;
+}
+
+html:not(.webpaper) .webpaper-only {
+  display: none;
+}
