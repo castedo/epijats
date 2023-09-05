@@ -88,7 +88,7 @@ class Webstract(dict):
 
     @property
     def date(self):
-        return self["date"]
+        return self.get("date")
 
     def __setitem__(self, key, value):
         if key not in self.KEYS:

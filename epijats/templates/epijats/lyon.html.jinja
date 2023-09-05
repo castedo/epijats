@@ -19,11 +19,15 @@
   {% for contributor in doc.contributors %}
     {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
   {% endfor %}
-  ({{ doc.date.year }})
+  ({{ doc.date.year or '20??' }})
   "{{ doc.title }}"
   perm.pub
-  {{ dsi_base_url }}/&zwnj;dsi:<code>{{ doc.dsi }}</code>
+  {{ dsi_base_url }}/&zwnj;dsi:<code>{{ doc.dsi or '???????????????????????????' }}</code>
 {% endmacro %}
+
+{% macro dsi_html_code(doc) -%}
+<code><span class="base64">{{ doc.base_dsi or '???????????????????????????' }}</span>/{{ doc.edid or '?' }}</code>
+{%- endmacro %}
 
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
 {% set static_dir = website_hooks.static_dir if website_hooks else 'static' %}
@@ -34,15 +38,12 @@
     </div>
     <div class="page-center"></div>
     <div class="page-right">
-      {% if doc.dsi %}
         <div class="article-dsi">
           <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-            <span class="logotype">perm.pub</span>/<strong>dsi:</strong><code><span
-                  class="base64">{{ doc.base_dsi }}</span>/{{ doc.edid }}</code>
+            <span class="logotype">perm.pub</span>/<strong>dsi:</strong>{{ dsi_html_code(doc) }}
           </a>
           <div class="online-msg">Additional formats and editions available online.</div>
         </div>
-      {% endif %}
     </div>
   </header>
 
@@ -66,8 +67,7 @@
     <div class="page-center"></div>
     <div class="page-right">
       <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-        {{ dsi_base_url }}/dsi:<code><span
-                  class="base64">{{ doc.base_dsi }}</span>/{{ doc.edid }}</code>
+        {{ dsi_base_url }}/dsi:{{ dsi_html_code(doc) }}
       </a>
     </div>
   </header>
@@ -79,8 +79,7 @@
         <div class="article-dsi">
           <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
             <span class="uri">
-              <span class="uri-scheme"
-                >dsi:</span><wbr><code><span class="base64">{{ doc.base_dsi }}</span>/{{ doc.edid }}</code>
+              <span class="uri-scheme">dsi:</span><wbr>{{ dsi_html_code(doc) }}
             </span>
           </a>
         </div>

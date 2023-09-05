@@ -31,15 +31,10 @@ class Main:
             action="store_true",
             help="Do not use online web fonts",
         )
-        self.parser.add_argument(
-            "--style", choices=["boston", "lyon", "quebec"], default=None, help="Article style"
-        )
         self.parser.parse_args(cmd_line_args, self)
 
         self.config = EprinterConfig(dsi_base_url="https://perm.pub")
         self.config.embed_web_fonts = not self.no_web_fonts
-        if self.style:
-            self.config.article_style = self.style
 
     def run(self):
         self.check_conversion_order()
