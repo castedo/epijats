@@ -68,6 +68,8 @@ html {
   .webpaper body {
     min-width: calc(var(--ps-body-min-width-rem) * 1rem);
     width: 100%;
+    padding-left: 0;
+    padding-right: 0;
   }
   .webpaper .eprint {
     font-size: var(--ps-base-font-size);

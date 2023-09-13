@@ -1,7 +1,8 @@
 epijats
 =======
 
-`epijats` converts a primitive JATS XML to PDF in three independent stages:
+`epijats` converts [baseprint](https://baseprints.singlesource.pub)
+JATS XML baseprint to PDF in three independent stages:
 
 ```
           JATS
@@ -19,7 +20,6 @@ Using the `epijats` command line tool, you can start and stop at any stage with 
 ```
 usage: __main__.py [-h] [--from {jats,json,yaml,jsoml,html}]
                    [--to {json,yaml,jsoml,html,pdf}] [--no-web-fonts]
-                   [--style {boston,lyon}]
                    inpath outpath
 
 Eprint JATS
@@ -35,8 +35,6 @@ options:
   --to {json,yaml,jsoml,html,pdf}
                         format of target
   --no-web-fonts        Do not use online web fonts
-  --style {boston,lyon}
-                        Article style
 ```
 
 
@@ -45,7 +43,7 @@ Installation
 ------------
 
 ```
-python3 -m pip install git+https://gitlab.com/perm.pub/epijats.git
+python3 -m pip install epijats
 ```
 
 #### Requirements per format

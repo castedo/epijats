@@ -29,25 +29,26 @@
 /* Responsive layout classes aside-rack and aside-shelf.
  * Similar to table and rows, but for side-by-side aside elements and content. */
 
-.eprint {
-  --aside-width: var(--ps-first-page-top-left-width);
-  --non-aside-width: var(--ps-first-page-top-right-width);
-  --non-aside-width-frac: 0.69;  /* must match --non-aside-width */
+:root {
+  --ps-aside-width-frac: 0.31;
+  --ps-aside-width: 31%; /* calc(var(--ps-aside-width-frac) * 100%); */
+  --ps-non-aside-width-frac: 0.69; /* calc(1 - var(--ps-aside-width-frac)); */
+  --ps-non-aside-width: 69%; /* calc(var(--ps-non-aside-width-frac) * 100%); */
 }
 .eprint .aside-shelf {
   clear: both;
 }
 .eprint .aside-rack > :not(.aside-shelf) {
-  width: var(--non-aside-width);
+  width: var(--ps-non-aside-width);
   margin-left: auto;
 }
 .eprint .aside-rack > .aside-shelf > aside {
   float: left;
-  width: var(--aside-width);
+  width: var(--ps-aside-width);
 }
 .eprint .aside-rack > .aside-shelf > :not(aside) {
   float: right;
-  width: var(--non-aside-width);
+  width: var(--ps-non-aside-width);
 }
 @media print {
   .article-one-column-only {
@@ -60,11 +61,13 @@
       var(--ps-paper-width-mm) - var(--ps-page-margin-left-mm) - var(--ps-page-margin-right-mm)
     );
     --ps-rack-narrow-max-width: calc(
-      var(--non-aside-width-frac) * var(--ps-page-area-width-mm) * var(--ps-rem-per-print-mm) * 1rem
+      var(--ps-non-aside-width-frac) * var(--ps-page-area-width-mm) * var(--ps-rem-per-print-mm) * 1rem
     );
   }
-  @media (max-width: 1056px) {
-    /* 1056px = 66 * 16px ; 66 ~= A4 paper width / 12px */
+  @media (max-width: 1058px) {
+    /* A4 paper width = 210mm; 96 CSS "pixels" = 25.4 CSS "mm" */
+    /* print paper width ~= 793.7 CSS "pixels" */
+    /* 1058.3 ~= 793.7 * (16px / 12px) */
     html.webpaper .aside-rack > * {
       max-width: var(--ps-rack-narrow-max-width);
       margin-left: auto;
@@ -226,8 +229,8 @@
   --ps-page-top-center-width: 0%;
   --ps-page-top-right-width: 55%;
 
-  --ps-first-page-top-left-width: 31%;
-  --ps-first-page-top-right-width: 69%;
+  --ps-first-page-top-left-width: var(--ps-aside-width);
+  --ps-first-page-top-right-width: var(--ps-non-aside-width);
 
   --ps-page-bottom-left-width: 75%;
   --ps-page-bottom-center-width: 0%;
