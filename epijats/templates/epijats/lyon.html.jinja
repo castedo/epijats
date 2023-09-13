@@ -1,4 +1,6 @@
 {% extends 'epijats/_common.html.jinja' %}
+{% set fake_dsi = '0123456789abcdefghijklmnopq' %}
+{% set permpub_missing = permpub_missing or false %}
 
 {% macro article_preview(doc, dsi_base_url) %}
 <div class="page-content-pillar">
@@ -22,11 +24,11 @@
   ({{ doc.date.year or '20??' }})
   "{{ doc.title }}"
   perm.pub
-  {{ dsi_base_url }}/&zwnj;dsi:<code>{{ doc.dsi or '???????????????????????????' }}</code>
+  {{ dsi_base_url }}/&zwnj;dsi:<code>{{ doc.dsi or fake_dsi }}</code>
 {% endmacro %}
 
 {% macro dsi_html_code(doc) -%}
-<code><span class="base64">{{ doc.base_dsi or '???????????????????????????' }}</span>/{{ doc.edid or '?' }}</code>
+<code><span class="base64">{{ doc.base_dsi or fake_dsi }}</span>/{{ doc.edid or '1' }}</code>
 {%- endmacro %}
 
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
@@ -38,12 +40,14 @@
     </div>
     <div class="page-center"></div>
     <div class="page-right">
+        {% if not permpub_missing %}
         <div class="article-dsi">
           <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
             <span class="logotype">perm.pub</span>/<strong>dsi:</strong>{{ dsi_html_code(doc) }}
           </a>
           <div class="online-msg">Additional formats and editions available online.</div>
         </div>
+        {% endif %}
     </div>
   </header>
 
@@ -61,6 +65,7 @@
   </footer>
 
   <header>
+  {% if not permpub_missing %}
     <div class="page-left">
       <span class="online-msg">Additional formats and editions available online.</span>
     </div>
@@ -70,12 +75,14 @@
         {{ dsi_base_url }}/dsi:{{ dsi_html_code(doc) }}
       </a>
     </div>
+  {% endif %}
   </header>
 
   <article lang="en" class="aside-rack">
 
     <div class="aside-shelf webpaper-only">
       <div class="article-header">
+        {% if not permpub_missing %}
         <div class="article-dsi">
           <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
             <span class="uri">
@@ -83,6 +90,7 @@
             </span>
           </a>
         </div>
+        {% endif %}
       </div>
     </div>
 
@@ -110,7 +118,7 @@
 
     <div class="aside-shelf">
       <div>
-        {% if not website_hooks %}
+        {% if not website_hooks and not permpub_missing %}
         <dl class="article-one-column-only">
             <dt>Citation</dt>
             <dd>{{ citation(doc, dsi_base_url) -}}</dd>
@@ -125,7 +133,7 @@
       </div>
       <aside class="article-two-column-only">
         <dl>
-          {% if not website_hooks %}
+          {% if not website_hooks and not permpub_missing %}
             <dt>Citation</dt>
             <dd>{{ citation(doc, dsi_base_url) -}}</dd>
           {% endif %}
