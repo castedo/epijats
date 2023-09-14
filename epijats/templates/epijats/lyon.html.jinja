@@ -1,5 +1,6 @@
 {% extends 'epijats/_common.html.jinja' %}
-{% set fake_dsi = '0123456789abcdefghijklmnopq' %}
+{% set fake_base_dsi =  '0123456789abcdefghijklmnopq' %}
+{% set fake_dsi = fake_base_dsi ~ '/1' %}
 {% set permpub_missing = permpub_missing or false %}
 
 {% macro article_preview(doc, dsi_base_url) %}
@@ -17,19 +18,29 @@
 </div><!-- page-content-pillar -->
 {% endmacro %}
 
+{% macro dsi_html_code(doc) -%}
+<code><span class="base64">{{ doc.base_dsi or fake_base_dsi }}</span>/{{ doc.edid or '1' }}</code>
+{%- endmacro %}
+
+{% macro dsi_html(doc) -%}
+<span class="uri"><span class="uri-scheme">dsi:</span>{{ dsi_html_code(doc) }}</span>
+{%- endmacro %}
+
+{% macro https_dsi_html(doc, dsi_base_url) -%}
+<span class="dsi-url"><span class="base-url">{{ dsi_base_url }}/</span>{{ dsi_html(doc) }}</span>
+{%- endmacro %}
+
 {% macro citation(doc, dsi_base_url) %}
+<p>
   {% for contributor in doc.contributors %}
     {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
   {% endfor %}
   ({{ doc.date.year or '20??' }})
   "{{ doc.title }}"
   perm.pub
-  {{ dsi_base_url }}/&zwnj;dsi:<code>{{ doc.dsi or fake_dsi }}</code>
+  {{ https_dsi_html(doc, dsi_base_url) }}
+</p>
 {% endmacro %}
-
-{% macro dsi_html_code(doc) -%}
-<code><span class="base64">{{ doc.base_dsi or fake_dsi }}</span>/{{ doc.edid or '1' }}</code>
-{%- endmacro %}
 
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
 {% set static_dir = website_hooks.static_dir if website_hooks else 'static' %}
@@ -42,8 +53,8 @@
     <div class="page-right">
         {% if not permpub_missing %}
         <div class="article-dsi">
-          <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-            <span class="logotype">perm.pub</span>/<strong>dsi:</strong>{{ dsi_html_code(doc) }}
+          <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
+            <span class="logotype">perm.pub</span><code>/</code><wbr>{{ dsi_html(doc) }}
           </a>
           <div class="online-msg">Additional formats and editions available online.</div>
         </div>
@@ -54,9 +65,9 @@
   <footer>
     <div class="page-left">
       <div class="article-swhid">
-        Archived baseprint:
-        <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
-          <strong>{{ doc.hash_scheme }}</strong><code>{{ doc.hexhash }}</code>
+        Archived baseprint
+        <a class="uri" href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
+          <span class="uri-scheme">{{ doc.hash_scheme }}</span><code>{{ doc.hexhash }}</code>
         </a>
       </div>
     </div>
@@ -71,8 +82,8 @@
     </div>
     <div class="page-center"></div>
     <div class="page-right">
-      <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
-        {{ dsi_base_url }}/dsi:{{ dsi_html_code(doc) }}
+      <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
+        {{ https_dsi_html(doc, dsi_base_url) }}
       </a>
     </div>
   {% endif %}
@@ -84,7 +95,7 @@
       <div class="article-header">
         {% if not permpub_missing %}
         <div class="article-dsi">
-          <a href="{{ dsi_base_url }}/{{ doc.dsi }}">
+          <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
             <span class="uri">
               <span class="uri-scheme">dsi:</span><wbr>{{ dsi_html_code(doc) }}
             </span>
@@ -154,7 +165,7 @@
         {{- copyright(doc) }}
       </div>
       <div class="article-swhid">
-        Archived baseprint:
+        Archived baseprint
         <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
           <span class="uri">
             <span class="uri-scheme"

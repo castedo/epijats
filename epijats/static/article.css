@@ -298,7 +298,6 @@
 /* Aside formatting */
 
 .eprint aside {
-  font-family: var(--font-condensed);
   font-size: 0.875em;
   padding-right: 2rem;
 }
@@ -308,6 +307,7 @@
 }
 
 .eprint aside p {
+  font-family: var(--font-condensed);
   text-align: left;
   hyphens: none;
   margin: 0;
@@ -362,6 +362,10 @@
 
 /* Specific text elements */
 
+.eprint .base-url {
+  white-space: nowrap;
+}
+
 .eprint .article-header .article-dsi {
   font-size: 1.5em;
   margin-bottom: 2rem;
@@ -379,24 +383,21 @@
   line-height: 1.2;
 }
 
-.eprint .article-dsi code,
-.eprint .article-swhid code {
-  margin-left: 0.125em;
-}
 .eprint footer .article-swhid code {
   font-size: 0.825em;
 }
 
-.eprint .uri {
+.eprint .dsi-url .uri {
   display: inline-block;
 }
-.eprint .uri .uri-scheme {
-  font-weight: bold;
+.eprint .uri-scheme {
   margin-right: 0.125em;
+}
+.eprint header .article-dsi .uri-scheme {
+  font-weight: bold;
 }
 .eprint .uri code {
   color: inherit;
-  margin-left: 0;
 }
 
 .eprint .edition-number {
