@@ -374,10 +374,6 @@
   font-size: 0.9em;
 }
 
-.eprint .article-footer .copyright {
-  margin-bottom: 1rem;
-}
-
 .eprint .article-swhid {
   color: var(--light-text-color);
   line-height: 1.2;

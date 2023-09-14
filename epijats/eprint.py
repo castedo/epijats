@@ -27,6 +27,7 @@ class EprinterConfig:
             self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
         self.article_style = 'lyon'
         self.embed_web_fonts = True
+        self.show_pdf_icon = False
 
 
 class Eprint:
@@ -41,6 +42,7 @@ class Eprint:
         self._html_ctx = dict(config.urls)
         self._html_ctx["article_style"] = config.article_style
         self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
+        self._html_ctx["show_pdf_icon"] = config.show_pdf_icon
         self.webstract = webstract
         if Eprint._gen is None:
             Eprint._gen = PackagePageGenerator()
@@ -48,7 +50,7 @@ class Eprint:
     def _get_html(self):
         html_dir = self._tmp
         os.makedirs(html_dir, exist_ok=True)
-        ret = html_dir / "article.html"
+        ret = html_dir / "index.html"
         # for now just assume math is always needed
         ctx = dict(doc=self.webstract.facade, has_math=True, **self._html_ctx)
         self._gen.render_file("article.html.jinja", ret, ctx)

@@ -3,13 +3,16 @@
 {% set fake_dsi = fake_base_dsi ~ '/1' %}
 {% set permpub_missing = permpub_missing or false %}
 
-{% macro article_preview(doc, dsi_base_url) %}
+{% macro article_preview(doc, dsi_base_url, show_pdf_icon) %}
 <div class="page-content-pillar">
   <div class="eprint">
 
     <nav class="preview-mode">
-      <a class="webpaper-none" href="#web">Switch to webpaper</a>
-      <a class="webpaper-only" href="#">Switch to print preview</a>
+      <a class="btn-switch webpaper-none" href="#web">Switch to webpaper</a>
+      <a class="btn-switch webpaper-only" href="#">Switch to print preview</a>
+      {% if show_pdf_icon %}
+      <a class="pdf-link" href="article.pdf"><img src="static/PDF_file_icon.svg"></a>
+      {% endif %}
     </nav>
 
     {{- article_layout(doc, dsi_base_url) }}
@@ -31,7 +34,6 @@
 {%- endmacro %}
 
 {% macro citation(doc, dsi_base_url) %}
-<p>
   {% for contributor in doc.contributors %}
     {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
   {% endfor %}
@@ -39,7 +41,6 @@
   "{{ doc.title }}"
   perm.pub
   {{ https_dsi_html(doc, dsi_base_url) }}
-</p>
 {% endmacro %}
 
 {% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
@@ -129,12 +130,6 @@
 
     <div class="aside-shelf">
       <div>
-        {% if not website_hooks and not permpub_missing %}
-        <dl class="article-one-column-only">
-            <dt>Citation</dt>
-            <dd>{{ citation(doc, dsi_base_url) -}}</dd>
-        </dl>
-        {% endif %}
         <section class="abstract">
           {% if doc.abstract %}
             <h2>Abstract</h2>
@@ -146,10 +141,14 @@
         <dl>
           {% if not website_hooks and not permpub_missing %}
             <dt>Citation</dt>
-            <dd>{{ citation(doc, dsi_base_url) -}}</dd>
+            <dd>
+              <p>
+                {{ citation(doc, dsi_base_url) -}}
+              </p>
+            </dd>
           {% endif %}
           <dt>Copyright</dt>
-          <dd>{{ copyright(doc, show_https=false) }}</dd>
+          <dd>{{ copyright(doc) }}</dd>
         </dl>
       </aside>
     </div>
@@ -161,9 +160,16 @@
     </div>
 
     <div class="article-footer webpaper-only">
-      <div class="copyright article-one-column-only">
-        {{- copyright(doc) }}
-      </div>
+      <dl class="article-one-column-only">
+        {% if not website_hooks and not permpub_missing %}
+          <dt>Citation</dt>
+          <dd>{{ citation(doc, dsi_base_url) -}}</dd>
+        {% endif %}
+        <dt>Copyright</dt>
+        <dd>
+          {{- copyright(doc) }}
+        </dd>
+      </dl>
       <div class="article-swhid">
         Archived baseprint
         <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
@@ -214,20 +220,31 @@
     @media screen {
       body {
         margin-top: 64px;
+        margin-bottom: 0;
       }
       nav.preview-mode {
-        display: block;
+        display: flex;
         position: absolute;
-        top: -42px;
+        top: -54px;
         font-size: 16px;
       }
       nav.preview-mode a {
-        appearance: button;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-right: 28px;
+        height: 40px;
+      }
+      nav.preview-mode a.pdf-link img {
+        height: 40px;
+      }
+      nav.preview-mode a.btn-switch {
         color: initial;
         text-decoration: none;
-        background-color: lightyellow;
-        padding: 8px;
-        margin-top: -8px;
+        background-color: #f5f5f5;
+        border: #ff2116 solid 1px;
+        border-radius: 5px;
+        width: 198px;
       }
     }
   </style>

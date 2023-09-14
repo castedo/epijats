@@ -19,7 +19,7 @@ Using the `epijats` command line tool, you can start and stop at any stage with 
 
 ```
 usage: __main__.py [-h] [--from {jats,json,yaml,jsoml,html}]
-                   [--to {json,yaml,jsoml,html,pdf}] [--no-web-fonts]
+                   [--to {json,yaml,jsoml,html,html+pdf,pdf}] [--no-web-fonts]
                    inpath outpath
 
 Eprint JATS
@@ -32,47 +32,30 @@ options:
   -h, --help            show this help message and exit
   --from {jats,json,yaml,jsoml,html}
                         format of source
-  --to {json,yaml,jsoml,html,pdf}
+  --to {json,yaml,jsoml,html,html+pdf,pdf}
                         format of target
   --no-web-fonts        Do not use online web fonts
 ```
-
 
 
 Installation
 ------------
 
 ```
-python3 -m pip install epijats
+python3 -m pip install epijats[format1,format2,...]
 ```
+where each `formatN` etc.. is one of `jats`, `html`, `pdf`, `yaml`, or `jsoml`.
+Json support is automatic.
 
-#### Requirements per format
 
-Different dependencies are required depending on which formats are processed.
+### Non-Python requirements
 
-<dl>
-<dt>JATS</dt>
-<dd><ul>
+If you are converting from JATS, the following dependencies must be installed:
+
+<ul>
   <li> [pandoc](https://pandoc.org)
-  <li> elifetools Python package
   <li> pandoc-katex-filter Node.js NPM package
-  <li> GitPython Python package
-</ul></dd>
-<dt>YAML</dt>
-<dd><ul>
-  <li> ruamel.yaml Python package
-</ul></dd>
-<dt>JSOML</dt>
-<dd><ul>
-  <li> [jsoml](gitlab.org/castedo/jsoml) Python package
-</ul></dd>
-<dt>HTML</dt>
-<dd><ul>
-  <li> jinja2 Python package
-</ul><dd>
-<dt>PDF</dt>
-<dd><ul>
-  <li> weasyprint Python package
-  <li> jinja2 Python package
-</ul></dd>
-</dl>
+  <li> git
+</ul>
+
+All other dependencies will be automatically installed by `pip`.
