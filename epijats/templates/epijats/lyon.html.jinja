@@ -4,23 +4,13 @@
 {% set fake_dsi = fake_base_dsi ~ '/' ~ fake_edid %}
 {% set permpub_missing = permpub_missing or false %}
 
-{% macro article_preview(doc, dsi_base_url, show_pdf_icon) %}
-<div class="page-content-pillar">
-  <div class="eprint">
 
-    <nav class="preview-mode">
-      <a class="btn-switch webpaper-none" href="#web">Switch to webpaper</a>
-      <a class="btn-switch webpaper-only" href="#">Switch to print preview</a>
-      {% if show_pdf_icon %}
-      <a class="pdf-link" href="article.pdf"><img src="static/PDF_file_icon.svg"></a>
-      {% endif %}
-    </nav>
-
-    {{- article_layout(doc, dsi_base_url) }}
-
-  </div><!-- eprint -->
-</div><!-- page-content-pillar -->
+{% macro article_main_css_style(static_dir="static") %}
+  {{- pandoc_class_css() }}
+  <link href="{{ static_dir }}/webpaper.css" rel="stylesheet">
+  <link href="{{ static_dir }}/article.css" rel="stylesheet">
 {% endmacro %}
+
 
 {% macro dsi_html_code(doc) -%}
 <code><span class="base64">{{ doc.base_dsi or fake_base_dsi }}</span>/{{ doc.edid or fake_edid }}</code>
@@ -31,7 +21,7 @@
 {%- endmacro %}
 
 {% macro https_dsi_html(doc, dsi_base_url) -%}
-<span class="dsi-url"><span class="base-url">{{ dsi_base_url }}/</span>{{ dsi_html(doc) }}</span>
+<span class="dsi-url"><span class="before-dsi"><span class="base-url">{{ dsi_base_url }}/</span><span class="uri-scheme">dsi:</span></span><wbr>{{ dsi_html_code(doc) }}</span>
 {%- endmacro %}
 
 {% macro citation(doc, dsi_base_url) %}
@@ -74,7 +64,7 @@
       </div>
     </div>
     <div class="page-center"></div>
-    <div class="page-right">0 of 0</div>
+    <div class="page-right">i of N</div>
   </footer>
 
   <header>
@@ -189,84 +179,4 @@
     </div>
 
   </article>
-{% endmacro %}
-
-
-{# article_css_style is used to generated standalone HTML page and eprint PDF #}
-{% macro article_css_style() %}
-  <style>
-    html {
-      font-size: 12px;
-    }
-  </style>
-  <link href="static/printstrap.css" rel="stylesheet">
-  {{- article_main_css_style() }}
-  <style>
-    .page-content-pillar {
-      margin: 0 auto;
-    }
-    @media screen {
-      .page-content-pillar {
-        max-width: calc(74 * var(--ps-base-font-size));
-      }
-    }
-
-    /* styling of UI controls to switch to webpaper mode */
-    html.webpaper {
-      background-color: #def;
-    }
-    nav.preview-mode {
-      display: none;
-      font-family: system-ui;
-    }
-    @media screen {
-      body {
-        margin-top: 64px;
-        margin-bottom: 0;
-      }
-      nav.preview-mode {
-        display: flex;
-        position: absolute;
-        top: -54px;
-        font-size: 16px;
-      }
-      nav.preview-mode a {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-right: 28px;
-        height: 40px;
-      }
-      nav.preview-mode a.pdf-link img {
-        height: 40px;
-      }
-      nav.preview-mode a.btn-switch {
-        color: initial;
-        text-decoration: none;
-        background-color: #f5f5f5;
-        border: #ff2116 solid 1px;
-        border-radius: 5px;
-        width: 198px;
-      }
-    }
-  </style>
-  <script>
-    function handleHash() {
-      if (window.location.hash == "#web") {
-          document.documentElement.classList.add('webpaper');
-      } else {
-          document.documentElement.classList.remove('webpaper');
-      }
-    }
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-  </script>
-{% endmacro %}
-
-
-{# article_main_css_style is used by popgen.es website #}
-{% macro article_main_css_style(static_dir="static") %}
-  {{- pandoc_class_css() }}
-  <link href="{{ static_dir }}/webpaper.css" rel="stylesheet">
-  <link href="{{ static_dir }}/article.css" rel="stylesheet">
 {% endmacro %}

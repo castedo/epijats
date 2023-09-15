@@ -1,8 +1,4 @@
 :root {
-  --ps-print-root-font-size: 12px;
-  --ps-print-root-font-size-px: 12; /* must match --print-root-font-size */
-  --ps-web-root-font-size-px: 16;
-
   --ps-page-margin-left: 8mm;
   --ps-page-margin-left-mm: 8;
 
@@ -12,6 +8,7 @@
   --ps-page-area-width: 192mm;
   /* 8mm + 192mm + 10mm = 210mm = A4 paper width */
 }
+
 
 /* .eprint class to scope variables to avoid collision with embedding website */
 
@@ -24,87 +21,6 @@
   --font-sans: 'Fira Sans', sans-serif;
   --font-mono: 'Fira Mono', monospace;
   --font-condensed: 'Fira Sans Condensed', sans-serif;
-}
-
-
-/* Responsive layout classes aside-rack and aside-shelf.
- * Similar to table and rows, but for side-by-side aside elements and content. */
-
-:root {
-  --ps-aside-width-frac: 0.27;
-  --ps-aside-width: 27%; /* calc(var(--ps-aside-width-frac) * 100%); */
-  --ps-non-aside-width-frac: 0.73; /* calc(1 - var(--ps-aside-width-frac)); */
-  --ps-non-aside-width: 73%; /* calc(var(--ps-non-aside-width-frac) * 100%); */
-}
-.eprint .aside-rack::before,
-.eprint .aside-rack::after,
-.eprint .aside-shelf::before,
-.eprint .aside-shelf::after {
-  display: table;
-  content: " ";
-}
-.eprint .aside-rack::after,
-.eprint .aside-shelf::after {
-  clear: both;
-}
-.eprint .aside-rack > :not(.aside-shelf) {
-  width: var(--ps-non-aside-width);
-  margin-left: auto;
-}
-.eprint .aside-rack > .aside-shelf > aside {
-  float: left;
-  width: var(--ps-aside-width);
-}
-.eprint .aside-rack > .aside-shelf > :not(aside) {
-  float: right;
-  width: var(--ps-non-aside-width);
-}
-@media print {
-  .article-one-column-only {
-    display: none;
-  }
-}
-@media screen {
-  :root {
-    --ps-page-area-width-mm: calc(
-      var(--ps-paper-width-mm) - var(--ps-page-margin-left-mm) - var(--ps-page-margin-right-mm)
-    );
-    --ps-rack-narrow-max-width: calc(
-      var(--ps-non-aside-width-frac) * var(--ps-page-area-width-mm) * var(--ps-rem-per-print-mm) * 1rem
-    );
-  }
-  @media (max-width: 1058px) {
-    /* A4 paper width = 210mm; 96 CSS "pixels" = 25.4 CSS "mm" */
-    /* print paper width ~= 793.7 CSS "pixels" */
-    /* 1058.3 ~= 793.7 * (16px / 12px) */
-    html.webpaper .aside-rack > * {
-      max-width: var(--ps-rack-narrow-max-width);
-      margin-left: auto;
-      margin-right: auto;
-    }
-    html.webpaper .aside-rack > :not(.aside-shelf) {
-      width: auto;
-    }
-    html.webpaper .aside-rack > .aside-shelf > aside {
-      float: none;
-      width: 100%;
-    }
-    html.webpaper .aside-rack > .aside-shelf > :not(aside) {
-      float: none;
-      width: 100%;
-    }
-    html.webpaper .article-two-column-only {
-      display: none;
-    }
-  }
-  html:not(.webpaper) .article-one-column-only {
-    display: none;
-  }
-  @media not (max-width: 1056px) {
-    html.webpaper .article-one-column-only {
-      display: none;
-    }
-  }
 }
 
 
@@ -237,7 +153,7 @@
 /* Page margin header/footer styling */
 
 :root {
-  --ps-first-page-margin-top: 50mm;
+  --ps-first-page-margin-top: 42mm;
   --ps-page-margin-top: 20mm;
   --ps-page-margin-bottom: 18mm;
 
@@ -259,7 +175,7 @@
    font-size: 1.1rem;
 }
 .eprint header:first-of-type > div {
-  margin-bottom: 5.75rem;
+  margin-bottom: 3.25rem;
 }
 .eprint header:not(:first-of-type) > div {
   margin-bottom: 2.0rem;
@@ -409,8 +325,13 @@
 .eprint header .article-dsi .uri-scheme {
   font-weight: bold;
 }
+.eprint .dsi-url code,
 .eprint .uri code {
   color: inherit;
+  display: inline-block;
+}
+.eprint .before-dsi {
+  display: inline-block;
 }
 @media print {
   wbr::before { content: "\200B" }
@@ -473,7 +394,7 @@
 .eprint .abstract {
   border-bottom: 0.25rem solid lightgrey;
   padding-bottom: 0.5rem;
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
 }
 
 .eprint .article-footer {

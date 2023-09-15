@@ -1,15 +1,99 @@
 {% extends 'base.html.jinja' %}
 {% import 'epijats/' ~ article_style ~ '.html.jinja' as style %}
 
+{% macro article_preview(doc, dsi_base_url, show_pdf_icon) %}
+<div class="page-content-pillar">
+  <div class="eprint">
+
+    <nav class="preview-mode">
+      <a class="btn-switch webpaper-none" href="#web">Switch to webpaper</a>
+      <a class="btn-switch webpaper-only" href="#">Switch to print preview</a>
+      {% if show_pdf_icon %}
+      <a class="pdf-link" href="article.pdf"><img src="static/PDF_file_icon.svg"></a>
+      {% endif %}
+    </nav>
+
+    {{- style.article_layout(doc, dsi_base_url) }}
+
+  </div><!-- eprint -->
+</div><!-- page-content-pillar -->
+{% endmacro %}
+
 {% block head_content %}
 {{super()-}}
 {% if embed_web_fonts %}
 {{style.link_fonts()}}
 {% endif %}
-<title>{{ doc.title }}</title>
-{{style.article_css_style()-}}
+  <title>{{ doc.title }}</title>
+  <style>
+    html {
+      font-size: 12px;
+    }
+  </style>
+  <link href="static/printstrap.css" rel="stylesheet">
+  {{- style.article_main_css_style() }}
+  <style>
+    .page-content-pillar {
+      margin: 0 auto;
+    }
+    @media screen {
+      .page-content-pillar {
+        max-width: calc(74 * var(--ps-base-font-size));
+      }
+    }
+
+    /* styling of UI controls to switch to webpaper mode */
+    html.webpaper {
+      background-color: #def;
+    }
+    nav.preview-mode {
+      display: none;
+      font-family: system-ui;
+    }
+    @media screen {
+      body {
+        margin-top: 64px;
+        margin-bottom: 0;
+      }
+      nav.preview-mode {
+        display: flex;
+        position: absolute;
+        top: -54px;
+        font-size: 16px;
+      }
+      nav.preview-mode a {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-right: 28px;
+        height: 40px;
+      }
+      nav.preview-mode a.pdf-link img {
+        height: 40px;
+      }
+      nav.preview-mode a.btn-switch {
+        color: initial;
+        text-decoration: none;
+        background-color: #f5f5f5;
+        border: #ff2116 solid 1px;
+        border-radius: 5px;
+        width: 198px;
+      }
+    }
+  </style>
+  <script>
+    function handleHash() {
+      if (window.location.hash == "#web") {
+          document.documentElement.classList.add('webpaper');
+      } else {
+          document.documentElement.classList.remove('webpaper');
+      }
+    }
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+  </script>
 {% endblock head_content %}
 
 {% block body_content %}
-{{style.article_preview(doc, dsi_base_url, show_pdf_icon)-}}
+{{article_preview(doc, dsi_base_url, show_pdf_icon)-}}
 {% endblock body_content %}
