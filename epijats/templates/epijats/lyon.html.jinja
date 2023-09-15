@@ -91,10 +91,9 @@
   {% endif %}
   </header>
 
-  <article lang="en" class="aside-rack">
-
-    <div class="aside-shelf webpaper-only">
-      <div class="article-header">
+  <div class="aside-rack article-header webpaper-only">
+    <div class="aside-shelf">
+      <div>
         {% if not permpub_missing %}
         <div class="article-dsi">
           <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
@@ -103,7 +102,16 @@
         </div>
         {% endif %}
       </div>
+      <aside>
+        <div class="webpaper-logos">
+          <img class="logo logo-cc" src="{{ static_dir }}/cc.svg">
+          <img class="logo logo-oa" src="{{ static_dir }}/Open_Access_logo_PLoS_transparent.svg">
+        </div>
+      </aside>
     </div>
+  </div>
+
+  <article lang="en" class="aside-rack">
 
     <div class="aside-shelf">
       <h1 class="title">{{ doc.title or "No Title" }}</h1>
@@ -202,11 +210,6 @@
         max-width: calc(74 * var(--ps-base-font-size));
       }
     }
-
-    .webpaper body {
-      padding-top: 3rem;
-    }
-
 
     /* styling of UI controls to switch to webpaper mode */
     html.webpaper {
