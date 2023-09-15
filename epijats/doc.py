@@ -24,9 +24,7 @@ class DocLoader:
 
                 ret = jats.webstract_from_jats(work_path, self.pandoc_opts)
             else:
-                from . import pdf
-
-                ret = pdf.webstract_from_pdf(work_path)
+                raise ValueError(f"Unknown digital object type at {edition.dsi}")
 
             edidata = dict(edid=str(edition.edid), base_dsi=str(edition.suc.dsi))
             latest_edid = edition.suc.latest(edition.unlisted).edid

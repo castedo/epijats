@@ -1,6 +1,7 @@
 {% extends 'epijats/_common.html.jinja' %}
 {% set fake_base_dsi =  '0123456789abcdefghijklmnopq' %}
-{% set fake_dsi = fake_base_dsi ~ '/1' %}
+{% set fake_edid = '1' %}
+{% set fake_dsi = fake_base_dsi ~ '/' ~ fake_edid %}
 {% set permpub_missing = permpub_missing or false %}
 
 {% macro article_preview(doc, dsi_base_url, show_pdf_icon) %}
@@ -22,11 +23,11 @@
 {% endmacro %}
 
 {% macro dsi_html_code(doc) -%}
-<code><span class="base64">{{ doc.base_dsi or fake_base_dsi }}</span>/{{ doc.edid or '1' }}</code>
+<code><span class="base64">{{ doc.base_dsi or fake_base_dsi }}</span>/{{ doc.edid or fake_edid }}</code>
 {%- endmacro %}
 
 {% macro dsi_html(doc) -%}
-<span class="uri"><span class="uri-scheme">dsi:</span>{{ dsi_html_code(doc) }}</span>
+<span class="uri"><span class="uri-scheme">dsi:</span><wbr>{{ dsi_html_code(doc) }}</span>
 {%- endmacro %}
 
 {% macro https_dsi_html(doc, dsi_base_url) -%}
@@ -97,9 +98,7 @@
         {% if not permpub_missing %}
         <div class="article-dsi">
           <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
-            <span class="uri">
-              <span class="uri-scheme">dsi:</span><wbr>{{ dsi_html_code(doc) }}
-            </span>
+            {{ dsi_html(doc) }}
           </a>
         </div>
         {% endif %}

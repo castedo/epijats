@@ -6,10 +6,11 @@
   --ps-page-margin-left: 8mm;
   --ps-page-margin-left-mm: 8;
 
-  --ps-page-margin-right: 8mm;
-  --ps-page-margin-right-mm: 8;
+  --ps-page-margin-right: 10mm;
+  --ps-page-margin-right-mm: 10;
 
-  --ps-page-area-width: 194mm;
+  --ps-page-area-width: 192mm;
+  /* 8mm + 192mm + 10mm = 210mm = A4 paper width */
 }
 
 /* .eprint class to scope variables to avoid collision with embedding website */
@@ -30,10 +31,10 @@
  * Similar to table and rows, but for side-by-side aside elements and content. */
 
 :root {
-  --ps-aside-width-frac: 0.31;
-  --ps-aside-width: 31%; /* calc(var(--ps-aside-width-frac) * 100%); */
-  --ps-non-aside-width-frac: 0.69; /* calc(1 - var(--ps-aside-width-frac)); */
-  --ps-non-aside-width: 69%; /* calc(var(--ps-non-aside-width-frac) * 100%); */
+  --ps-aside-width-frac: 0.27;
+  --ps-aside-width: 27%; /* calc(var(--ps-aside-width-frac) * 100%); */
+  --ps-non-aside-width-frac: 0.73; /* calc(1 - var(--ps-aside-width-frac)); */
+  --ps-non-aside-width: 73%; /* calc(var(--ps-non-aside-width-frac) * 100%); */
 }
 .eprint .aside-shelf {
   clear: both;
@@ -224,6 +225,8 @@
 
 :root {
   --ps-first-page-margin-top: 50mm;
+  --ps-page-margin-top: 20mm;
+  --ps-page-margin-bottom: 18mm;
 
   --ps-page-top-left-width: 45%;
   --ps-page-top-center-width: 0%;
@@ -299,7 +302,7 @@
 
 .eprint aside {
   font-size: 0.875em;
-  padding-right: 2rem;
+  padding-right: 1.75rem;
 }
 
 .eprint aside code {
@@ -370,8 +373,11 @@
   font-size: 1.5em;
   margin-bottom: 2rem;
 }
+.eprint .article-header .article-dsi code {
+  font-size: 0.92em;
+}
 .eprint .article-header .article-dsi code .base64 {
-  font-size: 0.9em;
+  font-size: 0.92em;
 }
 
 .eprint .article-swhid {
@@ -383,9 +389,6 @@
   font-size: 0.825em;
 }
 
-.eprint .dsi-url .uri {
-  display: inline-block;
-}
 .eprint .uri-scheme {
   margin-right: 0.125em;
 }
@@ -394,6 +397,11 @@
 }
 .eprint .uri code {
   color: inherit;
+}
+@media print {
+  wbr::before { content: "\200B" }
+  /* Work around for WeasyPrint <= 59.0 */
+  /* https://github.com/Kozea/WeasyPrint/issues/1965 */
 }
 
 .eprint .edition-number {

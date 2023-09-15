@@ -6,6 +6,13 @@ import argparse, importlib, logging, os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 
+def enable_weasyprint_logging():
+    from weasyprint import LOGGER
+
+    LOGGER.setLevel(logging.INFO)
+    LOGGER.addHandler(logging.StreamHandler())
+
+
 class Main:
     def __init__(self, cmd_line_args=None):
         self.parser = argparse.ArgumentParser(description="Eprint JATS")
@@ -56,13 +63,13 @@ class Main:
             'jsoml': 1,
             'html': 2,
             'html+pdf': 2,
-            'pdf': 3,
+            'pdf': 2,
         }
         source_stage = format_stages[self.inform]
         target_stage = format_stages[self.outform]
         if source_stage > target_stage:
             msg = (
-                "Conversion direction must be jats -> (json|yaml|jsoml) -> (html|html+pdf) -> pdf"
+                "Conversion direction must be jats -> (json|yaml|jsoml) -> (html|html+pdf|pdf)"
             )
             self.parser.error(msg)
 
@@ -116,22 +123,18 @@ class Main:
                 if self.outform == "html+pdf":
                     self.config.show_pdf_icon = True
                 eprint = Eprint(webstract, Path(tempdir) / "html", self.config)
-                if self.outform in ["html", "html+pdf"]:
-                    os.makedirs(self.outpath, exist_ok=True)
+                if self.outform == "html":
                     eprint.make_html_dir(self.outpath)
-                if self.outform == "pdf":
-                    pdf_outpath = self.outpath
-                elif self.outform == "html+pdf":
-                    pdf_outpath = self.outpath / "article.pdf"
                 else:
-                    pdf_outpath = None
-                if pdf_outpath:
                     self.check_imports(["weasyprint"], "write")
-                    from weasyprint import LOGGER
-
-                    LOGGER.setLevel(logging.INFO)
-                    LOGGER.addHandler(logging.StreamHandler())
-                    eprint.make_pdf(pdf_outpath)
+                    enable_weasyprint_logging()
+                    if self.outform == "html+pdf":
+                        eprint.make_html_and_pdf(
+                            self.outpath,
+                            self.outpath / "article.pdf"
+                        )
+                    elif self.outform == "pdf":
+                        eprint.make_pdf(self.outpath)
 
 
 def main(args=None):
