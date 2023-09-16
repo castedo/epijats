@@ -2,7 +2,7 @@ epijats
 =======
 
 `epijats` converts [baseprint](https://baseprints.singlesource.pub)
-JATS XML baseprint to PDF in three independent stages:
+JATS XML to PDF in three independent stages:
 
 ```
           JATS
@@ -53,7 +53,7 @@ Json support is automatic.
 If you are converting from JATS, the following dependencies must be installed:
 
 <ul>
-  <li> [pandoc](https://pandoc.org)
+  <li> <a href="https://pandoc.org">pandoc</a>
   <li> pandoc-katex-filter Node.js NPM package
   <li> git
 </ul>
