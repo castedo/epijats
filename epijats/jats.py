@@ -2,7 +2,7 @@ from elifetools import parseJATS
 from .webstract import Webstract, Source
 
 #std library
-import sys, subprocess
+import io, sys, subprocess
 from pathlib import Path
 from datetime import datetime
 from time import mktime
@@ -13,8 +13,7 @@ def run_pandoc(args, echo=True):
     cmd = ["pandoc"] + args
     if echo:
         print(" ".join([str(s) for s in cmd]))
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=sys.stderr)
-    return proc.stdout
+    return subprocess.check_output(cmd, stderr=sys.stderr)
 
 
 def pandoc_jats_to_webstract(jats_src, pandoc_opts):
@@ -28,11 +27,12 @@ def pandoc_jats_to_webstract(jats_src, pandoc_opts):
 
 
 def webstract_from_jats(src, pandoc_opts):
+    import jsoml
+
     src = Path(src)
     jats_src = src / "article.xml" if src.is_dir() else src
-    pipeout = pandoc_jats_to_webstract(jats_src, pandoc_opts)
-    ret = Webstract.load_xml(pipeout)
-
+    xmlout = pandoc_jats_to_webstract(jats_src, pandoc_opts)
+    ret = Webstract(jsoml.load(io.BytesIO(xmlout)))
     ret['source'] = Source(path=src)
 
     soup = parseJATS.parse_document(jats_src)

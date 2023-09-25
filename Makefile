@@ -2,6 +2,6 @@ all:
 	@echo Nope
 
 test:
-	python -m pytest
+	python -Wdefault -m pytest
 
 .PHONY: all test
