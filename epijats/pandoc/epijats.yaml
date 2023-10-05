@@ -1,0 +1,11 @@
+from: jats
+to: html
+standalone: true
+citeproc: true
+metadata:
+  link-citations: true
+  reference-section-title: "References"
+shift-heading-level-by: 1
+wrap: preserve
+filters:
+  - pandoc-katex-filter

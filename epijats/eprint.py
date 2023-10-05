@@ -7,6 +7,7 @@ import os, tempfile
 from datetime import datetime, date, time, timezone
 from pathlib import Path
 from pkg_resources import resource_filename
+from warnings import warn
 
 
 # WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
@@ -22,12 +23,16 @@ class EprinterConfig:
             dsi_base_url=(dsi_base_url.rstrip("/") if dsi_base_url else None),
             math_css_url=(math_css_url or "static/katex/katex.css"),
         )
-        self.pandoc_opts = []
-        if theme_dir:
-            self.pandoc_opts = ["--data-dir", theme_dir, "--defaults", "pandoc.yaml"]
+        if theme_dir is not None:
+            warn("Stop passing theme_dir to EprinterConfig.", DeprecationWarning)
         self.article_style = 'lyon'
         self.embed_web_fonts = True
         self.show_pdf_icon = False
+
+    @property
+    def pandoc_opts(self):
+        warn("Stop using pandoc_opts.", DeprecationWarning)
+        return []
 
 
 class Eprint:

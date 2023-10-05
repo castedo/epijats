@@ -8,7 +8,6 @@ from pathlib import Path
 class DocLoader:
     def __init__(self, cache, eprinter_config=None):
         self.cache = Path(cache)
-        self.pandoc_opts = eprinter_config.pandoc_opts
 
     def webstract_from_edition(self, edition):
         work_path = self.cache / "arc" / str(edition.dsi)
@@ -22,7 +21,7 @@ class DocLoader:
             if work_path.is_dir():
                 from . import jats
 
-                ret = jats.webstract_from_jats(work_path, self.pandoc_opts)
+                ret = jats.webstract_from_jats(work_path)
             else:
                 raise ValueError(f"Unknown digital object type at {edition.dsi}")
 

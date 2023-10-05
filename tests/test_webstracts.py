@@ -27,7 +27,7 @@ ARCHIVE = hidos.Archive(".", unsigned_ok=True)
 
 @pytest.mark.parametrize("case", WEBSTRACT_CASES)
 def test_webstracts(case):
-    got = webstract_from_jats(CASES_DIR / case / "input", CONFIG.pandoc_opts)
+    got = webstract_from_jats(CASES_DIR / case / "input")
     expect = Webstract.load_json(CASES_DIR / case / "output.json")
     assert got == expect
 

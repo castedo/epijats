@@ -2,36 +2,41 @@ from elifetools import parseJATS
 from .webstract import Webstract, Source
 
 #std library
-import io, sys, subprocess
+import io, subprocess
 from pathlib import Path
 from datetime import datetime
 from time import mktime
-from pkg_resources import resource_filename
+from importlib import resources
+from warnings import warn
 
 
 def run_pandoc(args, echo=True):
-    cmd = ["pandoc"] + args
+    cmd = ["pandoc"] + [str(a) for a in args]
     if echo:
-        print(" ".join([str(s) for s in cmd]))
-    return subprocess.check_output(cmd, stderr=sys.stderr)
+        print(" ".join(cmd))
+    return subprocess.check_output(cmd)
 
 
-def pandoc_jats_to_webstract(jats_src, pandoc_opts):
-    args = [jats_src, "--from=jats", "-s", '--to', 'html']
-    tmpl = resource_filename(__name__, "templates/webstract.pandoc")
-    args += ["--template", tmpl, "--citeproc", "--filter=pandoc-katex-filter"]
-    args += ["--metadata", "reference-section-title=References"]
-    args += ["--metadata", "link-citations=true"]
-    args += ["--shift-heading-level-by=1", "--wrap=preserve"]
-    return run_pandoc(args + pandoc_opts)
+def pandoc_jats_to_webstract(jats_src):
+    rp = resources.files(__package__).joinpath("pandoc")
+    with (
+        resources.as_file(rp.joinpath("epijats.yaml")) as defaults_file,
+        resources.as_file(rp.joinpath("epijats.csl")) as csl_file,
+        resources.as_file(rp.joinpath("webstract.tmpl")) as tmpl_file,
+    ):
+        args = ["-d", defaults_file, "--csl", csl_file, "--template", tmpl_file]
+        return run_pandoc(args + [jats_src])
 
 
-def webstract_from_jats(src, pandoc_opts):
+def webstract_from_jats(src, pandoc_opts=None):
     import jsoml
+
+    if pandoc_opts is not None:
+        warn("Stop passing pandoc_opts to webstract_from_jats.", DeprecationWarning)
 
     src = Path(src)
     jats_src = src / "article.xml" if src.is_dir() else src
-    xmlout = pandoc_jats_to_webstract(jats_src, pandoc_opts)
+    xmlout = pandoc_jats_to_webstract(jats_src)
     ret = Webstract(jsoml.load(io.BytesIO(xmlout)))
     ret['source'] = Source(path=src)
 

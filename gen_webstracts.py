@@ -18,7 +18,7 @@ config = EprinterConfig()
 
 for case in os.listdir(CASES_DIR):
     print(case)
-    w = jats.webstract_from_jats(CASES_DIR / case / "input", config.pandoc_opts)
+    w = jats.webstract_from_jats(CASES_DIR / case / "input")
     w.dump_json(CASES_DIR / case / "output.json")
     w.dump_yaml(CASES_DIR / case / "output.yaml")
     w.dump_xml(CASES_DIR / case / "output.xml")

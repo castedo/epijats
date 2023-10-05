@@ -96,7 +96,7 @@ class Main:
         if self.inform == "jats":
             self.check_imports(["elifetools", "jsoml"], "read")
             from epijats.jats import webstract_from_jats
-            return webstract_from_jats(self.inpath, self.config.pandoc_opts)
+            return webstract_from_jats(self.inpath)
         elif self.inform == "json":
             return Webstract.load_json(self.inpath)
         elif self.inform == "yaml":
