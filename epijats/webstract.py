@@ -212,14 +212,28 @@ class WebstractFacade:
         return self._edidata.get("edid")
 
     @property
-    def seq_edid(self):
+    def _edition_id(self):
         from hidos.dsi import EditionId
 
         edid = self._edidata.get("edid")
-        if not edid:
-            return None
-        edid = EditionId(edid)
+        return EditionId(edid) if edid else None
+
+    @property
+    def seq_edid(self):
+        from hidos.dsi import EditionId
+
+        edid = self._edition_id
         return str(EditionId(edid[:-1]))
+
+    @property
+    def listed(self):
+        edid = self._edition_id
+        return edid and edid.listed
+
+    @property
+    def unlisted(self):
+        edid = self._edition_id
+        return edid and edid.unlisted
 
     @property
     def latest_edid(self):
