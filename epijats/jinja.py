@@ -1,5 +1,7 @@
 import jinja2
 
+from pathlib import Path
+
 
 class WebPageGenerator:
     def __init__(self):
@@ -14,18 +16,20 @@ class WebPageGenerator:
     def add_template_loader(self, loader):
         self.env.loader.loaders.append(loader)
 
-    def render_file(self, tmpl_subpath, dest_filepath, ctx=dict()):
+    def render_file(
+        self, tmpl_subpath: Path | str, dest_filepath: Path, ctx=dict()
+    ) -> None:
         tmpl = self.env.get_template(str(tmpl_subpath))
         tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")
 
 
 class PackagePageGenerator(WebPageGenerator):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.add_template_loader(jinja2.PackageLoader(__name__, "templates"))
 
 
-def style_template_loader():
+def style_template_loader() -> jinja2.BaseLoader:
     return jinja2.PrefixLoader(
         {"epijats": jinja2.PackageLoader(__name__, "templates/epijats")}
     )
