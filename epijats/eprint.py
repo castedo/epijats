@@ -39,7 +39,6 @@ class Eprint:
         if config is None:
             config = EprinterConfig()
         self._tmp = Path(tmp)
-        assert self._tmp.is_dir()
         self._html_ctx: dict[str, str | bool | None] = dict(config.urls)
         self._html_ctx["article_style"] = config.article_style
         self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
@@ -57,8 +56,7 @@ class Eprint:
         self._gen.render_file("article.html.jinja", ret, ctx)
         if not ret.with_name("static").exists():
             Eprint.copy_static_dir(target / "static")
-        if self.webstract.source.subpath_exists("pass"):
-            self.webstract.source.symlink_subpath(target / "pass", "pass")
+        self.webstract.source.copy_resources(target)
         return ret
 
     @staticmethod

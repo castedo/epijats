@@ -1,16 +1,15 @@
-from .util import swhid_from_files
+from .util import copytree_nostat, swhid_from_files
 
-import copy, json, os
+import copy, json, os, shutil
 from pathlib import Path
 from datetime import date
 from warnings import warn
-
 
 SWHID_SCHEME_LENGTH = len("shw:1:abc:")
 
 
 class Source:
-    def __init__(self, swhid=None, path=None):
+    def __init__(self, *, swhid: str | None = None, path: Path | None = None):
         self._swhid = swhid
         self.path = None if path is None else Path(path)
         if self._swhid is None and self.path is None:
@@ -43,18 +42,17 @@ class Source:
             return self.swhid == other.swhid
         return False
 
-    def subpath_exists(self, subpath="."):
-        return self.path is not None and (self.path / subpath).exists()
-
-    def symlink_subpath(self, symlink, subpath="."):
-        if self.path is None:
-            raise ValueError(f"Path unknown for: {self._swhid}")
-        srcpath = self.path / subpath
-        if not srcpath.exists():
-            raise ValueError(f"Path not found: {srcpath}")
-        if symlink.exists():
-            os.unlink(symlink)
-        os.symlink(srcpath.resolve(), symlink)
+    def copy_resources(self, dest: Path) -> None:
+        os.makedirs(dest, exist_ok=True)
+        for srcentry in os.scandir(self.path):
+            dstentry = os.path.join(dest, srcentry.name)
+            if srcentry.name == "static":
+                msg = "A source directory entry named 'static' is not supported"
+                raise NotImplementedError(msg)
+            elif srcentry.is_dir():
+                copytree_nostat(srcentry, dstentry)
+            elif srcentry.name != "article.xml":
+                shutil.copy(srcentry, dstentry)
 
 
 class Webstract(dict):
@@ -100,7 +98,7 @@ class Webstract(dict):
             if isinstance(value, Path):
                 value = Source(path=value)
             elif not isinstance(value, Source):
-                value = Source(value)
+                value = Source(swhid=value)
         elif key == "date" and not isinstance(value, date):
             value = date.fromisoformat(value)
         elif key == "archive_date" and not isinstance(value, date):
@@ -117,7 +115,7 @@ class Webstract(dict):
                 indent=4,
                 default=str,
                 ensure_ascii=False,
-                sort_keys = True,
+                sort_keys=True,
             )
             file.write("\n")
 
@@ -138,7 +136,7 @@ class Webstract(dict):
             plain = dict(copy.deepcopy(self))
             if "source" in plain:
                 plain["source"] = str(plain["source"])
-            yaml.dump(plain, file) 
+            yaml.dump(plain, file)
 
     @staticmethod
     def load_yaml(source):

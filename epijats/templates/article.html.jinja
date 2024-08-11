@@ -6,8 +6,8 @@
   <div class="eprint">
 
     <nav class="preview-mode">
-      <a class="btn-switch webpaper-none" href="#web">Switch to webpaper</a>
-      <a class="btn-switch webpaper-only" href="#">Switch to print preview</a>
+      <a class="btn-switch webpaper-none" href="?webpaper">Switch to webpaper</a>
+      <a class="btn-switch webpaper-only" href="?">Switch to print preview</a>
       {% if show_pdf_icon %}
       <a class="pdf-link" href="article.pdf"><img src="static/PDF_file_icon.svg"></a>
       {% endif %}
@@ -82,15 +82,10 @@
     }
   </style>
   <script>
-    function handleHash() {
-      if (window.location.hash == "#web") {
-          document.documentElement.classList.add('webpaper');
-      } else {
-          document.documentElement.classList.remove('webpaper');
-      }
+    let params = new URLSearchParams(document.location.search);
+    if (params.has("webpaper")) {
+      document.documentElement.classList.add('webpaper');
     }
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
   </script>
 {% endblock head_content %}
 
