@@ -3,7 +3,7 @@ from .jinja import PackagePageGenerator
 from .webstract import Webstract
 
 #std library
-import os, tempfile
+import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
@@ -54,10 +54,14 @@ class Eprint:
         ctx = dict(doc=self.webstract.facade, has_math=True, **self._html_ctx)
         assert self._gen
         self._gen.render_file("article.html.jinja", ret, ctx)
-        if not ret.with_name("static").exists():
-            Eprint.copy_static_dir(target / "static")
+        Eprint._clone_static_dir(target / "static")
         self.webstract.source.copy_resources(target)
         return ret
+
+    @staticmethod
+    def _clone_static_dir(target: Path) -> None:
+        shutil.rmtree(target, ignore_errors=True)
+        Eprint.copy_static_dir(target)
 
     @staticmethod
     def copy_static_dir(target: Path) -> None:

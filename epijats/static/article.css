@@ -74,21 +74,19 @@
   margin-top: 0;
 }
 
-.eprint .article-body img {
-  display: block;
-  max-height: 6in;
-  max-width: 90%;
-  margin: 1em auto;
-}
-.eprint .article-body p img {
-  display: inline;
-  margin: 0;
-}
-
 .eprint figure {
   break-inside: avoid;
-  margin: 2em 0 2em -20%;
-  width: 120%;
+  margin: 2em 0;
+}
+.eprint figure p img {
+  width: 49%;
+}
+.eprint figure p img:nth-child(1):nth-last-child(1) {
+  width: 100%;
+}
+.eprint figure p img:nth-child(1):nth-last-child(3),
+.eprint figure p img:nth-child(1):nth-last-child(3) ~ img {
+  width: 31%;
 }
 .eprint figcaption {
   font-size: 0.8em;

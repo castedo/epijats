@@ -6,8 +6,12 @@
   <div class="eprint">
 
     <nav class="preview-mode">
-      <a class="btn-switch webpaper-none" href="?webpaper">Switch to webpaper</a>
-      <a class="btn-switch webpaper-only" href="?">Switch to print preview</a>
+      <button class="btn-switch webpaper-none" onclick="window.location.search = '?webpaper';">
+        Switch to webpaper
+      </a>
+      <button class="btn-switch webpaper-only" onclick="window.location.search = '';">
+        Switch to print preview
+      </button>
       {% if show_pdf_icon %}
       <a class="pdf-link" href="article.pdf"><img src="static/PDF_file_icon.svg"></a>
       {% endif %}
@@ -61,7 +65,7 @@
         top: -54px;
         font-size: 16px;
       }
-      nav.preview-mode a {
+      nav.preview-mode button {
         display: flex;
         justify-content: center;
         align-items: center;
@@ -71,13 +75,14 @@
       nav.preview-mode a.pdf-link img {
         height: 40px;
       }
-      nav.preview-mode a.btn-switch {
+      nav.preview-mode .btn-switch {
         color: initial;
-        text-decoration: none;
         background-color: #f5f5f5;
         border: #ff2116 solid 1px;
         border-radius: 5px;
         width: 198px;
+        padding: 0;
+        font-size: 16px;
       }
     }
   </style>
