@@ -1,6 +1,6 @@
 import pytest
 
-import tempfile
+import subprocess, tempfile
 from os import listdir
 from pathlib import Path
 
@@ -22,7 +22,14 @@ for s in SUCCESSION_CASES:
     for e in listdir(CASES_DIR / "succession" / s):
         EDITION_CASES.append(f"succession/{s}/{e}")
 
-ARCHIVE = hidos.Archive(".", unsigned_ok=True)
+ARCHIVE_DIR = Path(__file__).parent / "_archive"
+if not ARCHIVE_DIR.exists():
+    bundle = Path(__file__).parent / "test_succession_archive.bundle"
+    subprocess.run(
+        ["git", "clone", "--bare", bundle, ARCHIVE_DIR],
+        check=True,
+    )
+ARCHIVE = hidos.Archive(ARCHIVE_DIR, unsigned_ok=True)
 
 
 @pytest.mark.parametrize("case", WEBSTRACT_CASES)

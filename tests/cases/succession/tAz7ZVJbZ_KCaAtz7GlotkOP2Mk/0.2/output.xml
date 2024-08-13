@@ -17,10 +17,10 @@
     </arr>
     <str key="date" val="2022-04-14"/>
     <obj key="edition">
-        <str key="base_dsi" val="fUKGv5s9_mYQgkmX5W0O_7eTaTU"/>
+        <str key="base_dsi" val="tAz7ZVJbZ_KCaAtz7GlotkOP2Mk"/>
         <str key="edid" val="0.2"/>
         <str key="newer_edid" val="1.1"/>
     </obj>
-    <str key="source" val="swh:1:dir:7a05d41c586ea4cbfa5a5e0021bc2a00ac8998ba"/>
+    <str key="source" val="swh:1:dir:07a04e5f301860db6168c0150fa66bf1a4699257"/>
     <str key="title" val="On testing"/>
 </obj>
