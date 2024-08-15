@@ -1,6 +1,38 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "epijats"
+version = "1.5.1"
+description = "E-Printing Identified JATS"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Development Status :: 4 - Beta",
+    "Topic :: Text Processing :: Markup :: XML",
+]
+license = {file = "LICENSE"}
+authors = [
+  { name="Castedo Ellerman", author_email = "castedo@castedo.com" },
+]
+
+[project.urls]
+Homepage = "https://gitlab.com/perm.pub/epijats"
+
+[project.optional-dependencies]
+html = [ "jinja2" ]
+jats = [ "elifetools >= 0.26", "GitPython", "jsoml" ]
+jsoml = [ "jsoml" ]
+pdf = [ "jinja2", "weasyprint >= 60.2" ]
+yaml = [ "ruamel.yaml" ]
+successions = [ "hidos" ]
+
+[project.scripts]
+epijats = "epijats.__main__:main"
 
 [tool.yapf]
 column_limit = 88
