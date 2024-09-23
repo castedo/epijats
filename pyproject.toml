@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "epijats"
-version = "1.5.1.dev"
 description = "E-Printing Identified JATS"
 readme = "README.md"
+dynamic = ["version"]
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -36,6 +36,9 @@ epijats = "epijats.__main__:main"
 
 [tool.setuptools]
 packages = ["epijats"]
+
+[tool.setuptools_scm]
+version_file = "epijats/_version.py"
 
 [tool.yapf]
 column_limit = 88

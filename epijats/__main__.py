@@ -2,7 +2,7 @@ from epijats import Eprint, EprinterConfig, Webstract
 from epijats.util import copytree_nostat
 
 # std lib
-import argparse, importlib, logging, os, shutil, subprocess, sys, tempfile
+import argparse, importlib, logging, shutil, tempfile
 from pathlib import Path
 
 
@@ -13,9 +13,24 @@ def enable_weasyprint_logging():
     LOGGER.addHandler(logging.StreamHandler())
 
 
+def version() -> str:
+    try:
+        from ._version import version  # type: ignore
+        return str(version)
+    except ImportError:
+        return "0.0.0"
+
+
 class Main:
+    inpath: Path
+    outpath: Path
+    inform: str
+    outform: str
+    no_web_fonts: bool
+
     def __init__(self, cmd_line_args=None):
         self.parser = argparse.ArgumentParser(description="Eprint JATS")
+        self.parser.add_argument("--version", action="version", version=version())
         self.parser.add_argument("inpath", type=Path, help="input directory/path")
         self.parser.add_argument("outpath", type=Path, help="output directory/path")
         self.parser.add_argument(
@@ -34,26 +49,27 @@ class Main:
         )
         self.parser.add_argument(
             "--no-web-fonts",
-            default=False,
             action="store_true",
             help="Do not use online web fonts",
         )
+
         self.parser.parse_args(cmd_line_args, self)
 
         self.config = EprinterConfig(dsi_base_url="https://perm.pub")
         self.config.embed_web_fonts = not self.no_web_fonts
 
-    def run(self):
+    def run(self) -> int:
         self.check_conversion_order()
         if self.just_copy():
-            return
+            return 0
 
         webstract = self.load_webstract()
         if webstract is None:
             assert self.inform == "html" and self.outform == "pdf"
             Eprint.html_to_pdf(self.inpath, self.outpath)
-            return
+            return 0
         self.convert(webstract)
+        return 0
 
     def check_conversion_order(self):
         format_stages = {
@@ -137,8 +153,9 @@ class Main:
                         eprint.make_pdf(self.outpath)
 
 
-def main(args=None):
+def main(args=None) -> int:
     return Main(args).run()
+
 
 if __name__ == "__main__":
     exit(main())

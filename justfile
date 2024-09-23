@@ -1,12 +1,16 @@
-all:
-	@echo Nope
+#!/usr/bin/env -S just --justfile
+
+default:
+    just --list
 
 test:
-	python3 -Wdefault -m pytest
+    python3 -Wdefault -m pytest
 
 dist:
-	python3 -m build
+    python3 -m build
 
 clean:
-	rm -rf dist
-	rm -rf epijats.egg-info
+    rm -rf dist
+    rm -rf build
+    rm -rf epijats.egg-info
+    rm -f epijats/_version.py
