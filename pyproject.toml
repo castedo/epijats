@@ -35,7 +35,15 @@ successions = [ "hidos" ]
 epijats = "epijats.__main__:main"
 
 [tool.setuptools]
-packages = ["epijats"]
+packages = [
+  "epijats",
+  "epijats.pandoc",
+  "epijats.static",
+  "epijats.static.katex",
+  "epijats.static.katex.fonts",
+  "epijats.templates",
+  "epijats.templates.epijats",
+]
 
 [tool.setuptools_scm]
 version_file = "epijats/_version.py"
