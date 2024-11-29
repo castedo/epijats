@@ -4,7 +4,8 @@ import subprocess, tempfile
 from os import listdir
 from pathlib import Path
 
-import hidos
+from hidos.dulwich import revision_history
+from hidos.archive import history_successions
 
 from epijats import util, Webstract, EprinterConfig, DocLoader
 from epijats.jats import webstract_from_jats
@@ -29,7 +30,6 @@ if not ARCHIVE_DIR.exists():
         ["git", "clone", "--bare", bundle, ARCHIVE_DIR],
         check=True,
     )
-ARCHIVE = hidos.Archive(ARCHIVE_DIR, unsigned_ok=True)
 
 
 @pytest.mark.parametrize("case", WEBSTRACT_CASES)
@@ -43,7 +43,11 @@ def test_webstracts(case):
 def test_editions(case):
     with tempfile.TemporaryDirectory() as tmpdir:
         loader = DocLoader(tmpdir, CONFIG)
-        succ = ARCHIVE.find_succession(case)
+        hist = revision_history(ARCHIVE_DIR, unsigned_ok=True)
+        succs = history_successions(hist)
+        assert 1 == len(succs)
+        succ = succs.pop()
+        assert succ.dsi.base64 == case
         for edition in succ.root.all_subeditions():
             if edition.has_digital_object:
                 got = loader.webstract_from_edition(edition)
