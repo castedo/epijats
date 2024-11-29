@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import os, shutil, tempfile
+import os, shutil
 from pathlib import Path
-
 from typing import TYPE_CHECKING
+from warnings import warn
 if TYPE_CHECKING:
     from _typeshed import StrPath  # (os.PathLike[str] | str)
+
+import dulwich
 
 
 def up_to_date(target: Path, source: Path) -> bool:
@@ -26,14 +28,45 @@ def copytree_nostat(src: StrPath, dst: StrPath) -> Path:
     return Path(dst)
 
 
-def swhid_from_files(path: Path) -> str:
-    import git
+def warn_git_baseprint_diffs(entry: os.DirEntry) -> None:
+    if entry.name.startswith("."):
+        warn(f"Hidden files are ignored: {entry.name}")
+    stat = entry.stat(follow_symlinks=False)
+    if stat.st_mode & 0o111:
+        warn(f"Excecution bits are ignored for file {entry.name}")
 
-    if not path.is_dir():
-        return "swh:1:cnt:" + str(git.Git().hash_object(path))
-    with tempfile.TemporaryDirectory() as tmpdir:
-        repo = git.Repo.init(tmpdir)
-        g = git.Git(path)  # path is working dir
-        g.set_persistent_git_options(git_dir=repo.git_dir)
-        g.add(".")
-        return "swh:1:dir:" + str(g.write_tree())
+
+def _calc_file_sha1_hex(path: Path) -> str:
+    with open(path, 'rb') as f:
+        blob = dulwich.objects.Blob()
+        blob.data = f.read()
+        return blob.sha().hexdigest()
+
+
+def _calc_dir_sha1_hex(path: Path) -> str:
+    tree = dulwich.objects.Tree()
+    for entry in os.scandir(path):
+        warn_git_baseprint_diffs(entry)
+        if entry.name.startswith("."):
+            continue
+        if entry.is_file():
+            mode = 0o100644
+            sha = _calc_file_sha1_hex(path / entry.name).encode('ascii')
+            tree.add(entry.name.encode(), mode, sha)
+        elif entry.is_dir():
+            mode = 0o040000
+            sha = _calc_dir_sha1_hex(path / entry.name).encode('ascii')
+            tree.add(entry.name.encode(), mode, sha)
+        else:
+            raise ValueError
+    return tree.sha().hexdigest()
+
+
+def swhid_from_files(path: StrPath) -> str:
+    path = Path(path)
+    if path.is_file():
+        return "swh:1:cnt:" + _calc_file_sha1_hex(path)
+    if path.is_dir():
+        return "swh:1:dir:" + _calc_dir_sha1_hex(path)
+    msg = "Only regular files and folders supported for Baseprint snapshots."
+    raise ValueError(msg)

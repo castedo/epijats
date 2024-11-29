@@ -25,7 +25,7 @@ Homepage = "https://gitlab.com/perm.pub/epijats"
 
 [project.optional-dependencies]
 html = [ "jinja2" ]
-jats = [ "elifetools >= 0.26", "GitPython", "jsoml" ]
+jats = [ "elifetools >= 0.26", "dulwich", "jsoml" ]
 jsoml = [ "jsoml" ]
 pdf = [ "jinja2", "weasyprint >= 60.2" ]
 yaml = [ "ruamel.yaml" ]
