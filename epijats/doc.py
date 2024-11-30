@@ -30,6 +30,7 @@ class DocLoader:
             if latest_edid > edition.edid:
                 edidata["newer_edid"] = str(latest_edid)
             ret['edition'] = edidata
+            ret['date'] = edition.date
 
             os.makedirs(cached.parent, exist_ok=True)
             ret.dump_xml(cached)
