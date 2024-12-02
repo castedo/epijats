@@ -16,7 +16,6 @@ is common in population genetics.</p>]]></str>
             <str key="type" val="author"/>
         </obj>
     </arr>
-    <str key="date" val="2022-04-14"/>
     <str key="source" val="swh:1:dir:ed560a61176193d4f5b7330e211895758261427a"/>
     <str key="title"><![CDATA[Definitions of F<sub>ST</sub>]]></str>
 </obj>

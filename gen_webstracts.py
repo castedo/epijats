@@ -5,7 +5,7 @@ import hidos
 import os, tempfile
 from pathlib import Path
 
-from epijats import EprinterConfig, DocLoader
+from epijats import DocLoader
 from epijats import jats
 
 
@@ -13,8 +13,6 @@ HERE_DIR = Path(__file__).parent
 CASES_DIR = HERE_DIR / "tests/cases/webstract"
 SUCC_DIR = HERE_DIR / "tests/cases/succession"
 
-
-config = EprinterConfig()
 
 for case in os.listdir(CASES_DIR):
     print(case)
@@ -26,7 +24,7 @@ for case in os.listdir(CASES_DIR):
 archive = hidos.Archive(".", unsigned_ok=True)
 
 with tempfile.TemporaryDirectory() as tmpdir:
-    loader = DocLoader(tmpdir, config)
+    loader = DocLoader(tmpdir)
     for case in os.listdir(SUCC_DIR):
         print(case)
         succ = archive.find_succession(case)

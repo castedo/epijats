@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 class DocLoader:
-    def __init__(self, cache, eprinter_config=None):
+    def __init__(self, cache):
         self.cache = Path(cache)
 
     def webstract_from_edition(self, edition):

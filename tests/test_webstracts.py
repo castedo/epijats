@@ -7,11 +7,9 @@ from pathlib import Path
 from hidos.dulwich import revision_history
 from hidos.archive import history_successions
 
-from epijats import util, Webstract, EprinterConfig, DocLoader
+from epijats import util, Webstract, DocLoader
 from epijats.jats import webstract_from_jats
 
-
-CONFIG = EprinterConfig()
 
 CASES_DIR = Path(__file__).parent / "cases"
 
@@ -42,7 +40,7 @@ def test_webstracts(case):
 @pytest.mark.parametrize("case", SUCCESSION_CASES)
 def test_editions(case):
     with tempfile.TemporaryDirectory() as tmpdir:
-        loader = DocLoader(tmpdir, CONFIG)
+        loader = DocLoader(tmpdir)
         hist = revision_history(ARCHIVE_DIR, unsigned_ok=True)
         succs = history_successions(hist)
         assert 1 == len(succs)

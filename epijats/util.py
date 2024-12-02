@@ -7,7 +7,7 @@ from warnings import warn
 if TYPE_CHECKING:
     from _typeshed import StrPath  # (os.PathLike[str] | str)
 
-import dulwich
+import dulwich.objects
 
 
 def up_to_date(target: Path, source: Path) -> bool:
