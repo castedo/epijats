@@ -17,7 +17,9 @@ class DocLoader:
             ret.source.path = work_path
         else:
             if not work_path.exists():
-                edition.work_copy(work_path)
+                assert edition.snapshot
+                if edition.snapshot:
+                    edition.snapshot.copy(work_path)
             if work_path.is_dir():
                 from . import jats
 
