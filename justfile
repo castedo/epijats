@@ -5,7 +5,9 @@ default:
 
 export JUSTFILE_DIR := justfile_directory()
 
-test:
+test: && test-runtime
+
+test-runtime:
     python3 -Wdefault -m pytest
 
 dist:

@@ -41,13 +41,13 @@ def test_webstracts(case):
 def test_editions(case):
     with tempfile.TemporaryDirectory() as tmpdir:
         loader = DocLoader(tmpdir)
-        hist = revision_history(ARCHIVE_DIR, unsigned_ok=True)
+        hist = revision_history(ARCHIVE_DIR)
         succs = history_successions(hist)
         assert 1 == len(succs)
         succ = succs.pop()
         assert succ.dsi.base64 == case
         for edition in succ.root.all_subeditions():
-            if edition.has_digital_object:
+            if edition.snapshot:
                 got = loader.webstract_from_edition(edition)
                 edition_path = CASES_DIR / "succession" / case / str(edition.edid)
                 expect = Webstract.load_json(edition_path / "output.json")
