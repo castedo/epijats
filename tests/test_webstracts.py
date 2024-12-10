@@ -6,11 +6,9 @@ from pathlib import Path
 
 import hidos
 
-from epijats import util, Webstract, EprinterConfig, DocLoader
+from epijats import util, Webstract, DocLoader
 from epijats.jats import webstract_from_jats
 
-
-CONFIG = EprinterConfig()
 
 CASES_DIR = Path(__file__).parent / "cases"
 
@@ -42,7 +40,7 @@ def test_webstracts(case):
 @pytest.mark.parametrize("case", SUCCESSION_CASES)
 def test_editions(case):
     with tempfile.TemporaryDirectory() as tmpdir:
-        loader = DocLoader(tmpdir, CONFIG)
+        loader = DocLoader(tmpdir)
         succ = ARCHIVE.find_succession(case)
         for edition in succ.root.all_subeditions():
             if edition.has_digital_object:

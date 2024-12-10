@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 class DocLoader:
-    def __init__(self, cache, eprinter_config=None):
+    def __init__(self, cache):
         self.cache = Path(cache)
 
     def webstract_from_edition(self, edition):
@@ -30,6 +30,8 @@ class DocLoader:
             if latest_edid > edition.edid:
                 edidata["newer_edid"] = str(latest_edid)
             ret['edition'] = edidata
+            if hasattr(edition, 'date'):  # date added in hidos 2.0
+                ret['date'] = edition.date
 
             os.makedirs(cached.parent, exist_ok=True)
             ret.dump_xml(cached)
