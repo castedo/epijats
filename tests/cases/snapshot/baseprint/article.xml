@@ -1,0 +1,29 @@
+<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/">
+  <front>
+    <article-meta>
+      <title-group><article-title>A test</article-title></title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Wang</surname>
+          </name>
+        </contrib>
+      </contrib-group>
+      <permissions>
+        <copyright-year>2000</copyright-year>
+        <copyright-holder>Wang</copyright-holder>
+        <ali:free_to_read/>
+        <license>
+          <ali:license_ref>https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-p>This document is distributed under a Creative Commons Attribution 4.0 International license.</license-p>
+        </license>
+      </permissions>
+      <abstract>
+        <p>A simple test.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <p>Just a simple test.</p>
+  </body>
+</article>

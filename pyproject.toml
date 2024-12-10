@@ -48,6 +48,32 @@ packages = [
 [tool.setuptools_scm]
 version_file = "epijats/_version.py"
 
+[[tool.mypy.overrides]]
+module= [
+  'epijats.__main__',
+  'epijats.doc',
+  'epijats.webstract',
+  'epijats.jats',
+  'epijats.jinja',
+]
+check_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+disallow_any_generics =  false
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ['weasyprint', 'elifetools', 'ruamel']
+ignore_missing_imports = true
+
 [tool.yapf]
 column_limit = 88
 based_on_style = "facebook"
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+ignore = [
+    "E401",  # Multiple imports on one line
+]

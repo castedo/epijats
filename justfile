@@ -6,9 +6,12 @@ default:
 export JUSTFILE_DIR := justfile_directory()
 
 test: && test-runtime
+    ruff check epijats || true
+    mypy epijats
+    cd tests && mypy --ignore-missing-imports .  # cd for separate mypy cache+config
 
 test-runtime:
-    python3 -Wdefault -m pytest
+    time python3 -m pytest tests
 
 dist:
     python3 -m build

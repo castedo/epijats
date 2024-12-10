@@ -7,7 +7,6 @@ import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
-from warnings import warn
 
 # WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
 # file has relative URLs in anchor hrefs.

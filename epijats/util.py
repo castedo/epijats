@@ -28,7 +28,7 @@ def copytree_nostat(src: StrPath, dst: StrPath) -> Path:
     return Path(dst)
 
 
-def warn_git_baseprint_diffs(entry: os.DirEntry) -> None:
+def warn_git_baseprint_diffs(entry: os.DirEntry[str]) -> None:
     if entry.name.startswith("."):
         warn(f"Hidden files are ignored: {entry.name}")
     stat = entry.stat(follow_symlinks=False)
@@ -40,26 +40,28 @@ def _calc_file_sha1_hex(path: Path) -> str:
     with open(path, 'rb') as f:
         blob = dulwich.objects.Blob()
         blob.data = f.read()
-        return blob.sha().hexdigest()
+        ret = blob.sha().hexdigest()
+        assert isinstance(ret, str)
+        return ret
 
 
 def _calc_dir_sha1_hex(path: Path) -> str:
     tree = dulwich.objects.Tree()
     for entry in os.scandir(path):
         warn_git_baseprint_diffs(entry)
-        if entry.name.startswith("."):
-            continue
-        if entry.is_file():
-            mode = 0o100644
-            sha = _calc_file_sha1_hex(path / entry.name).encode('ascii')
-            tree.add(entry.name.encode(), mode, sha)
-        elif entry.is_dir():
-            mode = 0o040000
-            sha = _calc_dir_sha1_hex(path / entry.name).encode('ascii')
-            tree.add(entry.name.encode(), mode, sha)
-        else:
-            raise ValueError
-    return tree.sha().hexdigest()
+        if not entry.name.startswith("."):
+            if entry.is_file():
+                mode = 0o100644
+                sha = _calc_file_sha1_hex(path / entry.name).encode('ascii')
+            elif entry.is_dir():
+                mode = 0o040000
+                sha = _calc_dir_sha1_hex(path / entry.name).encode('ascii')
+            else:
+                raise ValueError
+            tree.add(entry.name.encode(), mode, sha)  # type: ignore[no-untyped-call]
+    ret = tree.sha().hexdigest()
+    assert isinstance(ret, str)
+    return ret
 
 
 def swhid_from_files(path: StrPath) -> str:
