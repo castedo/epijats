@@ -22,12 +22,11 @@ for s in SUCCESSION_CASES:
 
 ARCHIVE_DIR = Path(__file__).parent / "_archive"
 if not ARCHIVE_DIR.exists():
-    bundle = Path(__file__).parent / "test_succession_archive.bundle"
+    bundle = CASES_DIR / "test_succession_archive.bundle"
     subprocess.run(
         ["git", "clone", "--bare", bundle, ARCHIVE_DIR],
         check=True,
     )
-ARCHIVE = hidos.Archive(ARCHIVE_DIR, unsigned_ok=True)
 
 
 @pytest.mark.parametrize("case", WEBSTRACT_CASES)
@@ -41,9 +40,20 @@ def test_webstracts(case):
 def test_editions(case):
     with tempfile.TemporaryDirectory() as tmpdir:
         loader = DocLoader(tmpdir)
-        succ = ARCHIVE.find_succession(case)
+        if hasattr(hidos, 'repo_successions'):
+            succs = hidos.repo_successions(ARCHIVE_DIR)
+            assert 1 == len(succs)
+            succ = succs.pop()
+        else:  # hidos 1.x does not have top level Archive
+            archive = hidos.Archive(ARCHIVE_DIR, unsigned_ok=True)
+            succ = archive.find_succession(case)
+        assert str(succ.dsi) == case
         for edition in succ.root.all_subeditions():
-            if edition.has_digital_object:
+            if hasattr(edition, 'snapshot'):
+                by_snapshot = getattr(edition, 'snapshot', None)
+            else:  # hidos 1.x does not have edition.snapshot attribute
+                by_snapshot = edition.has_digital_object
+            if by_snapshot: 
                 got = loader.webstract_from_edition(edition)
                 edition_path = CASES_DIR / "succession" / case / str(edition.edid)
                 expect = Webstract.load_json(edition_path / "output.json")
