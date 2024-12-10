@@ -47,6 +47,8 @@ def test_editions(case):
                 got = loader.webstract_from_edition(edition)
                 edition_path = CASES_DIR / "succession" / case / str(edition.edid)
                 expect = Webstract.load_json(edition_path / "output.json")
+                if not hasattr(edition, 'date'):
+                    got['date'] = expect['date']  # don't test date with hidos 1.x
                 assert got == expect
 
 

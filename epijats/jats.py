@@ -4,8 +4,6 @@ from .webstract import Webstract, Source
 #std library
 import io, subprocess
 from pathlib import Path
-from datetime import datetime
-from time import mktime
 from importlib import resources
 from warnings import warn
 
@@ -41,13 +39,6 @@ def webstract_from_jats(src, pandoc_opts=None):
     ret['source'] = Source(path=src)
 
     soup = parseJATS.parse_document(jats_src)
-
-    dates = parseJATS.pub_dates(soup)
-    if dates:
-        date = datetime.fromtimestamp(mktime(dates[0]["date"])).date()
-    else:
-        date = None
-    ret['date'] = date
 
     ret['contributors'] = parseJATS.contributors(soup)
     for c in ret['contributors']:

@@ -15,7 +15,6 @@
             <str key="type" val="author"/>
         </obj>
     </arr>
-    <str key="date" val="2022-04-14"/>
     <str key="source" val="swh:1:dir:7a05d41c586ea4cbfa5a5e0021bc2a00ac8998ba"/>
     <str key="title" val="On testing"/>
 </obj>

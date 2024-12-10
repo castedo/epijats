@@ -15,7 +15,7 @@
             <str key="type" val="author"/>
         </obj>
     </arr>
-    <str key="date" val="2022-04-14"/>
+    <str key="date" val="2024-08-13"/>
     <obj key="edition">
         <str key="base_dsi" val="tAz7ZVJbZ_KCaAtz7GlotkOP2Mk"/>
         <str key="edid" val="0.2"/>
