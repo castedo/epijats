@@ -5,7 +5,6 @@ from .webstract import Webstract, Source
 import io, subprocess
 from pathlib import Path
 from importlib import resources
-from warnings import warn
 
 
 def run_pandoc(args, echo=True):
@@ -26,11 +25,8 @@ def pandoc_jats_to_webstract(jats_src):
         return run_pandoc(args + [jats_src])
 
 
-def webstract_from_jats(src, pandoc_opts=None):
+def webstract_from_jats(src) -> Webstract:
     import jsoml
-
-    if pandoc_opts is not None:
-        warn("Stop passing pandoc_opts to webstract_from_jats.", DeprecationWarning)
 
     src = Path(src)
     jats_src = src / "article.xml" if src.is_dir() else src
