@@ -22,6 +22,7 @@ def test_empty_dir():
 
 
 @pytest.mark.parametrize("case", CASE_SWHIDS.keys())
+@pytest.mark.filterwarnings("ignore:Hidden files")
 def test_swhids(case):
     assert CASE_SWHIDS[case] == swhid_from_files(SNAPSHOT_CASE / case)
 
@@ -50,5 +51,6 @@ def test_a_baseprint():
 
 
 def test_with_hidden_file():
-    bp = SNAPSHOT_CASE / "with_hidden_file"
-    assert get_swhid_from_git(bp) != swhid_from_files(bp)
+    with pytest.warns(UserWarning):
+        bp = SNAPSHOT_CASE / "with_hidden_file"
+        assert get_swhid_from_git(bp) != swhid_from_files(bp)

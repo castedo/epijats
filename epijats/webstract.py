@@ -1,9 +1,13 @@
-from .util import copytree_nostat, swhid_from_files
+from __future__ import annotations
 
 import copy, json, os, shutil
 from pathlib import Path
 from datetime import date
+from typing import Any
 from warnings import warn
+
+from .util import copytree_nostat, swhid_from_files
+
 
 SWHID_SCHEME_LENGTH = len("shw:1:abc:")
 
@@ -16,28 +20,29 @@ class Source:
             raise ValueError("SWHID or path must be specified")
 
     @property
-    def swhid(self):
+    def swhid(self) -> str:
         if self._swhid is None:
+            assert self.path is not None
             self._swhid = swhid_from_files(self.path)
             if not self._swhid.startswith("swh:1:"):
                 raise ValueError("Source not identified by SWHID v1")
         return self._swhid
 
     @property
-    def hash_scheme(self):
+    def hash_scheme(self) -> str:
         return self.swhid[:SWHID_SCHEME_LENGTH]
 
     @property
-    def hexhash(self):
+    def hexhash(self) -> str:
         return self.swhid[SWHID_SCHEME_LENGTH:]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.swhid
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(dict(swhid=self._swhid, path=self.path))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, Source):
             return self.swhid == other.swhid
         return False
@@ -55,7 +60,7 @@ class Source:
                 shutil.copy(srcentry, dstentry)
 
 
-class Webstract(dict):
+class Webstract(dict[str, Any]):
     KEYS = [
         "abstract",
         "archive_date",
@@ -67,7 +72,7 @@ class Webstract(dict):
         "title",
     ]
 
-    def __init__(self, init=None):
+    def __init__(self, init: dict[str, Any] | None = None):
         super().__init__()
         self["contributors"] = list()
         if init is None:
@@ -77,18 +82,23 @@ class Webstract(dict):
         self._facade = WebstractFacade(self)
 
     @property
-    def facade(self):
+    def facade(self) -> WebstractFacade:
         return self._facade
 
     @property
-    def source(self):
-        return self["source"]
+    def source(self) -> Source:
+        ret = self.get("source")
+        if not isinstance(ret, Source):
+            raise ValueError("Webstract source missing.")
+        return ret
 
     @property
-    def date(self):
-        return self.get("date")
+    def date(self) -> date | None:
+        ret = self.get("date")
+        assert isinstance(ret, (date, type(None)))
+        return ret
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         if key not in self.KEYS:
             raise KeyError(f"Invalid Webstract key: {key}")
         if value is None:
@@ -105,7 +115,7 @@ class Webstract(dict):
             value = date.fromisoformat(value)
         super().__setitem__(key, value)
 
-    def dump_json(self, path):
+    def dump_json(self, path: Path | str) -> None:
         """Write JSON to path."""
 
         with open(path, "w") as file:
@@ -120,11 +130,11 @@ class Webstract(dict):
             file.write("\n")
 
     @staticmethod
-    def load_json(path):
+    def load_json(path: Path | str) -> Webstract:
         with open(path) as f:
             return Webstract(json.load(f))
 
-    def dump_yaml(self, path):
+    def dump_yaml(self, path: Path | str) -> None:
         from ruamel.yaml import YAML
 
         if isinstance(path, str):
@@ -139,12 +149,12 @@ class Webstract(dict):
             yaml.dump(plain, file)
 
     @staticmethod
-    def load_yaml(source):
+    def load_yaml(source: Path | str) -> Webstract:
         from ruamel.yaml import YAML
 
         return Webstract(YAML(typ='safe').load(source))
 
-    def dump_xml(self, path):
+    def dump_xml(self, path: Path | str) -> None:
         """Write XML to path."""
 
         import jsoml
@@ -154,10 +164,13 @@ class Webstract(dict):
             file.write("\n")
 
     @staticmethod
-    def load_xml(path):
+    def load_xml(path: Path | str) -> Webstract:
         import jsoml
 
-        return Webstract(jsoml.load(path))
+        data = jsoml.load(path)
+        if not isinstance(data, dict):
+            raise ValueError("JSOML webstract must be object/dictionary.")
+        return Webstract(data)
 
 
 def add_webstract_key_properties(cls):
@@ -171,7 +184,7 @@ def add_webstract_key_properties(cls):
 
 @add_webstract_key_properties
 class WebstractFacade:
-    def __init__(self, webstract):
+    def __init__(self, webstract: Webstract):
         self._webstract = webstract
 
     @property

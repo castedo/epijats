@@ -7,7 +7,7 @@ export JUSTFILE_DIR := justfile_directory()
 
 test: && test-runtime
     ruff check epijats || true
-    mypy epijats
+    mypy --strict epijats
     cd tests && mypy --ignore-missing-imports .  # cd for separate mypy cache+config
 
 test-runtime:

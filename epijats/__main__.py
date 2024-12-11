@@ -1,12 +1,12 @@
+import argparse, importlib, logging, shutil, tempfile
+from pathlib import Path
+from typing import Any, Iterable
+
 from epijats import Eprint, EprinterConfig, Webstract
 from epijats.util import copytree_nostat
 
-# std lib
-import argparse, importlib, logging, shutil, tempfile
-from pathlib import Path
 
-
-def enable_weasyprint_logging():
+def enable_weasyprint_logging() -> None:
     from weasyprint import LOGGER
 
     LOGGER.setLevel(logging.INFO)
@@ -15,7 +15,7 @@ def enable_weasyprint_logging():
 
 def version() -> str:
     try:
-        from ._version import version  # type: ignore
+        from ._version import version
         return str(version)
     except ImportError:
         return "0.0.0"
@@ -28,7 +28,7 @@ class Main:
     outform: str
     no_web_fonts: bool
 
-    def __init__(self, cmd_line_args=None):
+    def __init__(self, cmd_line_args: Any = None):
         self.parser = argparse.ArgumentParser(description="Eprint JATS")
         self.parser.add_argument("--version", action="version", version=version())
         self.parser.add_argument("inpath", type=Path, help="input directory/path")
@@ -71,7 +71,7 @@ class Main:
         self.convert(webstract)
         return 0
 
-    def check_conversion_order(self):
+    def check_conversion_order(self) -> None:
         format_stages = {
             'jats': 0,
             'json': 1,
@@ -89,7 +89,7 @@ class Main:
             )
             self.parser.error(msg)
 
-    def just_copy(self):
+    def just_copy(self) -> bool:
         if self.inform == self.outform:
             if self.inform not in ["json", "yaml", "jsoml"]:
                 if self.inpath.is_dir():
@@ -99,7 +99,7 @@ class Main:
                 return True
         return False
 
-    def check_imports(self, import_names, act):
+    def check_imports(self, import_names: Iterable[str], act: str) -> None:
         form = self.inform if act == "read" else self.outform
         for name in import_names:
             try:
@@ -108,7 +108,7 @@ class Main:
                 msg = f"{e.name} must be installed to {act} {form}"
                 self.parser.error(msg)
 
-    def load_webstract(self):
+    def load_webstract(self) -> Webstract | None:
         if self.inform == "jats":
             self.check_imports(["elifetools", "jsoml"], "read")
             from epijats.jats import webstract_from_jats
@@ -123,7 +123,7 @@ class Main:
             return Webstract.load_xml(self.inpath)
         return None
 
-    def convert(self, webstract):
+    def convert(self, webstract: Webstract) -> None:
         if self.outform == "json":
             webstract.dump_json(self.outpath)
         elif self.outform == "yaml":
@@ -153,7 +153,7 @@ class Main:
                         eprint.make_pdf(self.outpath)
 
 
-def main(args=None) -> int:
+def main(args: Any = None) -> int:
     return Main(args).run()
 
 

@@ -1,10 +1,11 @@
 import jinja2
 
 from pathlib import Path
+from typing import Any
 
 
 class WebPageGenerator:
-    def __init__(self):
+    def __init__(self) -> None:
         self.env = jinja2.Environment(
             loader=jinja2.ChoiceLoader([]),
             trim_blocks=True,
@@ -13,11 +14,15 @@ class WebPageGenerator:
             extensions=["jinja2.ext.do"],
         )
 
-    def add_template_loader(self, loader):
-        self.env.loader.loaders.append(loader)
+    def add_template_loader(self, loader: jinja2.BaseLoader) -> None:
+        assert isinstance(self.env.loader, jinja2.ChoiceLoader)
+        self.env.loader.loaders.append(loader)  # type: ignore
 
     def render_file(
-        self, tmpl_subpath: Path | str, dest_filepath: Path, ctx=dict()
+        self,
+        tmpl_subpath: Path | str,
+        dest_filepath: Path,
+        ctx: dict[str, Any] = dict(),
     ) -> None:
         tmpl = self.env.get_template(str(tmpl_subpath))
         tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")
