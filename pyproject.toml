@@ -56,7 +56,7 @@ check_untyped_defs = false
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = ['weasyprint', 'elifetools', 'ruamel']
+module = ['weasyprint', 'elifetools', 'ruamel', 'epijats._version']
 ignore_missing_imports = true
 
 [tool.yapf]
