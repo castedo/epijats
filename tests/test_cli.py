@@ -16,7 +16,6 @@ def _run(src, dest, args=""):
 
 @pytest.mark.parametrize("form", [
     ["--to json", Webstract.load_json],
-    ["--to yaml", Webstract.load_yaml],
     ["--to jsoml", Webstract.load_xml],
 ])
 def test_jats_to(form, tmp_path):
@@ -31,7 +30,6 @@ def test_jats_to(form, tmp_path):
 INVALID_ARGS = [
     "--from html --to jats",
     "--from html --to json",
-    "--from html --to yaml",
     "--from html --to jsoml",
 ]
 

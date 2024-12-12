@@ -7,7 +7,7 @@ name = "epijats"
 description = "E-Printing Identified JATS"
 readme = "README.md"
 dynamic = ["version"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -19,17 +19,19 @@ license = {file = "LICENSE"}
 authors = [
   { name="Castedo Ellerman", email = "castedo@castedo.com" },
 ]
+dependencies = [
+  "dulwich",
+  "elifetools >= 0.26",
+  "hidos >= 1.4.1",
+  "jinja2",
+  "jsoml",
+]
 
 [project.urls]
 Homepage = "https://gitlab.com/perm.pub/epijats"
 
 [project.optional-dependencies]
-html = [ "jinja2" ]
-jats = [ "elifetools >= 0.26", "dulwich", "jsoml" ]
-jsoml = [ "jsoml" ]
-pdf = [ "jinja2", "weasyprint >= 60.2" ]
-yaml = [ "ruamel.yaml" ]
-successions = [ "hidos" ]
+pdf = ["weasyprint >= 60.2"]
 
 [project.scripts]
 epijats = "epijats.__main__:main"

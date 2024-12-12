@@ -18,7 +18,6 @@ for case in os.listdir(CASES_DIR):
     print(case)
     w = jats.webstract_from_jats(CASES_DIR / case / "input")
     w.dump_json(CASES_DIR / case / "output.json")
-    w.dump_yaml(CASES_DIR / case / "output.yaml")
     w.dump_xml(CASES_DIR / case / "output.xml")
 
 archive = hidos.Archive(".", unsigned_ok=True)
@@ -33,5 +32,4 @@ with tempfile.TemporaryDirectory() as tmpdir:
                 dest = SUCC_DIR / case / str(edition.edid)
                 w = loader.webstract_from_edition(edition)
                 w.dump_json(dest / "output.json")
-                w.dump_yaml(dest / "output.yaml")
                 w.dump_xml(dest / "output.xml")

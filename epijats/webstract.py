@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import copy, json, os, shutil
+import json, os, shutil
 from pathlib import Path
 from datetime import date
 from typing import Any
@@ -133,26 +133,6 @@ class Webstract(dict[str, Any]):
     def load_json(path: Path | str) -> Webstract:
         with open(path) as f:
             return Webstract(json.load(f))
-
-    def dump_yaml(self, path: Path | str) -> None:
-        from ruamel.yaml import YAML
-
-        if isinstance(path, str):
-            path = Path(path)
-        if not isinstance(path, Path):
-            raise NotImplementedError
-        yaml = YAML()
-        with open(path, "w") as file:
-            plain = dict(copy.deepcopy(self))
-            if "source" in plain:
-                plain["source"] = str(plain["source"])
-            yaml.dump(plain, file)
-
-    @staticmethod
-    def load_yaml(source: Path | str) -> Webstract:
-        from ruamel.yaml import YAML
-
-        return Webstract(YAML(typ='safe').load(source))
 
     def dump_xml(self, path: Path | str) -> None:
         """Write XML to path."""
