@@ -6,7 +6,7 @@ from datetime import date
 from typing import Any, Callable
 from warnings import warn
 
-from hidos import EditionId
+from hidos import Edition, EditionId
 
 from .util import copytree_nostat, swhid_from_files
 
@@ -82,6 +82,30 @@ class Webstract(dict[str, Any]):
         for key, value in init.items():
             self[key] = value
         self._facade = WebstractFacade(self)
+
+    @staticmethod
+    def from_edition(ed: Edition, cache_subdir: Path) -> Webstract:
+        cache_subdir = Path(cache_subdir)
+        cached = cache_subdir / "webstract.xml"
+        snapshot = cache_subdir / "snapshot"
+        if cached.exists():
+            ret = Webstract.load_xml(cached)
+            ret.source.path = snapshot
+        else:
+            from . import jats
+
+            if not ed.snapshot:
+                raise ValueError(f"Edition {ed} is not a snapshot edition")
+            ed.snapshot.copy(snapshot)
+            ret = jats.webstract_from_jats(snapshot)
+            edidata = dict(edid=str(ed.edid), base_dsi=str(ed.suc.dsi))
+            latest = ed.suc.latest(ed.unlisted)
+            if latest and latest.edid > ed.edid:
+                edidata["newer_edid"] = str(latest.edid)
+            ret['edition'] = edidata
+            ret['date'] = ed.date
+            ret.dump_xml(cached)
+        return ret
 
     @property
     def facade(self) -> WebstractFacade:

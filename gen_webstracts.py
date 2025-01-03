@@ -5,7 +5,7 @@ import hidos
 import os, tempfile
 from pathlib import Path
 
-from epijats import DocLoader
+from epijats import Webstract
 from epijats import jats
 
 
@@ -23,13 +23,12 @@ for case in os.listdir(CASES_DIR):
 archive = hidos.Archive(".", unsigned_ok=True)
 
 with tempfile.TemporaryDirectory() as tmpdir:
-    loader = DocLoader(tmpdir)
     for case in os.listdir(SUCC_DIR):
         print(case)
         succ = archive.find_succession(case)
         for edition in succ.root.all_subeditions():
             if edition.has_digital_object:
                 dest = SUCC_DIR / case / str(edition.edid)
-                w = loader.webstract_from_edition(edition)
+                w = Webstract.from_edition(edition, tmpdir / str(edition.dsi))
                 w.dump_json(dest / "output.json")
                 w.dump_xml(dest / "output.xml")

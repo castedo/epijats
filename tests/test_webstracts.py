@@ -6,7 +6,7 @@ from pathlib import Path
 
 import hidos
 
-from epijats import util, Webstract, DocLoader
+from epijats import util, Webstract
 from epijats.jats import webstract_from_jats
 
 
@@ -39,22 +39,15 @@ def test_webstracts(case):
 @pytest.mark.parametrize("case", SUCCESSION_CASES)
 def test_editions(case):
     with tempfile.TemporaryDirectory() as tmpdir:
-        loader = DocLoader(tmpdir)
-        if hasattr(hidos, 'repo_successions'):
-            succs = hidos.repo_successions(ARCHIVE_DIR)
-            assert 1 == len(succs)
-            succ = succs.pop()
-        else:  # hidos 1.x does not have top level Archive
-            archive = hidos.Archive(ARCHIVE_DIR, unsigned_ok=True)
-            succ = archive.find_succession(case)
+        succs = hidos.repo_successions(ARCHIVE_DIR)
+        assert 1 == len(succs)
+        succ = succs.pop()
         assert str(succ.dsi) == case
         for edition in succ.root.all_subeditions():
-            if hasattr(edition, 'snapshot'):
-                by_snapshot = getattr(edition, 'snapshot', None)
-            else:  # hidos 1.x does not have edition.snapshot attribute
-                by_snapshot = edition.has_digital_object
-            if by_snapshot: 
-                got = loader.webstract_from_edition(edition)
+            if edition.snapshot: 
+                subdir = Path(tmpdir) / str(edition.dsi)
+                got = Webstract.from_edition(edition, subdir)
+
                 edition_path = CASES_DIR / "succession" / case / str(edition.edid)
                 expect = Webstract.load_json(edition_path / "output.json")
                 if not hasattr(edition, 'date'):

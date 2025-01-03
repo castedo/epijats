@@ -22,7 +22,7 @@ authors = [
 dependencies = [
   "dulwich",
   "elifetools >= 0.26",
-  "hidos >= 1.4.1",
+  "hidos >= 2.0",
   "jinja2",
   "jsoml",
 ]
