@@ -3,8 +3,10 @@ from __future__ import annotations
 import json, os, shutil
 from pathlib import Path
 from datetime import date
-from typing import Any
+from typing import Any, Callable
 from warnings import warn
+
+from hidos import EditionId
 
 from .util import copytree_nostat, swhid_from_files
 
@@ -153,14 +155,16 @@ class Webstract(dict[str, Any]):
         return Webstract(data)
 
 
-def add_webstract_key_properties(cls):
-    def make_getter(key):
+def add_webstract_key_properties(cls: type) -> type:
+    def make_getter(key: str) -> Callable[[Any], Any]:
         return lambda self: self._webstract.get(key)
 
     for key in Webstract.KEYS:
         setattr(cls, key, property(make_getter(key)))
     return cls
 
+
+# mypy: disable-error-code="no-untyped-def, attr-defined"
 
 @add_webstract_key_properties
 class WebstractFacade:
@@ -187,7 +191,7 @@ class WebstractFacade:
         return self.source.hexhash
 
     @property
-    def obsolete(self):
+    def obsolete(self) -> bool:
         return "newer_edid" in self._edidata
 
     @property
@@ -195,7 +199,7 @@ class WebstractFacade:
         return self._edidata.get("base_dsi")
 
     @property
-    def dsi(self):
+    def dsi(self) -> str | None:
         return (self.base_dsi + "/" + self.edid) if self._edidata else None
 
     @property
@@ -203,18 +207,17 @@ class WebstractFacade:
         return self._edidata.get("edid")
 
     @property
-    def _edition_id(self):
-        from hidos.dsi import EditionId
-
+    def _edition_id(self) -> EditionId | None:
         edid = self._edidata.get("edid")
         return EditionId(edid) if edid else None
 
     @property
-    def seq_edid(self):
-        from hidos.dsi import EditionId
-
+    def seq_edid(self) -> str | None:
         edid = self._edition_id
-        return str(EditionId(edid[:-1]))
+        if not edid:
+            return None
+        nums = list(edid)
+        return str(EditionId(nums[:-1]))
 
     @property
     def listed(self):

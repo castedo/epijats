@@ -55,7 +55,6 @@ If you are converting from JATS, the following dependencies must be installed:
 <ul>
   <li> <a href="https://pandoc.org">pandoc</a>
   <li> pandoc-katex-filter Node.js NPM package
-  <li> git
 </ul>
 
 All other dependencies will be automatically installed by `pip`.

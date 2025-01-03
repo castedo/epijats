@@ -51,13 +51,6 @@ packages = [
 version_file = "epijats/_version.py"
 
 [[tool.mypy.overrides]]
-module= [
-  'epijats.webstract',
-]
-check_untyped_defs = false
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
 module = ['weasyprint', 'elifetools', 'ruamel', 'epijats._version']
 ignore_missing_imports = true
 
