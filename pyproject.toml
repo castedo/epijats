@@ -21,10 +21,10 @@ authors = [
 ]
 dependencies = [
   "dulwich",
-  "elifetools >= 0.26",
   "hidos >= 2.0",
   "jinja2",
   "jsoml",
+  "lxml",
 ]
 
 [project.urls]
@@ -51,7 +51,7 @@ packages = [
 version_file = "epijats/_version.py"
 
 [[tool.mypy.overrides]]
-module = ['weasyprint', 'bs4', 'elifetools', 'ruamel', 'epijats._version']
+module = ['weasyprint', 'lxml', 'epijats._version']
 ignore_missing_imports = true
 
 [tool.yapf]

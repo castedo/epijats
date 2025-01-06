@@ -3,41 +3,32 @@ from pathlib import Path
 from importlib import resources
 from typing import Any, Iterable
 
+from lxml import etree
+
 from .webstract import Webstract, Source
 
 
+def extract_nodes(tree: etree.ElementTree, nodename: str) -> list[Any]:
+    return [node for node in tree.iterdescendants() if node.tag == nodename]
+
+
 def parse_authors(jats_src: Path) -> list[dict[str, Any]]:
-    import bs4
-    from elifetools import utils
-
     with open(jats_src, "rb") as f:
-        soup = bs4.BeautifulSoup(f, "lxml-xml")
-
-    article_meta_tag = utils.extract_first_node(soup, "article-meta")
-    assert article_meta_tag
-    contributor_tags = utils.extract_nodes(article_meta_tag, "contrib")
-    contrib_tags = [tag for tag in contributor_tags if tag.parent.name == "contrib-group"]
-
+        tree = etree.parse(f).getroot()
+    article_meta_tag = extract_nodes(tree, "article-meta")[0]
     ret = []
-    for tag in contrib_tags:
+    for tag in extract_nodes(article_meta_tag, "contrib"):
         contributor: dict[str, Any] = {}
-        utils.copy_attribute(tag.attrs, "contrib-type", contributor, "type")
+        contributor["type"] = tag.attrib["contrib-type"]
         assert "type" in contributor
-        contrib_id_tag = utils.first(utils.extract_nodes(tag, "contrib-id"))
-        assert contrib_id_tag
-        assert "contrib-id-type" in contrib_id_tag.attrs
-        assert contrib_id_tag["contrib-id-type"] == "orcid"
-        contributor["orcid"] = utils.node_contents_str(contrib_id_tag)
-        for email_tag in utils.extract_nodes(tag, "email"):
+        contrib_id_tag = extract_nodes(tag, "contrib-id")[0]
+        assert "contrib-id-type" in contrib_id_tag.attrib
+        assert contrib_id_tag.attrib["contrib-id-type"] == "orcid"
+        contributor["orcid"] = contrib_id_tag.text
+        for email_tag in extract_nodes(tag, "email"):
             contributor["email"] = [email_tag.text]
-        utils.set_if_value(
-            contributor, "surname", utils.first_node_str_contents(tag, "surname")
-        )
-        utils.set_if_value(
-            contributor,
-            "given-names",
-            utils.first_node_str_contents(tag, "given-names"),
-        )
+        contributor["surname"] = extract_nodes(tag, "surname")[0].text
+        contributor["given-names"] = extract_nodes(tag, "given-names")[0].text
         ret.append(contributor)
     return ret
 
