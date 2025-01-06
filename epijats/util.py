@@ -58,7 +58,7 @@ def _calc_dir_sha1_hex(path: Path) -> str:
                 sha = _calc_dir_sha1_hex(path / entry.name).encode('ascii')
             else:
                 raise ValueError
-            tree.add(entry.name.encode(), mode, sha)  # type: ignore[no-untyped-call]
+            tree.add(entry.name.encode(), mode, sha)
     ret = tree.sha().hexdigest()
     assert isinstance(ret, str)
     return ret
