@@ -51,7 +51,7 @@ packages = [
 version_file = "epijats/_version.py"
 
 [[tool.mypy.overrides]]
-module = ['weasyprint', 'elifetools', 'ruamel', 'epijats._version']
+module = ['weasyprint', 'bs4', 'elifetools', 'ruamel', 'epijats._version']
 ignore_missing_imports = true
 
 [tool.yapf]
