@@ -8,7 +8,7 @@ from lxml import etree
 from .webstract import Webstract, Source
 
 
-def extract_nodes(tree: etree.ElementTree, nodename: str) -> list[Any]:
+def extract_nodes(tree: etree._Element, nodename: str) -> list[Any]:
     return [node for node in tree.iterdescendants() if node.tag == nodename]
 
 
