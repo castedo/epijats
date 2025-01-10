@@ -49,6 +49,7 @@ class Baseprint:
     authors: list[Author]
 
 
+@dataclass(frozen=True)
 class FormatCondition:
     def __str__(self) -> str:
         return self.__doc__ or type(self).__name__
@@ -58,11 +59,14 @@ class FormatCondition:
 class FormatIssue:
     condition: FormatCondition
     sourceline: int | None = None
+    info: str | None = None
 
     def __str__(self) -> str:
         msg = str(self.condition)
         if self.sourceline:
             msg += f" (line {self.sourceline})"
+        if self.info:
+            msg += f": {self.info}"
         return msg
 
 
@@ -77,7 +81,11 @@ class BaseprintParse:
         else:
             xml_path = path
         xml_parser = etree.XMLParser(remove_comments=True, load_dtd=False)
-        et = etree.parse(xml_path, parser=xml_parser)
+        try:
+            et = etree.parse(xml_path, parser=xml_parser)
+        except etree.XMLSyntaxError as ex:
+            self._issue(XMLSyntaxError(), ex.lineno, ex.msg)
+            return None
         if bool(et.docinfo.doctype):
             self._issue(DoctypeDeclaration())
         if et.docinfo.encoding.lower() != "utf-8":
@@ -92,7 +100,12 @@ class BaseprintParse:
             self._issue_element(root)
             return None
 
-    def _issue(self, condition: FormatCondition, sourceline: int | None = None) -> None:
+    def _issue(
+        self,
+        condition: FormatCondition,
+        sourceline: int | None = None,
+        info: str | None = None,
+    ) -> None:
         self.issues.append(FormatIssue(condition, sourceline))
 
     def _issue_element(self, e: etree._Element) -> None:
@@ -189,7 +202,7 @@ class BaseprintParse:
                     try:
                         orcid = Orcid.from_url(url)
                     except ValueError:
-                        self._issue(InvalidOrcid(url), s.sourceline)
+                        self._issue(InvalidOrcid(), s.sourceline, url)
                 elif k in s.attrib:
                     v = s.attrib[k]
                     self._issue(UnsupportedAttributeValue(s.tag, k, v))
@@ -223,7 +236,10 @@ class BaseprintParse:
         return ret
 
 
-@dataclass(frozen=True)
+class XMLSyntaxError(FormatCondition):
+    """XML syntax error"""
+
+
 class DoctypeDeclaration(FormatCondition):
     """XML DOCTYPE declaration"""
 
@@ -255,14 +271,8 @@ class UnsupportedElement(FormatCondition):
         return "{} {}/{!r}".format(self.__doc__, parent, self.tag)
 
 
-@dataclass(frozen=True)
 class InvalidOrcid(FormatCondition):
     """Invalid ORCID"""
-
-    url: str
-
-    def __str__(self) -> str:
-        return "{} {!r}".format(self.__doc__, self.url)
 
 
 @dataclass(frozen=True)

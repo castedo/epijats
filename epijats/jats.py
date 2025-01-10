@@ -42,7 +42,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
         raise ValueError()
     ret['contributors'] = list()
     for a in bp.authors:
-        d = {'surname': a.surname, 'type': 'author'}
+        d: dict[str, Any] = {'surname': a.surname, 'type': 'author'}
         if a.given_names:
             d['given-names'] = a.given_names
         if a.email:
