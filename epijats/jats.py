@@ -40,6 +40,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     bp = parse.baseprint(jats_src)
     if bp is None:
         raise ValueError()
+    ret['title'] = bp.title.inner_html()
     ret['contributors'] = list()
     for a in bp.authors:
         d: dict[str, Any] = {'surname': a.surname, 'type': 'author'}
