@@ -3,7 +3,7 @@ from pathlib import Path
 from importlib import resources
 from typing import Any, Iterable
 
-from .baseprint import BaseprintParse
+from .baseprint import parse_baseprint
 from .webstract import Webstract, Source
 
 
@@ -36,8 +36,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
         raise ValueError("JSOML webstract must be object/dictionary.")
     ret = Webstract(data)
     ret['source'] = Source(path=src)
-    parse = BaseprintParse()
-    bp = parse.baseprint(jats_src)
+    bp = parse_baseprint(jats_src)
     if bp is None:
         raise ValueError()
     ret['title'] = bp.title.inner_html()

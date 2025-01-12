@@ -8,6 +8,13 @@ from lxml import etree
 from lxml.etree import QName
 
 
+def parse_baseprint(src: Path) -> Baseprint | None:
+    def ignore(issue: FormatIssue) -> None:
+        pass
+    b = BaseprintBuilder(ignore)
+    return b.build(src)
+
+
 @dataclass(frozen=True)
 class Orcid:
     isni: str
@@ -39,9 +46,13 @@ class Orcid:
 @dataclass(frozen=True)
 class Author:
     surname: str | None
-    given_names: str | None
-    email: str | None
-    orcid: Orcid | None
+    given_names: str | None = None
+    email: str | None = None
+    orcid: Orcid | None = None
+
+    def __post_init__(self) -> None:
+        if not self.surname and not self.given_names:
+            raise ValueError()
 
 
 @dataclass
@@ -73,10 +84,41 @@ class Element:
         return "".join(self._outer_html_strs())
 
 
-@dataclass(frozen=True)
+@dataclass
+class Paragraph:
+    text: str = ""
+
+
+@dataclass
+class Abstract:
+    start: list[Paragraph]
+
+
+@dataclass
 class Baseprint:
-    authors: list[Author]
     title: Element
+    authors: list[Author]
+    abstract: Abstract | None = None
+
+
+class AbstractParser:
+    def __init__(
+        self, issue_callback: Callable[[FormatIssue], None]
+    ):
+        self._log = issue_callback
+
+    def parse(self, e: etree._Element) -> Abstract:
+        for k in e.attrib.keys():
+            self._log(UnsupportedAttribute.issue(e, k))
+        txt_parser = ElementParser(['sub', 'sup'], self._log)
+        ps = []
+        for s in e:
+            if s.tag == "p":
+                xml = txt_parser.parse(s)
+                ps.append(Paragraph(xml.text))
+            else:
+                self._log(UnsupportedElement.issue(s))
+        return Abstract(ps)
 
 
 @dataclass(frozen=True)
@@ -121,14 +163,14 @@ class ElementParser:
         return Element(tag, e.text or "", subs, e.tail or "")
 
 
-class BaseprintParse:
-    def __init__(self) -> None:
-        self.issues: list[FormatIssue] = list()
-        self.issue = self.issues.append
-        self.title: Element
+class BaseprintBuilder:
+    def __init__(self, issue_callback: Callable[[FormatIssue], None]):
+        self._log = issue_callback
+        self.title: Element | None = None
         self.authors: list[Author] = list()
+        self.abstract: Abstract | None = None
 
-    def baseprint(self, path: Path) -> Baseprint | None:
+    def build(self, path: Path) -> Baseprint | None:
         path = Path(path)
         if path.is_dir():
             xml_path = path / "article.xml"
@@ -151,7 +193,7 @@ class BaseprintParse:
         if root.tag == 'article':
             return self._article(root)
         else:
-            self.issue(UnsupportedElement.issue(root))
+            self._log(UnsupportedElement.issue(root))
             return None
 
     def _issue(
@@ -160,13 +202,13 @@ class BaseprintParse:
         sourceline: int | None = None,
         info: str | None = None,
     ) -> None:
-        self.issues.append(FormatIssue(condition, sourceline))
+        self._log(FormatIssue(condition, sourceline))
 
     def _check_no_attrib(self, e: etree._Element) -> None:
         for k in e.attrib.keys():
             self._issue(UnsupportedAttribute(e.tag, k))
 
-    def _article(self, e: etree._Element) -> Baseprint:
+    def _article(self, e: etree._Element) -> Baseprint | None:
         for k, v in e.attrib.items():
             if k == '{http://www.w3.org/XML/1998/namespace}lang':
                 if v != "en":
@@ -181,8 +223,11 @@ class BaseprintParse:
             elif s.tag == "back":
                 pass
             else:
-                self.issue(UnsupportedElement.issue(s))
-        return Baseprint(self.authors, self.title)
+                self._log(UnsupportedElement.issue(s))
+        if self.title is None:
+            self._issue(MissingElement('article-title', 'title-group'))
+            return None
+        return Baseprint(self.title, self.authors, self.abstract)
 
     def _front(self, e: etree._Element) -> None:
         self._check_no_attrib(e)
@@ -190,13 +235,13 @@ class BaseprintParse:
             if s.tag == 'article-meta':
                 self._article_meta(s)
             else:
-                self.issue(UnsupportedElement.issue(s))
+                self._log(UnsupportedElement.issue(s))
 
     def _article_meta(self, e: etree._Element) -> None:
         self._check_no_attrib(e)
         for s in e:
             if s.tag == 'abstract':
-                pass
+                self._abstract(s)
             elif s.tag == 'contrib-group':
                 self._contrib_group(s)
             elif s.tag == 'permissions':
@@ -204,16 +249,20 @@ class BaseprintParse:
             elif s.tag == 'title-group':
                 self._title_group(s)
             else:
-                self.issue(UnsupportedElement.issue(s))
+                self._log(UnsupportedElement.issue(s))
+
+    def _abstract(self, e: etree._Element) -> None:
+        p = AbstractParser(self._log)
+        self.abstract = p.parse(e)
 
     def _title_group(self, e: etree._Element) -> None:
-        title_parser = ElementParser(['sub', 'sup'], self.issues.append)
+        title_parser = ElementParser(['sub', 'sup'], self._log)
         self._check_no_attrib(e)
         for s in e:
             if s.tag == 'article-title':
                 self.title = title_parser.parse(s, 'title')
             else:
-                self.issue(UnsupportedElement.issue(s))
+                self._log(UnsupportedElement.issue(s))
 
     def _contrib_group(self, e: etree._Element) -> None:
         self._check_no_attrib(e)
@@ -225,7 +274,7 @@ class BaseprintParse:
                 except ValueError:
                     pass
             else:
-                self.issue(UnsupportedElement.issue(s))
+                self._log(UnsupportedElement.issue(s))
 
     def _contrib(self, e: etree._Element) -> Author:
         for k, v in e.attrib.items():
@@ -259,9 +308,9 @@ class BaseprintParse:
                     v = s.attrib[k]
                     self._issue(UnsupportedAttributeValue(s.tag, k, v))
                 else:
-                    self.issue(UnsupportedElement.issue(s))
+                    self._log(UnsupportedElement.issue(s))
             else:
-                self.issue(UnsupportedElement.issue(s))
+                self._log(UnsupportedElement.issue(s))
         return Author(surname, given_names, email, orcid)
 
     def _name(self, e: etree._Element) -> Tuple[str | None, str | None]:
@@ -274,7 +323,7 @@ class BaseprintParse:
             elif s.tag == 'given-names':
                 given_names = self.simple_string(s)
             else:
-                self.issue(UnsupportedElement.issue(s))
+                self._log(UnsupportedElement.issue(s))
         return (surname, given_names)
 
     def _simple_strings(self, e: etree._Element) -> list[str]:
@@ -283,7 +332,7 @@ class BaseprintParse:
         if e.text:
             ret.append(e.text)
         for s in e:
-            self.issue(UnsupportedElement.issue(s))
+            self._log(UnsupportedElement.issue(s))
             ret += self._simple_strings(s)
             if s.tail:
                 ret.append(s.tail)
@@ -363,3 +412,14 @@ class UnsupportedAttributeValue(FormatCondition):
     def __str__(self) -> str:
         msg = "{} {!r}@{!r} = {!r}"
         return msg.format(self.__doc__, self.tag, self.attribute, self.value)
+
+
+@dataclass(frozen=True)
+class MissingElement(FormatCondition):
+    """Missing element"""
+
+    tag: str
+    parent: str
+
+    def __str__(self) -> str:
+        return "{} {!r}/{!r}".format(self.__doc__, self.parent, self.tag)
