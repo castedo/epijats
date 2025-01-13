@@ -56,15 +56,11 @@ class Author:
 
 
 @dataclass
-class Element:
-    """Common JATS/HTML element"""
-
-    tag: str
+class ElementContent:
     text: str
-    _subelements: list[Element]
-    tail: str
+    _subelements: list[SubElement]
 
-    def __iter__(self) -> Iterator[Element]:
+    def __iter__(self) -> Iterator[SubElement]:
         return iter(self._subelements)
 
     def _inner_html_strs(self) -> list[str]:
@@ -74,31 +70,96 @@ class Element:
             ret.append(sub.tail)
         return ret
 
-    def _outer_html_strs(self) -> list[str]:
-        return ['<', self.tag, '>', *self._inner_html_strs(), '</', self.tag, '>']
-
     def inner_html(self) -> str:
         return "".join(self._inner_html_strs())
+
+    def append(self, e: SubElement) -> None:
+        self._subelements.append(e)
+
+    def extend(self, es: Iterator[SubElement]) -> None:
+        self._subelements.extend(es)
+
+    def append_text(self, s: str | None) -> None:
+        if s:
+            if self._subelements:
+                self._subelements[-1].tail += s
+            else:
+                self.text += s
+
+
+@dataclass
+class SubElement(ElementContent):
+    """Common JATS/HTML element"""
+    tag: str  # HTML tag
+    tail: str
+
+    def _outer_html_strs(self) -> list[str]:
+        return ['<', self.tag, '>', *self._inner_html_strs(), '</', self.tag, '>']
 
     def outer_html(self) -> str:
         return "".join(self._outer_html_strs())
 
 
 @dataclass
-class Paragraph:
-    text: str = ""
+class RichText(ElementContent):
+    pass
 
 
 @dataclass
 class Abstract:
-    start: list[Paragraph]
+    paragraphs: list[RichText]
 
 
 @dataclass
 class Baseprint:
-    title: Element
+    title: RichText
     authors: list[Author]
     abstract: Abstract | None = None
+
+
+BARELY_RICH_TEXT_TAGS = {
+    'bold': 'b',
+    'italic': 'i',
+    'sub': 'sub',
+    'sup': 'sup',
+}
+
+FAIRLY_RICH_TEXT_TAGS = {
+    **BARELY_RICH_TEXT_TAGS,
+    'monospace': 'tt',
+}
+
+
+class RichTextParser:
+    def __init__(
+        self,
+        issue_callback: Callable[[FormatIssue], None],
+        tagmap: dict[str, str],
+    ):
+        self._issue = issue_callback
+        self.tagmap = tagmap
+
+    def _content(self, e: etree._Element) -> RichText:
+        ret = RichText(e.text or "", [])
+        for s in e:
+            if isinstance(s.tag, str) and s.tag in self.tagmap:
+                ret.append(self.subelement(s, self.tagmap[s.tag]))
+            else:
+                self._issue(UnsupportedElement.issue(s))
+                inner = self._content(s)
+                ret.append_text(inner.text)
+                ret.extend(iter(inner))
+                ret.append_text(s.tail)
+        return ret
+
+    def content(self, e: etree._Element) -> RichText:
+        for k in e.attrib.keys():
+            self._issue(UnsupportedAttribute.issue(e, k))
+        return self._content(e)
+
+    def subelement(self, e: etree._Element, html_tag: str) -> SubElement:
+        c = self.content(e)
+        return SubElement(c.text, list(c), html_tag, e.tail or "")
 
 
 class AbstractParser:
@@ -110,12 +171,11 @@ class AbstractParser:
     def parse(self, e: etree._Element) -> Abstract:
         for k in e.attrib.keys():
             self._log(UnsupportedAttribute.issue(e, k))
-        txt_parser = ElementParser(['sub', 'sup'], self._log)
+        txt_parser = RichTextParser(self._log, FAIRLY_RICH_TEXT_TAGS)
         ps = []
         for s in e:
             if s.tag == "p":
-                xml = txt_parser.parse(s)
-                ps.append(Paragraph(xml.text))
+                ps.append(txt_parser.content(s))
             else:
                 self._log(UnsupportedElement.issue(s))
         return Abstract(ps)
@@ -142,31 +202,10 @@ class FormatIssue:
         return msg
 
 
-class ElementParser:
-    def __init__(
-        self, subtags: list[str], issue_callback: Callable[[FormatIssue], None]
-    ):
-        self.subtags = subtags
-        self._issue = issue_callback
-
-    def parse(self, e: etree._Element, new_tag: str | None = None) -> Element:
-        for k in e.attrib.keys():
-            self._issue(UnsupportedAttribute.issue(e, k))
-        tag = new_tag or e.tag
-        assert isinstance(tag, str)
-        subs = []
-        for s in e:
-            if s.tag in self.subtags:
-                subs.append(self.parse(s))
-            else:
-                self._issue(UnsupportedElement.issue(s))
-        return Element(tag, e.text or "", subs, e.tail or "")
-
-
 class BaseprintBuilder:
     def __init__(self, issue_callback: Callable[[FormatIssue], None]):
         self._log = issue_callback
-        self.title: Element | None = None
+        self.title: RichText | None = None
         self.authors: list[Author] = list()
         self.abstract: Abstract | None = None
 
@@ -256,11 +295,11 @@ class BaseprintBuilder:
         self.abstract = p.parse(e)
 
     def _title_group(self, e: etree._Element) -> None:
-        title_parser = ElementParser(['sub', 'sup'], self._log)
+        title_parser = RichTextParser(self._log, BARELY_RICH_TEXT_TAGS)
         self._check_no_attrib(e)
         for s in e:
             if s.tag == 'article-title':
-                self.title = title_parser.parse(s, 'title')
+                self.title = title_parser.content(s)
             else:
                 self._log(UnsupportedElement.issue(s))
 
@@ -400,6 +439,7 @@ class UnsupportedAttribute(FormatCondition):
     @staticmethod
     def issue(e: etree._Element, key: str) -> FormatIssue:
         return FormatIssue(UnsupportedAttribute(e.tag, key), e.sourceline)
+
 
 @dataclass(frozen=True)
 class UnsupportedAttributeValue(FormatCondition):

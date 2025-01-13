@@ -12,5 +12,5 @@ def test_minimal():
     assert not issues
     assert "A test" in got.title.inner_html()
     assert [_.Author("Wang")] == got.authors
-    expect = _.Abstract([_.Paragraph('A simple test.')])
+    expect = _.Abstract([_.RichText('A simple test.', [])])
     assert expect == got.abstract
