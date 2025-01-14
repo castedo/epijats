@@ -87,6 +87,10 @@ class SubElement(ElementContent):
     tag: str  # HTML tag
     tail: str
 
+    @property
+    def attrib(self) -> dict[str, str]:
+        return {}
+
 
 @dataclass
 class RichText(ElementContent):
@@ -100,6 +104,10 @@ class Hyperlink(SubElement):
     def __init__(self, text: str, subs: list[SubElement], tail: str, href: str):
         super().__init__(text, subs, 'a', tail)
         self.href = href
+
+    @property
+    def attrib(self) -> dict[str, str]:
+        return {'href': self.href}
 
 
 @dataclass

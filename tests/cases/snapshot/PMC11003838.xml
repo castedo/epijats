@@ -1,0 +1,139 @@
+<!DOCTYPE article
+PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD with MathML3 v1.3 20210610//EN" "JATS-archivearticle1-3-mathml3.dtd">
+<article xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" dtd-version="1.3" xml:lang="en" article-type="research-article">
+  <?properties manuscript?>
+  <processing-meta base-tagset="archiving" mathml-version="3.0" table-model="xhtml" tagset-family="jats">
+    <restricted-by>pmc</restricted-by>
+  </processing-meta>
+  <front>
+    <journal-meta>
+      <journal-id journal-id-type="nlm-journal-id">101197451</journal-id>
+      <journal-id journal-id-type="pubmed-jr-id">32521</journal-id>
+      <journal-id journal-id-type="nlm-ta">Clin Trials</journal-id>
+      <journal-id journal-id-type="iso-abbrev">Clin Trials</journal-id>
+      <journal-title-group>
+        <journal-title>Clinical trials (London, England)</journal-title>
+      </journal-title-group>
+      <issn pub-type="ppub">1740-7745</issn>
+      <issn pub-type="epub">1740-7753</issn>
+    </journal-meta>
+    <article-meta>
+      <article-id pub-id-type="pmid">37924275</article-id>
+      <article-id pub-id-type="pmc">11003838</article-id>
+      <article-id pub-id-type="doi">10.1177/17407745231203393</article-id>
+      <article-id pub-id-type="manuscript">NIHMS1930553</article-id>
+      <article-categories>
+        <subj-group subj-group-type="heading">
+          <subject>Article</subject>
+        </subj-group>
+      </article-categories>
+      <title-group>
+        <article-title>Shedding Light on Data Monitoring Committee Charters on <ext-link xlink:href="http://clinicaltrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link></article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Fine</surname>
+            <given-names>Anna M.</given-names>
+          </name>
+          <degrees>PharmD, MS</degrees>
+        </contrib>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Golfinopoulos</surname>
+            <given-names>Elisa</given-names>
+          </name>
+          <degrees>PhD</degrees>
+        </contrib>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Tse</surname>
+            <given-names>Tony</given-names>
+          </name>
+          <degrees>PhD</degrees>
+        </contrib>
+        <aff id="A1">National Center for Biotechnology Information, National Library of Medicine, National Institutes of Health, Bethesda, MD 20894, USA</aff>
+      </contrib-group>
+      <author-notes>
+        <corresp id="CR1"><bold>Corresponding author:</bold> Anna M. Fine, National Center for Biotechnology Information, National Library of Medicine, National Institutes of Health, Bethesda, MD 20894, USA. <email>Anna.Fine@nih.gov</email></corresp>
+      </author-notes>
+      <pub-date pub-type="nihms-submitted">
+        <day>21</day>
+        <month>9</month>
+        <year>2023</year>
+      </pub-date>
+      <pub-date pub-type="ppub">
+        <month>4</month>
+        <year>2024</year>
+      </pub-date>
+      <pub-date pub-type="epub">
+        <day>04</day>
+        <month>11</month>
+        <year>2023</year>
+      </pub-date>
+      <pub-date pub-type="pmc-release">
+        <day>10</day>
+        <month>4</month>
+        <year>2024</year>
+      </pub-date>
+      <volume>21</volume>
+      <issue>2</issue>
+      <fpage>260</fpage>
+      <lpage>261</lpage>
+      <permissions>
+        <license>
+          <license-p>This file is available for text mining. It may also be used consistent with the principles of fair use under the copyright law.</license-p>
+        </license>
+      </permissions>
+    </article-meta>
+  </front>
+  <body>
+    <sec id="S1">
+      <title>Dear Editor,</title>
+      <p id="P1">We read with interest the commentary by DeMets et al.,<sup><xref rid="R1" ref-type="bibr">1</xref></sup> which advocates for public access to data monitoring committee (DMC) charters and considers <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> to be “the most logical place to make DMC charters public because it is the established archive for structured and searchable trial information.” We concur that making DMC charters more accessible would increase transparency while potentially benefiting the clinical trial enterprise. In response to the authors’ proposal, aimed to “enhance the credibility of the trial and ultimately improve the quality of DMC charters,” we would like to clarify that <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> already permits optional linking to DMC charters, as described below, and announce a plan to facilitate linking to and searching for DMC charters on <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> as part of our ongoing, multiyear modernization effort.<sup><xref rid="R2" ref-type="bibr">2</xref></sup></p>
+      <p id="P2"><ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link>, operated and maintained by the National Library of Medicine (NLM), already permits sponsors and investigators to provide links from study records to DMC charters posted on other websites or presented within publications (e.g., Supplemental file 2 of publication PMC8899655, provided in <ext-link xlink:href="https://clinicaltrials.gov/ct2/show/NCT04797013v.3" ext-link-type="uri">NCT04797013v.3</ext-link>). To enable easier search and retrieval of study records that link to DMC charters, as suggested in the commentary, <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> plans to update an existing optional data element to allow for unambiguous labeling of sponsor-submitted links to DMC charters. This approach is consistent with the suggestions made by members of the NLM Board of Regents Public Service Working Group on <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> Modernization.<sup><xref rid="R3" ref-type="bibr">3</xref></sup></p>
+      <p id="P3">Specifically, by 2025, <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> plans to provide:</p>
+      <list list-type="bullet" id="L2">
+        <list-item>
+          <p id="P4">A “DMC Charter” option for the structured Available IPD/Information Type registration data element in the Protocol Section of the study record</p>
+        </list-item>
+        <list-item>
+          <p id="P5">Instructions for data submitters for how to designate links to DMC charters in the Protocol Registration and Results System, or PRS</p>
+        </list-item>
+        <list-item>
+          <p id="P6">Guidelines for <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> users for searching for records displaying links to DMC charters on <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link>, using its application programming interface</p>
+        </list-item>
+      </list>
+      <p id="P7">At that time, we would call on the commentary authors and other members of the Society for Clinical Trials to actively engage with the community to educate them about this new, dedicated DMC charter linking capability on <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> and promote its use. We are pleased to have the opportunity to shed additional light on DMC charters on <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link>, and we look forward to further enhancing clinical trial transparency.</p>
+    </sec>
+  </body>
+  <back>
+    <ack id="S2">
+      <title>Funding</title>
+      <p id="P8">This work was supported by the National Center for Biotechnology Information of the National Library of Medicine (NLM), National Institutes of Health.</p>
+    </ack>
+    <fn-group>
+      <fn fn-type="COI-statement" id="FN1">
+        <p id="P9">Declaration of conflicting of interests</p>
+        <p id="P10">The author(s) declared the following potential conflicts of interest with respect to the research, authorship, and/or publication of this article: All work on <ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> at the time this letter was completed.</p>
+      </fn>
+    </fn-group>
+    <ref-list>
+      <title>References</title>
+      <ref id="R1">
+        <label>1.</label>
+        <mixed-citation publication-type="journal"><name><surname>DeMets</surname><given-names>DL</given-names></name>, <etal/>
+<article-title>Bringing data monitoring committee charters into the sunlight</article-title>. <source>Clin Trials</source>; <volume>20</volume>(<issue>4</issue>):<fpage>447</fpage>–<lpage>451</lpage>.<pub-id pub-id-type="pmid">37231737</pub-id>
+</mixed-citation>
+      </ref>
+      <ref id="R2">
+        <label>2.</label>
+        <mixed-citation publication-type="webpage"><collab>National Library of Medicine</collab>. <source><ext-link xlink:href="http://ClinicalTrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> Modernization</source>, <comment><ext-link xlink:href="https://classic.clinicaltrials.gov/ct2/about-site/modernization" ext-link-type="uri">https://classic.clinicaltrials.gov/ct2/about-site/modernization</ext-link></comment> (<date-in-citation>accessed 9 Aug 2023</date-in-citation>).</mixed-citation>
+      </ref>
+      <ref id="R3">
+        <label>3.</label>
+        <mixed-citation publication-type="webpage"><collab>National Library of Medicine</collab>. <source>Board of Regents (BOR) Public Service Working Group on <ext-link xlink:href="http://clinicaltrials.gov" ext-link-type="uri">ClinicalTrials.gov</ext-link> Modernization Meeting Summary</source>, <comment><ext-link xlink:href="https://www.nlm.nih.gov/od/bor/NLM_BOR_CTG_WG_Minutes_Final_20230113_508.pdf" ext-link-type="uri">https://www.nlm.nih.gov/od/bor/NLM_BOR_CTG_WG_Minutes_Final_20230113_508.pdf</ext-link></comment> (<year>2023</year>, <date-in-citation>accessed 9 Aug 2023</date-in-citation>).</mixed-citation>
+      </ref>
+    </ref-list>
+  </back>
+</article>

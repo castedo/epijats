@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from lxml.html import HtmlElement, tostring
+from lxml.html.builder import E
 
 from .baseprint import ElementContent, SubElement
 
@@ -15,9 +16,8 @@ class HtmlGenerator:
     def content(self, src: ElementContent) -> list[str | HtmlElement]:
         ret: list[str | HtmlElement] = [src.text]
         for sub in src:
-            ret += self.content(sub)
-            ret.append(sub.tail)
+            ret.append(self.sub_element(sub))
         return ret
 
     def sub_element(self, src: SubElement) -> HtmlElement:
-        return HtmlElement(*self.content(src), src.tail)
+        return E(src.tag, *self.content(src), src.tail, **src.attrib)

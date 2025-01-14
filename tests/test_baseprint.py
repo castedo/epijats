@@ -25,3 +25,8 @@ def test_minimal_html_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "baseprint")
     expect = tostring(E.TITLE('A test'))
     assert expect == tostring(E.TITLE(*GEN.content(bp.title)))
+
+def test_article_title():
+    bp = _.parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
+    expect = b"""<title>Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a></title>"""
+    assert expect == tostring(E.TITLE(*GEN.content(bp.title)))
