@@ -11,6 +11,7 @@ from lxml.etree import QName
 def parse_baseprint(src: Path) -> Baseprint | None:
     def ignore(issue: FormatIssue) -> None:
         pass
+
     b = BaseprintBuilder(ignore)
     return b.build(src)
 
@@ -90,6 +91,7 @@ class ElementContent:
 @dataclass
 class SubElement(ElementContent):
     """Common JATS/HTML element"""
+
     tag: str  # HTML tag
     tail: str
 
@@ -106,6 +108,15 @@ class RichText(ElementContent):
 
 
 @dataclass
+class Hyperlink(SubElement):
+    href: str
+
+    def __init__(self, text: str, subs: list[SubElement], tail: str, href: str):
+        super().__init__(text, subs, 'a', tail)
+        self.href = href
+
+
+@dataclass
 class Abstract:
     paragraphs: list[RichText]
 
@@ -119,6 +130,7 @@ class Baseprint:
 
 BARELY_RICH_TEXT_TAGS = {
     'bold': 'b',
+    'ext-link': 'a',
     'italic': 'i',
     'sub': 'sub',
     'sup': 'sup',
@@ -139,17 +151,43 @@ class RichTextParser:
         self._issue = issue_callback
         self.tagmap = tagmap
 
+    def _copy_contents(self, src: etree._Element, dest: RichText) -> None:
+        inner = self._content(src)
+        dest.append_text(inner.text)
+        dest.extend(iter(inner))
+        dest.append_text(src.tail)
+
+    def _ext_link(self, e: etree._Element, dest: RichText) -> None:
+        k_href = "{http://www.w3.org/1999/xlink}href"
+        href = e.attrib.get(k_href)
+        link_type = e.attrib.get("ext-link-type")
+        if link_type and link_type != "uri":
+            cond = UnsupportedAttributeValue("ext-link", "ext-link-type", link_type)
+            self._issue(FormatIssue(cond, e.sourceline))
+        for k, v in e.attrib.items():
+            if k not in ["ext-link-type", k_href]:
+                self._issue(UnsupportedAttribute.issue(e, k))
+        c = self._content(e)
+        if href is None:
+            self._issue(MissingAttribute.issue(e, k_href))
+            self._copy_contents(e, dest)
+        else:
+            dest.append(Hyperlink(c.text, list(c), e.tail or "", href))
+
     def _content(self, e: etree._Element) -> RichText:
         ret = RichText(e.text or "", [])
         for s in e:
             if isinstance(s.tag, str) and s.tag in self.tagmap:
-                ret.append(self.subelement(s, self.tagmap[s.tag]))
+                if s.tag == 'ext-link':
+                    tagmap = self.tagmap.copy()
+                    del tagmap['ext-link']
+                    down = RichTextParser(self._issue, tagmap)
+                    down._ext_link(s, ret)
+                else:
+                    ret.append(self.subelement(s, self.tagmap[s.tag]))
             else:
                 self._issue(UnsupportedElement.issue(s))
-                inner = self._content(s)
-                ret.append_text(inner.text)
-                ret.extend(iter(inner))
-                ret.append_text(s.tail)
+                self._copy_contents(s, ret)
         return ret
 
     def content(self, e: etree._Element) -> RichText:
@@ -163,9 +201,7 @@ class RichTextParser:
 
 
 class AbstractParser:
-    def __init__(
-        self, issue_callback: Callable[[FormatIssue], None]
-    ):
+    def __init__(self, issue_callback: Callable[[FormatIssue], None]):
         self._log = issue_callback
 
     def parse(self, e: etree._Element) -> Abstract:
@@ -456,10 +492,25 @@ class UnsupportedAttributeValue(FormatCondition):
 
 @dataclass(frozen=True)
 class MissingElement(FormatCondition):
-    """Missing element"""
+    """Missing XML element"""
 
     tag: str
     parent: str
 
     def __str__(self) -> str:
         return "{} {!r}/{!r}".format(self.__doc__, self.parent, self.tag)
+
+
+@dataclass(frozen=True)
+class MissingAttribute(FormatCondition):
+    """Missing XML attribute"""
+
+    tag: str | bytes | bytearray | QName
+    attribute: str
+
+    def __str__(self) -> str:
+        return f"{self.__doc__} {self.tag!r}@{self.attribute!r}"
+
+    @staticmethod
+    def issue(e: etree._Element, key: str) -> FormatIssue:
+        return FormatIssue(MissingAttribute(e.tag, key), e.sourceline)
