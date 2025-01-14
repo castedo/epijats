@@ -88,7 +88,7 @@ class SubElement(ElementContent):
     tail: str
 
     @property
-    def attrib(self) -> dict[str, str]:
+    def html_attrib(self) -> dict[str, str]:
         return {}
 
 
@@ -106,7 +106,7 @@ class Hyperlink(SubElement):
         self.href = href
 
     @property
-    def attrib(self) -> dict[str, str]:
+    def html_attrib(self) -> dict[str, str]:
         return {'href': self.href}
 
 
@@ -123,7 +123,7 @@ class Baseprint:
 
 
 BARELY_RICH_TEXT_TAGS = {
-    'bold': 'b',
+    'bold': 'strong',
     'ext-link': 'a',
     'italic': 'i',
     'sub': 'sub',
