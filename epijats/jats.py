@@ -4,6 +4,7 @@ from importlib import resources
 from typing import Any, Iterable
 
 from .baseprint import parse_baseprint
+from .html import HtmlGenerator, html_to_str
 from .webstract import Webstract, Source
 
 
@@ -39,7 +40,8 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     bp = parse_baseprint(jats_src)
     if bp is None:
         raise ValueError()
-    ret['title'] = bp.title.inner_html()
+    gen = HtmlGenerator()
+    ret['title'] = html_to_str(*gen.content(bp.title))
     ret['contributors'] = list()
     for a in bp.authors:
         d: dict[str, Any] = {'surname': a.surname, 'type': 'author'}

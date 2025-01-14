@@ -25,9 +25,11 @@ class Orcid:
         url = url.removeprefix("http://orcid.org/")
         url = url.removeprefix("https://orcid.org/")
         isni = url.replace("-", "")
-        ok = len(isni) == 16
-        ok = ok and isni[:15].isdigit()
-        ok = ok and (isni[15].isdigit() or isni[15] == "X")
+        ok = (
+            len(isni) == 16
+            and isni[:15].isdigit()
+            and (isni[15].isdigit() or isni[15] == "X")
+        )
         if not ok:
             raise ValueError()
         return Orcid(isni)
@@ -64,16 +66,6 @@ class ElementContent:
     def __iter__(self) -> Iterator[SubElement]:
         return iter(self._subelements)
 
-    def _inner_html_strs(self) -> list[str]:
-        ret = [self.text]
-        for sub in self:
-            ret += sub._outer_html_strs()
-            ret.append(sub.tail)
-        return ret
-
-    def inner_html(self) -> str:
-        return "".join(self._inner_html_strs())
-
     def append(self, e: SubElement) -> None:
         self._subelements.append(e)
 
@@ -94,12 +86,6 @@ class SubElement(ElementContent):
 
     tag: str  # HTML tag
     tail: str
-
-    def _outer_html_strs(self) -> list[str]:
-        return ['<', self.tag, '>', *self._inner_html_strs(), '</', self.tag, '>']
-
-    def outer_html(self) -> str:
-        return "".join(self._outer_html_strs())
 
 
 @dataclass
