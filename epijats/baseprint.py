@@ -46,7 +46,7 @@ class Orcid:
         return "https://orcid.org/" + self.as_19chars()
 
 
-@dataclass(frozen=True)
+@dataclass
 class Author:
     surname: str | None
     given_names: str | None = None
@@ -136,13 +136,37 @@ FAIRLY_RICH_TEXT_TAGS = {
 }
 
 
-class RichTextParser:
+class Parser:
+    def __init__(self, issue_callback: Callable[[FormatIssue], None]):
+        self._log = issue_callback
+
+    def check_no_attrib(self, e: etree._Element) -> None:
+        for k in e.attrib.keys():
+            self._log(UnsupportedAttribute.issue(e, k))
+
+    def _simple_strings(self, e: etree._Element) -> list[str]:
+        self.check_no_attrib(e)
+        ret = []
+        if e.text:
+            ret.append(e.text)
+        for s in e:
+            self._log(UnsupportedElement.issue(s))
+            ret += self._simple_strings(s)
+            if s.tail:
+                ret.append(s.tail)
+        return ret
+
+    def simple_string(self, e: etree._Element) -> str:
+        return "".join(self._simple_strings(e))
+
+
+class RichTextParser(Parser):
     def __init__(
         self,
         issue_callback: Callable[[FormatIssue], None],
         tagmap: dict[str, str],
     ):
-        self._issue = issue_callback
+        super().__init__(issue_callback)
         self.tagmap = tagmap
 
     def _copy_contents(self, src: etree._Element, dest: RichText) -> None:
@@ -157,13 +181,13 @@ class RichTextParser:
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
             cond = UnsupportedAttributeValue("ext-link", "ext-link-type", link_type)
-            self._issue(FormatIssue(cond, e.sourceline))
+            self._log(FormatIssue(cond, e.sourceline))
         for k, v in e.attrib.items():
             if k not in ["ext-link-type", k_href]:
-                self._issue(UnsupportedAttribute.issue(e, k))
+                self._log(UnsupportedAttribute.issue(e, k))
         c = self._content(e)
         if href is None:
-            self._issue(MissingAttribute.issue(e, k_href))
+            self._log(MissingAttribute.issue(e, k_href))
             self._copy_contents(e, dest)
         else:
             dest.append(Hyperlink(c.text, list(c), e.tail or "", href))
@@ -175,18 +199,18 @@ class RichTextParser:
                 if s.tag == 'ext-link':
                     tagmap = self.tagmap.copy()
                     del tagmap['ext-link']
-                    down = RichTextParser(self._issue, tagmap)
+                    down = RichTextParser(self._log, tagmap)
                     down._ext_link(s, ret)
                 else:
                     ret.append(self.subelement(s, self.tagmap[s.tag]))
             else:
-                self._issue(UnsupportedElement.issue(s))
+                self._log(UnsupportedElement.issue(s))
                 self._copy_contents(s, ret)
         return ret
 
     def content(self, e: etree._Element) -> RichText:
         for k in e.attrib.keys():
-            self._issue(UnsupportedAttribute.issue(e, k))
+            self._log(UnsupportedAttribute.issue(e, k))
         return self._content(e)
 
     def subelement(self, e: etree._Element, html_tag: str) -> SubElement:
@@ -194,10 +218,7 @@ class RichTextParser:
         return SubElement(c.text, list(c), html_tag, e.tail or "")
 
 
-class AbstractParser:
-    def __init__(self, issue_callback: Callable[[FormatIssue], None]):
-        self._log = issue_callback
-
+class AbstractParser(Parser):
     def parse(self, e: etree._Element) -> Abstract:
         for k in e.attrib.keys():
             self._log(UnsupportedAttribute.issue(e, k))
@@ -209,6 +230,72 @@ class AbstractParser:
             else:
                 self._log(UnsupportedElement.issue(s))
         return Abstract(ps)
+
+
+class AuthorGroupParser(Parser):
+    def parse(self, e: Iterator[etree._Element]) -> list[Author]:
+        ret = []
+        for s in e:
+            if s.tag == 'contrib':
+                if a := self._contrib(s):
+                    ret.append(a)
+            else:
+                self._log(UnsupportedElement.issue(s))
+        return ret
+
+    def _contrib(self, e: etree._Element) -> Author | None:
+        for k, v in e.attrib.items():
+            if k == 'contrib-type':
+                if v != "author":
+                    self._log(UnsupportedAttributeValue.issue(e, k, v))
+                    return None
+            elif k == 'id':
+                pass
+            else:
+                self._log(UnsupportedAttribute.issue(e, k))
+        surname = None
+        given_names = None
+        email = None
+        orcid = None
+        for s in e:
+            if s.tag == 'name':
+                (surname, given_names) = self._name(s)
+            elif s.tag == 'email':
+                email = self.simple_string(s)
+            elif s.tag == 'contrib-id':
+                k = 'contrib-id-type'
+                if s.attrib.get(k) == 'orcid':
+                    del s.attrib[k]
+                    url = self.simple_string(s)
+                    try:
+                        orcid = Orcid.from_url(url)
+                    except ValueError:
+                        self._log(FormatIssue(InvalidOrcid(), s.sourceline, url))
+                elif k in s.attrib:
+                    v = s.attrib[k]
+                    self._log(UnsupportedAttributeValue.issue(s, k, v))
+                else:
+                    self._log(UnsupportedElement.issue(s))
+            else:
+                self._log(UnsupportedElement.issue(s))
+        if surname or given_names:
+            return Author(surname, given_names, email, orcid)
+        else:
+            self._log(FormatIssue(MissingName(), s.sourceline))
+            return None
+
+    def _name(self, e: etree._Element) -> Tuple[str | None, str | None]:
+        self.check_no_attrib(e)
+        surname = None
+        given_names = None
+        for s in e:
+            if s.tag == 'surname':
+                surname = self.simple_string(s)
+            elif s.tag == 'given-names':
+                given_names = self.simple_string(s)
+            else:
+                self._log(UnsupportedElement.issue(s))
+        return (surname, given_names)
 
 
 @dataclass(frozen=True)
@@ -232,9 +319,9 @@ class FormatIssue:
         return msg
 
 
-class BaseprintBuilder:
+class BaseprintBuilder(Parser):
     def __init__(self, issue_callback: Callable[[FormatIssue], None]):
-        self._log = issue_callback
+        super().__init__(issue_callback)
         self.title: RichText | None = None
         self.authors: list[Author] = list()
         self.abstract: Abstract | None = None
@@ -249,14 +336,14 @@ class BaseprintBuilder:
         try:
             et = etree.parse(xml_path, parser=xml_parser)
         except etree.XMLSyntaxError as ex:
-            self._issue(XMLSyntaxError(), ex.lineno, ex.msg)
+            self._log(FormatIssue(XMLSyntaxError(), ex.lineno, ex.msg))
             return None
         if bool(et.docinfo.doctype):
-            self._issue(DoctypeDeclaration())
+            self._log(FormatIssue(DoctypeDeclaration()))
         if et.docinfo.encoding.lower() != "utf-8":
-            self._issue(EncodingNotUtf8(et.docinfo.encoding))
+            self._log(FormatIssue(EncodingNotUtf8(et.docinfo.encoding)))
         for pi in et.xpath("//processing-instruction()"):
-            self._issue(ProcessingInstruction(pi.text), pi.sourceline)
+            self._log(FormatIssue(ProcessingInstruction(pi.text), pi.sourceline))
             etree.strip_elements(et, pi.tag, with_tail=False)
         root = et.getroot()
         if root.tag == 'article':
@@ -265,25 +352,13 @@ class BaseprintBuilder:
             self._log(UnsupportedElement.issue(root))
             return None
 
-    def _issue(
-        self,
-        condition: FormatCondition,
-        sourceline: int | None = None,
-        info: str | None = None,
-    ) -> None:
-        self._log(FormatIssue(condition, sourceline))
-
-    def _check_no_attrib(self, e: etree._Element) -> None:
-        for k in e.attrib.keys():
-            self._issue(UnsupportedAttribute(e.tag, k))
-
     def _article(self, e: etree._Element) -> Baseprint | None:
         for k, v in e.attrib.items():
             if k == '{http://www.w3.org/XML/1998/namespace}lang':
                 if v != "en":
-                    self._issue(UnsupportedAttributeValue(e.tag, k, v))
+                    self._log(UnsupportedAttributeValue.issue(e, k, v))
             else:
-                self._issue(UnsupportedAttribute(e.tag, k))
+                self._log(UnsupportedAttribute.issue(e, k))
         for s in e:
             if s.tag == "front":
                 self._front(s)
@@ -294,12 +369,13 @@ class BaseprintBuilder:
             else:
                 self._log(UnsupportedElement.issue(s))
         if self.title is None:
-            self._issue(MissingElement('article-title', 'title-group'))
+            cond = MissingElement('article-title', 'title-group')
+            self._log(FormatIssue(cond, e.sourceline))
             return None
         return Baseprint(self.title, self.authors, self.abstract)
 
     def _front(self, e: etree._Element) -> None:
-        self._check_no_attrib(e)
+        self.check_no_attrib(e)
         for s in e:
             if s.tag == 'article-meta':
                 self._article_meta(s)
@@ -307,7 +383,7 @@ class BaseprintBuilder:
                 self._log(UnsupportedElement.issue(s))
 
     def _article_meta(self, e: etree._Element) -> None:
-        self._check_no_attrib(e)
+        self.check_no_attrib(e)
         for s in e:
             if s.tag == 'abstract':
                 self._abstract(s)
@@ -326,7 +402,7 @@ class BaseprintBuilder:
 
     def _title_group(self, e: etree._Element) -> None:
         title_parser = RichTextParser(self._log, BARELY_RICH_TEXT_TAGS)
-        self._check_no_attrib(e)
+        self.check_no_attrib(e)
         for s in e:
             if s.tag == 'article-title':
                 self.title = title_parser.content(s)
@@ -334,81 +410,12 @@ class BaseprintBuilder:
                 self._log(UnsupportedElement.issue(s))
 
     def _contrib_group(self, e: etree._Element) -> None:
-        self._check_no_attrib(e)
-        self.authors = []
-        for s in e:
-            if s.tag == 'contrib':
-                try:
-                    self.authors.append(self._contrib(s))
-                except ValueError:
-                    pass
-            else:
-                self._log(UnsupportedElement.issue(s))
-
-    def _contrib(self, e: etree._Element) -> Author:
-        for k, v in e.attrib.items():
-            if k == 'contrib-type':
-                if v != "author":
-                    self._issue(UnsupportedAttributeValue(e.tag, k, v))
-                    raise ValueError
-            elif k == 'id':
-                pass
-            else:
-                self._issue(UnsupportedAttribute(e.tag, k))
-        surname = None
-        given_names = None
-        email = None
-        orcid = None
-        for s in e:
-            if s.tag == 'name':
-                (surname, given_names) = self._name(s)
-            elif s.tag == 'email':
-                email = self.simple_string(s)
-            elif s.tag == 'contrib-id':
-                k = 'contrib-id-type'
-                if s.attrib.get(k) == 'orcid':
-                    del s.attrib[k]
-                    url = self.simple_string(s)
-                    try:
-                        orcid = Orcid.from_url(url)
-                    except ValueError:
-                        self._issue(InvalidOrcid(), s.sourceline, url)
-                elif k in s.attrib:
-                    v = s.attrib[k]
-                    self._issue(UnsupportedAttributeValue(s.tag, k, v))
-                else:
-                    self._log(UnsupportedElement.issue(s))
-            else:
-                self._log(UnsupportedElement.issue(s))
-        return Author(surname, given_names, email, orcid)
-
-    def _name(self, e: etree._Element) -> Tuple[str | None, str | None]:
-        self._check_no_attrib(e)
-        surname = None
-        given_names = None
-        for s in e:
-            if s.tag == 'surname':
-                surname = self.simple_string(s)
-            elif s.tag == 'given-names':
-                given_names = self.simple_string(s)
-            else:
-                self._log(UnsupportedElement.issue(s))
-        return (surname, given_names)
-
-    def _simple_strings(self, e: etree._Element) -> list[str]:
-        self._check_no_attrib(e)
-        ret = []
-        if e.text:
-            ret.append(e.text)
-        for s in e:
-            self._log(UnsupportedElement.issue(s))
-            ret += self._simple_strings(s)
-            if s.tail:
-                ret.append(s.tail)
-        return ret
-
-    def simple_string(self, e: etree._Element) -> str:
-        return "".join(self._simple_strings(e))
+        self.check_no_attrib(e)
+        if self.authors:
+            self._log(ExcessElement.issue(e))
+        else:
+            parser = AuthorGroupParser(self._log)
+            self.authors = parser.parse(iter(e))
 
 
 class XMLSyntaxError(FormatCondition):
@@ -435,9 +442,7 @@ class ProcessingInstruction(FormatCondition):
 
 
 @dataclass(frozen=True)
-class UnsupportedElement(FormatCondition):
-    """Unsupported XML element"""
-
+class ElementFormatCondition(FormatCondition):
     tag: str | bytes | bytearray | QName
     parent: str | bytes | bytearray | QName | None
 
@@ -445,15 +450,29 @@ class UnsupportedElement(FormatCondition):
         parent = "" if self.parent is None else repr(self.parent)
         return "{} {}/{!r}".format(self.__doc__, parent, self.tag)
 
-    @staticmethod
-    def issue(e: etree._Element) -> FormatIssue:
+    @classmethod
+    def issue(klas, e: etree._Element) -> FormatIssue:
         parent = e.getparent()
         ptag = None if parent is None else parent.tag
-        return FormatIssue(UnsupportedElement(e.tag, ptag), e.sourceline)
+        return FormatIssue(klas(e.tag, ptag), e.sourceline)
+
+
+@dataclass(frozen=True)
+class UnsupportedElement(ElementFormatCondition):
+    """Unsupported XML element"""
+
+
+@dataclass(frozen=True)
+class ExcessElement(ElementFormatCondition):
+    """Excess XML element"""
 
 
 class InvalidOrcid(FormatCondition):
     """Invalid ORCID"""
+
+
+class MissingName(FormatCondition):
+    """Missing name"""
 
 
 @dataclass(frozen=True)
@@ -482,6 +501,10 @@ class UnsupportedAttributeValue(FormatCondition):
     def __str__(self) -> str:
         msg = "{} {!r}@{!r} = {!r}"
         return msg.format(self.__doc__, self.tag, self.attribute, self.value)
+
+    @staticmethod
+    def issue(e: etree._Element, key: str, value: str) -> FormatIssue:
+        return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), e.sourceline)
 
 
 @dataclass(frozen=True)
