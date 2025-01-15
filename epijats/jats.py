@@ -1,4 +1,4 @@
-import io, subprocess
+import io, os, subprocess
 from pathlib import Path
 from importlib import resources
 from typing import Any, Iterable
@@ -31,11 +31,14 @@ def webstract_from_jats(src: Path | str) -> Webstract:
 
     src = Path(src)
     jats_src = src / "article.xml" if src.is_dir() else src
-    xmlout = pandoc_jats_to_webstract(jats_src)
-    data = jsoml.load(io.BytesIO(xmlout))
-    if not isinstance(data, dict):
-        raise ValueError("JSOML webstract must be object/dictionary.")
-    ret = Webstract(data)
+    if "EPIJATS_NO_PANDOC" in os.environ:
+        ret = Webstract()
+    else:
+        xmlout = pandoc_jats_to_webstract(jats_src)
+        data = jsoml.load(io.BytesIO(xmlout))
+        if not isinstance(data, dict):
+            raise ValueError("JSOML webstract must be object/dictionary.")
+        ret = Webstract(data)
     ret['source'] = Source(path=src)
     bp = parse_baseprint(jats_src)
     if bp is None:
@@ -43,6 +46,8 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     gen = HtmlGenerator()
     ret['title'] = html_to_str(*gen.content(bp.title))
     ret['contributors'] = list()
+    if bp.abstract and "EPIJATS_NO_PANDOC" in os.environ:
+        ret['abstract'] = html_to_str(*gen.abstract(bp.abstract))
     for a in bp.authors:
         d: dict[str, Any] = {'surname': a.surname, 'type': 'author'}
         if a.given_names:
