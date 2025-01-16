@@ -93,11 +93,6 @@ class SubElement(ElementContent):
 
 
 @dataclass
-class RichText(ElementContent):
-    pass
-
-
-@dataclass
 class Hyperlink(SubElement):
     href: str
 
@@ -112,12 +107,12 @@ class Hyperlink(SubElement):
 
 @dataclass
 class Abstract:
-    paragraphs: list[RichText]
+    paragraphs: list[ElementContent]
 
 
 @dataclass
 class Baseprint:
-    title: RichText
+    title: ElementContent
     authors: list[Author]
     abstract: Abstract | None = None
 
@@ -140,9 +135,10 @@ class Parser:
     def __init__(self, issue_callback: Callable[[FormatIssue], None]):
         self._log = issue_callback
 
-    def check_no_attrib(self, e: etree._Element) -> None:
+    def check_no_attrib(self, e: etree._Element, ignore: list[str] = []) -> None:
         for k in e.attrib.keys():
-            self._log(UnsupportedAttribute.issue(e, k))
+            if k not in ignore:
+                self._log(UnsupportedAttribute.issue(e, k))
 
     def _simple_strings(self, e: etree._Element) -> list[str]:
         self.check_no_attrib(e)
@@ -169,59 +165,71 @@ class RichTextParser(Parser):
         super().__init__(issue_callback)
         self.tagmap = tagmap
 
-    def _copy_contents(self, src: etree._Element, dest: RichText) -> None:
-        inner = self._content(src)
-        dest.append_text(inner.text)
-        dest.extend(iter(inner))
-        dest.append_text(src.tail)
-
-    def _ext_link(self, e: etree._Element, dest: RichText) -> None:
-        k_href = "{http://www.w3.org/1999/xlink}href"
-        href = e.attrib.get(k_href)
-        link_type = e.attrib.get("ext-link-type")
-        if link_type and link_type != "uri":
-            cond = UnsupportedAttributeValue("ext-link", "ext-link-type", link_type)
-            self._log(FormatIssue(cond, e.sourceline))
-        for k, v in e.attrib.items():
-            if k not in ["ext-link-type", k_href]:
-                self._log(UnsupportedAttribute.issue(e, k))
-        c = self._content(e)
-        if href is None:
-            self._log(MissingAttribute.issue(e, k_href))
-            self._copy_contents(e, dest)
-        else:
-            dest.append(Hyperlink(c.text, list(c), e.tail or "", href))
-
-    def _content(self, e: etree._Element) -> RichText:
-        ret = RichText(e.text or "", [])
+    def parse_content(self, e: etree._Element, out: ElementContent) -> None:
+        out.append_text(e.text)
         for s in e:
+            sub: SubElement | None = None
             if isinstance(s.tag, str) and s.tag in self.tagmap:
                 if s.tag == 'ext-link':
-                    tagmap = self.tagmap.copy()
-                    del tagmap['ext-link']
-                    down = RichTextParser(self._log, tagmap)
-                    down._ext_link(s, ret)
+                    xlp = ExtLinkParser(self._log, self.tagmap)
+                    sub = xlp.parse(s)
                 else:
-                    ret.append(self.subelement(s, self.tagmap[s.tag]))
+                    sub = self.parse(s)
+            if sub is not None:
+                out.append(sub)
             else:
                 self._log(UnsupportedElement.issue(s))
-                self._copy_contents(s, ret)
+                self.parse_content(s, out)
+                out.append_text(s.tail)
+
+    def content(self, e: etree._Element) -> ElementContent:
+        ret = ElementContent("", [])
+        self.check_no_attrib(e)
+        self.parse_content(e, ret)
         return ret
 
-    def content(self, e: etree._Element) -> RichText:
-        for k in e.attrib.keys():
-            self._log(UnsupportedAttribute.issue(e, k))
-        return self._content(e)
+    def parse(self, e: etree._Element) -> SubElement | None:
+        self.check_no_attrib(e)
+        html_tag = self.tagmap[str(e.tag)]
+        ret = SubElement("", [], html_tag, e.tail or "")
+        self.parse_content(e, ret)
+        return ret
 
-    def subelement(self, e: etree._Element, html_tag: str) -> SubElement:
-        c = self.content(e)
-        return SubElement(c.text, list(c), html_tag, e.tail or "")
+
+class ExtLinkParser(RichTextParser):
+    def __init__(
+        self,
+        issue_callback: Callable[[FormatIssue], None],
+        tagmap: dict[str, str],
+    ):
+        tagmap = tagmap.copy()
+        if 'ext-link' in tagmap:
+            tagmap.pop('ext-link')
+        super().__init__(issue_callback, tagmap)
+
+    def parse(self, e: etree._Element) -> SubElement | None:
+        link_type = e.attrib.get("ext-link-type")
+        if link_type and link_type != "uri":
+            cond = UnsupportedAttributeValue(e.tag, "ext-link-type", link_type)
+            self._log(FormatIssue(cond, e.sourceline))
+            return None
+        k_href = "{http://www.w3.org/1999/xlink}href"
+        href = e.attrib.get(k_href)
+        self.check_no_attrib(e, ["ext-link-type", k_href])
+        if href is None:
+            self._log(MissingAttribute.issue(e, k_href))
+            return None
+        else:
+            ret = Hyperlink("", [], e.tail or "", href)
+            self.parse_content(e, ret)
+            return ret
 
 
 class AbstractParser(Parser):
-    def parse(self, e: etree._Element) -> Abstract:
-        for k in e.attrib.keys():
-            self._log(UnsupportedAttribute.issue(e, k))
+    out: Abstract | None = None
+    
+    def parse(self, e: etree._Element) -> None:
+        self.check_no_attrib(e)
         txt_parser = RichTextParser(self._log, FAIRLY_RICH_TEXT_TAGS)
         ps = []
         for s in e:
@@ -229,19 +237,24 @@ class AbstractParser(Parser):
                 ps.append(txt_parser.content(s))
             else:
                 self._log(UnsupportedElement.issue(s))
-        return Abstract(ps)
+        self.out = Abstract(ps)
 
 
 class AuthorGroupParser(Parser):
-    def parse(self, e: Iterator[etree._Element]) -> list[Author]:
-        ret = []
+    out: list[Author] = []
+
+    def parse(self, e: etree._Element) -> None:
+        self.check_no_attrib(e)
+        if self.out:
+            self._log(ExcessElement.issue(e))
+            return
+        self.out = []
         for s in e:
             if s.tag == 'contrib':
                 if a := self._contrib(s):
-                    ret.append(a)
+                    self.out.append(a)
             else:
                 self._log(UnsupportedElement.issue(s))
-        return ret
 
     def _contrib(self, e: etree._Element) -> Author | None:
         for k, v in e.attrib.items():
@@ -322,9 +335,9 @@ class FormatIssue:
 class BaseprintBuilder(Parser):
     def __init__(self, issue_callback: Callable[[FormatIssue], None]):
         super().__init__(issue_callback)
-        self.title: RichText | None = None
-        self.authors: list[Author] = list()
-        self.abstract: Abstract | None = None
+        self.title: ElementContent | None = None
+        self.authors = AuthorGroupParser(issue_callback)
+        self.abstract = AbstractParser(issue_callback)
 
     def build(self, path: Path) -> Baseprint | None:
         path = Path(path)
@@ -372,7 +385,7 @@ class BaseprintBuilder(Parser):
             cond = MissingElement('article-title', 'title-group')
             self._log(FormatIssue(cond, e.sourceline))
             return None
-        return Baseprint(self.title, self.authors, self.abstract)
+        return Baseprint(self.title, self.authors.out, self.abstract.out)
 
     def _front(self, e: etree._Element) -> None:
         self.check_no_attrib(e)
@@ -386,19 +399,15 @@ class BaseprintBuilder(Parser):
         self.check_no_attrib(e)
         for s in e:
             if s.tag == 'abstract':
-                self._abstract(s)
+                self.abstract.parse(s)
             elif s.tag == 'contrib-group':
-                self._contrib_group(s)
+                self.authors.parse(s)
             elif s.tag == 'permissions':
                 pass
             elif s.tag == 'title-group':
                 self._title_group(s)
             else:
                 self._log(UnsupportedElement.issue(s))
-
-    def _abstract(self, e: etree._Element) -> None:
-        p = AbstractParser(self._log)
-        self.abstract = p.parse(e)
 
     def _title_group(self, e: etree._Element) -> None:
         title_parser = RichTextParser(self._log, BARELY_RICH_TEXT_TAGS)
@@ -408,14 +417,6 @@ class BaseprintBuilder(Parser):
                 self.title = title_parser.content(s)
             else:
                 self._log(UnsupportedElement.issue(s))
-
-    def _contrib_group(self, e: etree._Element) -> None:
-        self.check_no_attrib(e)
-        if self.authors:
-            self._log(ExcessElement.issue(e))
-        else:
-            parser = AuthorGroupParser(self._log)
-            self.authors = parser.parse(iter(e))
 
 
 class XMLSyntaxError(FormatCondition):
