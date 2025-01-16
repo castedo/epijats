@@ -115,19 +115,27 @@ class Baseprint:
     title: ElementContent
     authors: list[Author]
     abstract: Abstract | None = None
+    body: ElementContent | None = None
 
 
 BARELY_RICH_TEXT_TAGS = {
     'bold': 'strong',
     'ext-link': 'a',
-    'italic': 'i',
+    'italic': 'em',
     'sub': 'sub',
     'sup': 'sup',
 }
 
 FAIRLY_RICH_TEXT_TAGS = {
     **BARELY_RICH_TEXT_TAGS,
+    'list': 'ul',
     'monospace': 'tt',
+}
+
+VERY_RICH_TEXT_TAGS = {
+    **FAIRLY_RICH_TEXT_TAGS,
+    'code': 'code',
+    'preformat': 'pre',
 }
 
 
@@ -196,16 +204,17 @@ class RichTextParser(Parser):
         return ret
 
 
-class ExtLinkParser(RichTextParser):
+class ExtLinkParser(Parser):
     def __init__(
         self,
         issue_callback: Callable[[FormatIssue], None],
         tagmap: dict[str, str],
     ):
+        super().__init__(issue_callback)
         tagmap = tagmap.copy()
         if 'ext-link' in tagmap:
             tagmap.pop('ext-link')
-        super().__init__(issue_callback, tagmap)
+        self._sub = RichTextParser(issue_callback, tagmap)
 
     def parse(self, e: etree._Element) -> SubElement | None:
         link_type = e.attrib.get("ext-link-type")
@@ -221,7 +230,7 @@ class ExtLinkParser(RichTextParser):
             return None
         else:
             ret = Hyperlink("", [], e.tail or "", href)
-            self.parse_content(e, ret)
+            self._sub.parse_content(e, ret)
             return ret
 
 
@@ -232,11 +241,22 @@ class AbstractParser(Parser):
         self.check_no_attrib(e)
         txt_parser = RichTextParser(self._log, FAIRLY_RICH_TEXT_TAGS)
         ps = []
+        correction: ElementContent | None = None
         for s in e:
             if s.tag == "p":
+                if correction:
+                    ps.append(correction)
+                    correction= None
                 ps.append(txt_parser.content(s))
             else:
                 self._log(UnsupportedElement.issue(s))
+                if not correction:
+                    correction = ElementContent("", [])
+                if sub := txt_parser.parse(s):
+                    correction.append(sub)
+        if correction:
+            ps.append(correction)
+            correction= None
         self.out = Abstract(ps)
 
 
@@ -376,7 +396,7 @@ class BaseprintBuilder(Parser):
             if s.tag == "front":
                 self._front(s)
             elif s.tag == "body":
-                pass
+                pass  # ; self._body(s)
             elif s.tag == "back":
                 pass
             else:
@@ -394,6 +414,10 @@ class BaseprintBuilder(Parser):
                 self._article_meta(s)
             else:
                 self._log(UnsupportedElement.issue(s))
+
+    def _body(self, e: etree._Element) -> None:
+        txt_parser = RichTextParser(self._log, VERY_RICH_TEXT_TAGS)
+        self.body = txt_parser.content(e)
 
     def _article_meta(self, e: etree._Element) -> None:
         self.check_no_attrib(e)

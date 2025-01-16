@@ -6,9 +6,11 @@ from lxml import etree
 
 import epijats.baseprint as _
 from epijats import html
+from epijats.reformat import baseprint_to_xml
 
 
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
+ROUNDTRIP_CASE = Path(__file__).parent / "cases" / "roundtrip"
 
 GEN = html.HtmlGenerator()
 
@@ -20,6 +22,16 @@ def test_minimal():
     assert [_.Author("Wang")] == got.authors
     expect = _.Abstract([_.ElementContent('A simple test.', [])])
     assert expect == got.abstract
+
+
+def test_roundtrip():
+    xml_path = ROUNDTRIP_CASE / "minimal" / "article.xml"
+    with open(xml_path, "r") as f:
+        expect = f.read()
+    issues = []
+    bp = _.BaseprintBuilder(issues.append).build(xml_path)
+    assert not issues
+    assert etree.tostring(baseprint_to_xml(bp)).decode() == expect
 
 
 def test_minimal_html_title():
