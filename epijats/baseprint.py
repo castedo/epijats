@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator, Tuple
+from typing import Callable, Iterator, TYPE_CHECKING, Tuple, TypeAlias
 
 from lxml import etree
 from lxml.etree import QName
@@ -155,8 +155,11 @@ VERY_RICH_TEXT_TAGS = {
 
 
 class Parser:
-    def __init__(self, issue_callback: Callable[[FormatIssue], None]):
+    def __init__(self, issue_callback: IssueCallback):
         self._log = issue_callback
+
+    def parse(self, e: etree._Element) -> bool:
+        raise NotImplementedError
 
     def check_no_attrib(self, e: etree._Element, ignore: list[str] = []) -> None:
         for k in e.attrib.keys():
@@ -182,7 +185,7 @@ class Parser:
 class RichTextParser(Parser):
     def __init__(
         self,
-        issue_callback: Callable[[FormatIssue], None],
+        issue_callback: IssueCallback,
         tagmap: dict[str, str],
     ):
         super().__init__(issue_callback)
@@ -190,17 +193,12 @@ class RichTextParser(Parser):
 
     def parse_content(self, e: etree._Element, out: ElementContent) -> None:
         out.append_text(e.text)
+        parsers: list[Parser] = []
+        if 'ext-link' in self.tagmap:
+            parsers.append(ExtLinkParser(self._log, self.tagmap, out))
+        parsers.append(TextElementParser(self._log, self.tagmap, out))
         for s in e:
-            sub: SubElement | None = None
-            if isinstance(s.tag, str) and s.tag in self.tagmap:
-                if s.tag == 'ext-link':
-                    xlp = ExtLinkParser(self._log, self.tagmap)
-                    sub = xlp.parse(s)
-                else:
-                    sub = self.parse(s)
-            if sub is not None:
-                out.append(sub)
-            else:
+            if not any(p.parse(s) for p in parsers):
                 self._log(UnsupportedElement.issue(s))
                 self.parse_content(s, out)
                 out.append_text(s.tail)
@@ -211,50 +209,68 @@ class RichTextParser(Parser):
         self.parse_content(e, ret)
         return ret
 
-    def parse(self, e: etree._Element) -> SubElement | None:
-        self.check_no_attrib(e)
+
+class TextElementParser(Parser):
+    def __init__(
+        self,
+        issue_callback: IssueCallback,
+        tagmap: dict[str, str],
+        out: ElementContent,
+    ):
+        super().__init__(issue_callback)
+        self._sub = RichTextParser(issue_callback, tagmap)
+        self._out = out
+
+    def parse(self, e: etree._Element) -> bool:
         ret = None
-        if isinstance(e.tag, str) and e.tag in self.tagmap:
-            html_tag = self.tagmap[e.tag]
+        if isinstance(e.tag, str) and e.tag in self._sub.tagmap:
+            self.check_no_attrib(e)
+            html_tag = self._sub.tagmap[e.tag]
             ret = SubElement("", [], e.tag, html_tag, e.tail or "")
-            self.parse_content(e, ret)
-        return ret
+            self._sub.parse_content(e, ret)
+            self._out.append(ret)
+        return ret is not None
 
 
 class ExtLinkParser(Parser):
     def __init__(
         self,
-        issue_callback: Callable[[FormatIssue], None],
+        issue_callback: IssueCallback,
         tagmap: dict[str, str],
+        out: ElementContent,
     ):
         super().__init__(issue_callback)
         tagmap = tagmap.copy()
         if 'ext-link' in tagmap:
             tagmap.pop('ext-link')
         self._sub = RichTextParser(issue_callback, tagmap)
+        self._out = out
 
-    def parse(self, e: etree._Element) -> SubElement | None:
+    def parse(self, e: etree._Element) -> bool:
+        if e.tag != 'ext-link':
+            return False
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
             cond = UnsupportedAttributeValue(e.tag, "ext-link-type", link_type)
             self._log(FormatIssue(cond, e.sourceline))
-            return None
+            return False
         k_href = "{http://www.w3.org/1999/xlink}href"
         href = e.attrib.get(k_href)
         self.check_no_attrib(e, ["ext-link-type", k_href])
         if href is None:
             self._log(MissingAttribute.issue(e, k_href))
-            return None
+            return False
         else:
             ret = Hyperlink("", [], e.tail or "", href)
             self._sub.parse_content(e, ret)
-            return ret
+            self._out.append(ret)
+            return True
 
 
 class AbstractParser(Parser):
     out: Abstract | None = None
     
-    def parse(self, e: etree._Element) -> None:
+    def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
         txt_parser = RichTextParser(self._log, FAIRLY_RICH_TEXT_TAGS)
         ps = []
@@ -263,29 +279,30 @@ class AbstractParser(Parser):
             if s.tag == "p":
                 if correction:
                     ps.append(correction)
-                    correction= None
+                    correction = None
                 ps.append(txt_parser.content(s))
             else:
                 self._log(UnsupportedElement.issue(s))
                 if not correction:
-                    correction = ElementContent("", [])
-                if sub := txt_parser.parse(s):
-                    correction.append(sub)
+                    correction = ElementContent("p", [])
+                parser = TextElementParser(self._log, FAIRLY_RICH_TEXT_TAGS, correction)
+                parser.parse(s)
         if correction:
             ps.append(correction)
-            correction= None
+            correction = None
         if ps:
             self.out = Abstract(ps)
+        return bool(self.out)
 
 
 class AuthorGroupParser(Parser):
     out: list[Author] = []
 
-    def parse(self, e: etree._Element) -> None:
+    def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
         if self.out:
             self._log(ExcessElement.issue(e))
-            return
+            return False
         self.out = []
         for s in e:
             if s.tag == 'contrib':
@@ -293,6 +310,7 @@ class AuthorGroupParser(Parser):
                     self.out.append(a)
             else:
                 self._log(UnsupportedElement.issue(s))
+        return True
 
     def _contrib(self, e: etree._Element) -> Author | None:
         for k, v in e.attrib.items():
@@ -370,8 +388,12 @@ class FormatIssue:
         return msg
 
 
+if TYPE_CHECKING:
+    IssueCallback: TypeAlias = Callable[[FormatIssue], None]
+
+
 class BaseprintBuilder(Parser):
-    def __init__(self, issue_callback: Callable[[FormatIssue], None]):
+    def __init__(self, issue_callback: IssueCallback):
         super().__init__(issue_callback)
         self.title: ElementContent | None = None
         self.authors = AuthorGroupParser(issue_callback)
