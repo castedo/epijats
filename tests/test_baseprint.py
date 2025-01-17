@@ -13,6 +13,13 @@ SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
 ROUNDTRIP_CASE = Path(__file__).parent / "cases" / "roundtrip"
 
 GEN = html.HtmlGenerator()
+XML = etree.XMLParser(remove_comments=True, load_dtd=False)
+
+
+def assert_bdom_roundtrip(expect: _.Baseprint):
+    dump = etree.tostring(baseprint_to_xml(expect))
+    root = etree.fromstring(dump, parser=XML)
+    assert _.parse_baseprint_root(root) == expect
 
 
 def test_minimal():
@@ -22,7 +29,7 @@ def test_minimal():
     assert [_.Author("Wang")] == got.authors
     expect = _.Abstract([_.ElementContent('A simple test.', [])])
     assert expect == got.abstract
-
+    assert_bdom_roundtrip(got)
 
 def test_roundtrip():
     xml_path = ROUNDTRIP_CASE / "minimal" / "article.xml"
@@ -44,6 +51,7 @@ def test_article_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
     expect = b"""<title>Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a></title>"""
     assert expect == tostring(E.TITLE(*GEN.content(bp.title)))
+    assert_bdom_roundtrip(bp)
 
 
 def xml2html(xml, tagmap = {}):

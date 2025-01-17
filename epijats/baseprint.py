@@ -8,12 +8,18 @@ from lxml import etree
 from lxml.etree import QName
 
 
-def parse_baseprint(src: Path) -> Baseprint | None:
-    def ignore(issue: FormatIssue) -> None:
-        pass
+def ignore_issue(issue: FormatIssue) -> None:
+    pass
 
-    b = BaseprintBuilder(ignore)
+
+def parse_baseprint(src: Path) -> Baseprint | None:
+    b = BaseprintBuilder(ignore_issue)
     return b.build(src)
+
+
+def parse_baseprint_root(root: etree._Element) -> Baseprint | None:
+    b= BaseprintBuilder(ignore_issue)
+    return b.build_from_root(root)
 
 
 @dataclass(frozen=True)
@@ -84,8 +90,13 @@ class ElementContent:
 class SubElement(ElementContent):
     """Common JATS/HTML element"""
 
-    tag: str  # HTML tag
+    xml_tag: str
+    html_tag: str
     tail: str
+
+    @property
+    def xml_attrib(self) -> dict[str, str]:
+        return {}
 
     @property
     def html_attrib(self) -> dict[str, str]:
@@ -97,8 +108,12 @@ class Hyperlink(SubElement):
     href: str
 
     def __init__(self, text: str, subs: list[SubElement], tail: str, href: str):
-        super().__init__(text, subs, 'a', tail)
+        super().__init__(text, subs, 'ext-link', 'a', tail)
         self.href = href
+
+    @property
+    def xml_attrib(self) -> dict[str, str]:
+        return {"{http://www.w3.org/1999/xlink}href": self.href}
 
     @property
     def html_attrib(self) -> dict[str, str]:
@@ -198,9 +213,11 @@ class RichTextParser(Parser):
 
     def parse(self, e: etree._Element) -> SubElement | None:
         self.check_no_attrib(e)
-        html_tag = self.tagmap[str(e.tag)]
-        ret = SubElement("", [], html_tag, e.tail or "")
-        self.parse_content(e, ret)
+        ret = None
+        if isinstance(e.tag, str) and e.tag in self.tagmap:
+            html_tag = self.tagmap[e.tag]
+            ret = SubElement("", [], e.tag, html_tag, e.tail or "")
+            self.parse_content(e, ret)
         return ret
 
 
@@ -257,7 +274,8 @@ class AbstractParser(Parser):
         if correction:
             ps.append(correction)
             correction= None
-        self.out = Abstract(ps)
+        if ps:
+            self.out = Abstract(ps)
 
 
 class AuthorGroupParser(Parser):
@@ -375,10 +393,12 @@ class BaseprintBuilder(Parser):
             self._log(FormatIssue(DoctypeDeclaration()))
         if et.docinfo.encoding.lower() != "utf-8":
             self._log(FormatIssue(EncodingNotUtf8(et.docinfo.encoding)))
-        for pi in et.xpath("//processing-instruction()"):
+        return self.build_from_root(et.getroot())
+
+    def build_from_root(self, root: etree._Element) -> Baseprint | None:
+        for pi in root.xpath("//processing-instruction()"):
             self._log(FormatIssue(ProcessingInstruction(pi.text), pi.sourceline))
-            etree.strip_elements(et, pi.tag, with_tail=False)
-        root = et.getroot()
+            etree.strip_elements(root, pi.tag, with_tail=False)
         if root.tag == 'article':
             return self._article(root)
         else:
