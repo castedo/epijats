@@ -58,8 +58,8 @@ def xml2html(xml, tagmap = {}):
     et = etree.fromstring(xml)
     issues = []
     out = _.ElementContent("", [])
-    par = _.RichTextParser(issues.append, tagmap)
-    par.parse_content(et, out)
+    par = _.RichTextParser(issues.append, tagmap, out)
+    par.parse(et)
     return (html.html_to_str(*GEN.content(out)), len(issues))
 
 
