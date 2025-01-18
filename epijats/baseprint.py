@@ -154,7 +154,7 @@ VERY_RICH_TEXT_TAGS = {
 }
 
 
-class Parser:
+class Checker:
     def __init__(self, log: IssueCallback):
         self._log = log
 
@@ -163,28 +163,27 @@ class Parser:
             if k not in ignore:
                 self._log(UnsupportedAttribute.issue(e, k))
 
-    def _simple_strings(self, e: etree._Element) -> list[str]:
+
+class StringParser(Checker):
+    def parse(self, e: etree._Element) -> str:
         self.check_no_attrib(e)
-        ret = []
+        frags = []
         if e.text:
-            ret.append(e.text)
+            frags.append(e.text)
         for s in e:
             self._log(UnsupportedElement.issue(s))
-            ret += self._simple_strings(s)
+            frags += self.parse(s)
             if s.tail:
-                ret.append(s.tail)
-        return ret
-
-    def simple_string(self, e: etree._Element) -> str:
-        return "".join(self._simple_strings(e))
+                frags.append(s.tail)
+        return "".join(frags)
 
 
-class ElementParser(Parser):
+class ElementParser(Checker):
     def parse_element(self, e: etree._Element) -> SubElement | None:
         raise NotImplementedError
 
 
-class ContentParser(Parser):
+class ContentParser(Checker):
     def __init__(
         self, log: IssueCallback, out: ElementContent, parsers: Iterable[ElementParser]
     ):
@@ -300,7 +299,7 @@ class ExtLinkParser(ElementParser):
             return ret
 
 
-class AbstractParser(Parser):
+class AbstractParser(Checker):
     out: Abstract | None = None
     
     def parse(self, e: etree._Element) -> bool:
@@ -329,7 +328,7 @@ class AbstractParser(Parser):
         return bool(self.out)
 
 
-class AuthorGroupParser(Parser):
+class AuthorGroupParser(Checker):
     out: list[Author] = []
 
     def parse(self, e: etree._Element) -> bool:
@@ -364,12 +363,12 @@ class AuthorGroupParser(Parser):
             if s.tag == 'name':
                 (surname, given_names) = self._name(s)
             elif s.tag == 'email':
-                email = self.simple_string(s)
+                email = StringParser(self._log).parse(s)
             elif s.tag == 'contrib-id':
                 k = 'contrib-id-type'
                 if s.attrib.get(k) == 'orcid':
                     del s.attrib[k]
-                    url = self.simple_string(s)
+                    url = StringParser(self._log).parse(s)
                     try:
                         orcid = Orcid.from_url(url)
                     except ValueError:
@@ -393,9 +392,9 @@ class AuthorGroupParser(Parser):
         given_names = None
         for s in e:
             if s.tag == 'surname':
-                surname = self.simple_string(s)
+                surname = StringParser(self._log).parse(s)
             elif s.tag == 'given-names':
-                given_names = self.simple_string(s)
+                given_names = StringParser(self._log).parse(s)
             else:
                 self._log(UnsupportedElement.issue(s))
         return (surname, given_names)
@@ -426,7 +425,7 @@ if TYPE_CHECKING:
     IssueCallback: TypeAlias = Callable[[FormatIssue], None]
 
 
-class BaseprintBuilder(Parser):
+class BaseprintBuilder(Checker):
     def __init__(self, issue_callback: IssueCallback):
         super().__init__(issue_callback)
         self.title: ElementContent | None = None
