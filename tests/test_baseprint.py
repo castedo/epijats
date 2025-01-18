@@ -4,8 +4,9 @@ from lxml.html import builder as E
 from lxml.html import tostring
 from lxml import etree
 
-import epijats.baseprint as _
+import epijats.parse as _
 from epijats import html
+from epijats.baseprint import Baseprint
 from epijats.reformat import baseprint_to_xml
 
 
@@ -16,7 +17,7 @@ GEN = html.HtmlGenerator()
 XML = etree.XMLParser(remove_comments=True, load_dtd=False)
 
 
-def assert_bdom_roundtrip(expect: _.Baseprint):
+def assert_bdom_roundtrip(expect: Baseprint):
     dump = etree.tostring(baseprint_to_xml(expect))
     root = etree.fromstring(dump, parser=XML)
     assert _.parse_baseprint_root(root) == expect
@@ -24,7 +25,7 @@ def assert_bdom_roundtrip(expect: _.Baseprint):
 
 def test_minimal():
     issues = []
-    got = _.BaseprintBuilder(issues.append).build(SNAPSHOT_CASE / "baseprint")
+    got = _.BaseprintParser(issues.append).parse(SNAPSHOT_CASE / "baseprint")
     assert not issues
     assert [_.Author("Wang")] == got.authors
     expect = _.Abstract([_.ElementContent('A simple test.', [])])
@@ -36,7 +37,7 @@ def test_roundtrip():
     with open(xml_path, "r") as f:
         expect = f.read()
     issues = []
-    bp = _.BaseprintBuilder(issues.append).build(xml_path)
+    bp = _.BaseprintParser(issues.append).parse(xml_path)
     assert not issues
     assert etree.tostring(baseprint_to_xml(bp)).decode() == expect
 

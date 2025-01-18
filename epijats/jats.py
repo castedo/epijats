@@ -3,7 +3,7 @@ from pathlib import Path
 from importlib import resources
 from typing import Any, Iterable
 
-from .baseprint import parse_baseprint
+from .parse import parse_baseprint
 from .html import HtmlGenerator, html_to_str
 from .webstract import Webstract, Source
 
