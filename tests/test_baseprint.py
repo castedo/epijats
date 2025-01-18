@@ -6,8 +6,8 @@ from lxml import etree
 
 import epijats.parse as _
 from epijats import html
-from epijats.baseprint import Baseprint
-from epijats.reformat import baseprint_to_xml
+from epijats.baseprint import Baseprint, List
+from epijats.reformat import baseprint_to_xml, sub_element
 
 
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
@@ -15,6 +15,11 @@ ROUNDTRIP_CASE = Path(__file__).parent / "cases" / "roundtrip"
 
 GEN = html.HtmlGenerator()
 XML = etree.XMLParser(remove_comments=True, load_dtd=False)
+NSMAP = {
+    'ali': "http://www.niso.org/schemas/ali/1.0",
+    'mml': "http://www.w3.org/1998/Math/MathML",
+    'xlink': "http://www.w3.org/1999/xlink",
+}
 
 
 def assert_bdom_roundtrip(expect: Baseprint):
@@ -58,7 +63,9 @@ def test_article_title():
 def xml2html(xml, tagmap = {}, hypertext=False):
     et = etree.fromstring(xml)
     issues = []
-    model = _.hypertext_model(tagmap) if hypertext else _.text_model(tagmap)
+    model = _.base_model(tagmap)
+    if hypertext:
+        model = _.hypertext(model)
     out = _.parse_text_content(issues.append, et, model)
     return (html.html_to_str(*GEN.content(out)), len(issues))
 
@@ -75,3 +82,45 @@ def test_ext_link_xml_parse():
     assert xml2html(xml) == ("Foobarbaz", 1)
     expect = 'Foo<a href="http://x.es">bar</a>baz'
     assert xml2html(xml, {'ext-link': 'a'}, True) == (expect, 0) 
+
+
+def wrap_xml(content: str):
+    attribs = ['xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items()]
+    attribs = " ".join(attribs)
+    return ("<root {}>\n{}</root>\n".format(attribs, content))
+
+
+def xml_to_root_str(e: etree._Element) -> str:
+    root = etree.Element("root", nsmap=NSMAP)
+    root.text = "\n"
+    root.append(e)
+    root.tail = "\n"
+    return etree.tostring(root).decode()
+
+
+def wrap_to_xml(root_wrap: str) -> etree._Element:
+    root = etree.fromstring(root_wrap, parser=XML)
+    assert root.tag == 'root'
+    return root[0]
+
+
+def test_list_rountrip():
+    dump = wrap_xml("""<list list-type="bullet">
+  <list-item>
+    <p>Def <italic>time</italic>.</p>
+  </list-item>
+  <list-item>
+    <p>Foo
+    bar.</p>
+  </list-item>
+  <list-item>
+    <p>Baz</p>
+  </list-item>
+</list>
+""")
+    issues = []
+    parser = _.ListParser(issues.append, _.base_model(_.FAIRLY_RICH_TEXT_TAGS))
+    subel = parser.parse_element(wrap_to_xml(dump))
+    assert isinstance(subel, List)
+    assert len(subel.items) == 3
+    assert xml_to_root_str(sub_element(subel)) == dump

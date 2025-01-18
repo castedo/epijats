@@ -12,7 +12,6 @@ def html_to_str(*ins: str | HtmlElement) -> str:
 
 
 class HtmlGenerator:
-
     def content(self, src: ElementContent) -> list[str | HtmlElement]:
         ret: list[str | HtmlElement] = [src.text]
         for sub in src:

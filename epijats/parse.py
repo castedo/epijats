@@ -7,7 +7,17 @@ from typing import Callable, Iterable, TYPE_CHECKING, Tuple, TypeAlias
 from lxml import etree
 from lxml.etree import QName
 
-from .baseprint import Abstract, Author, Baseprint, ElementContent, Hyperlink, Orcid, SubElement
+from .baseprint import (
+    Abstract,
+    Author,
+    Baseprint,
+    ElementContent,
+    Hyperlink,
+    List,
+    ListItem,
+    Orcid,
+    SubElement,
+)
 
 
 @dataclass(frozen=True)
@@ -86,10 +96,13 @@ class ContentParser(Checker):
             self._out.append(sub)
         return sub is not None
 
+    def parse_element(self, e: etree._Element) -> bool:
+        return any(self._sub_parse(e, p) for p in self._parsers)
+
     def parse_content(self, e: etree._Element) -> bool:
         self._out.append_text(e.text)
         for s in e:
-            if not any(self._sub_parse(s, p) for p in self._parsers):
+            if not self.parse_element(s):
                 self._log(UnsupportedElement.issue(s))
                 self.parse_content(s)
                 self._out.append_text(s.tail)
@@ -102,6 +115,11 @@ class ContentModel:
 
     def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser:
         return ContentParser(log, dest, self.elements)
+
+    def parse_element(
+        self, log: IssueCallback, e: etree._Element, dest: ElementContent
+    ) -> bool:
+        return self.parser(log, dest).parse_element(e)
 
     def parse_content(
         self, log: IssueCallback, e: etree._Element, dest: ElementContent
@@ -180,11 +198,49 @@ class ExtLinkModel(ElementModel):
         return ExtLinkParser(log, self.content_model)
 
 
+class ListParser(ElementParser):
+    def __init__(
+        self,
+        log: IssueCallback,
+        content_model: ContentModel,
+    ):
+        super().__init__(log)
+        self._content_model = content_model
+
+    def parse_element(self, e: etree._Element) -> SubElement | None:
+        if e.tag != 'list':
+            return None
+        list_type = e.attrib.get("list-type")
+        if list_type and list_type != "bullet":
+            cond = UnsupportedAttributeValue(e.tag, "list-type", list_type)
+            self._log(FormatIssue(cond, e.sourceline))
+            return None
+        self.check_no_attrib(e, ['list-type'])
+        # e.text silently ignored
+        ret = List([], e.tail or "")
+        for s in e:
+            if s.tag == 'list-item':
+                item = ListItem("", [])
+                self._content_model.parse_content(self._log, s, item)
+                ret.append(item)
+            else:
+                self._log(UnsupportedElement.issue(s))
+        return ret
+
+
+@dataclass
+class ListModel(ElementModel):
+    content_model: ContentModel
+
+    def parser(self, log: IssueCallback) -> ElementParser:
+        return ListParser(log, self.content_model)
+
+
 class TitleGroupParser(Checker):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
         self.out: ElementContent | None = None
-        model = hypertext_model(BARELY_RICH_TEXT_TAGS)
+        model = hypertext(base_model(BARELY_RICH_TEXT_TAGS))
         self._txt_parser = RichTextParseHelper(log, model)
 
     def parse(self, e: etree._Element) -> bool:
@@ -280,21 +336,31 @@ class AbstractParser(Checker):
 
     def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
-        content_model = hypertext_model(FAIRLY_RICH_TEXT_TAGS)
+        core_model = base_model(FAIRLY_RICH_TEXT_TAGS)
+        content_model = hypertext(core_model + ListModel(core_model))
         txt_parser = RichTextParseHelper(self._log, content_model)
         ps = []
         correction: ElementContent | None = None
+        text = e.text or ""
+        if text.strip():
+            correction = ElementContent(text, [])
+            text = ""
         for s in e:
             if s.tag == "p":
                 if correction:
                     ps.append(correction)
                     correction = None
                 ps.append(txt_parser.content(s))
+                text = s.tail or ""
+                if text.strip():
+                    correction = ElementContent(text, [])
+                    text = ""
             else:
                 self._log(UnsupportedElement.issue(s))
                 if not correction:
-                    correction = ElementContent("p", [])
-                content_model.parse_content(self._log, s, correction)
+                    correction = ElementContent(text, [])
+                    text = ""
+                content_model.parse_element(self._log, s, correction)
         if correction:
             ps.append(correction)
             correction = None
@@ -369,7 +435,7 @@ class BaseprintParser(Checker):
                 self._log(UnsupportedElement.issue(s))
 
     def _body(self, e: etree._Element) -> None:
-        model = hypertext_model(VERY_RICH_TEXT_TAGS)
+        model = hypertext(base_model(VERY_RICH_TEXT_TAGS))
         self.body = parse_text_content(self._log, e, model)
 
     def _article_meta(self, e: etree._Element) -> None:
@@ -396,8 +462,8 @@ BARELY_RICH_TEXT_TAGS = {
 
 FAIRLY_RICH_TEXT_TAGS = {
     **BARELY_RICH_TEXT_TAGS,
-    'list': 'ul',
     'monospace': 'tt',
+    'p': 'p',
 }
 
 VERY_RICH_TEXT_TAGS = {
@@ -407,12 +473,11 @@ VERY_RICH_TEXT_TAGS = {
 }
 
 
-def text_model(tagmap: dict[str, str]) -> ContentModel:
+def base_model(tagmap: dict[str, str]) -> ContentModel:
     return ContentModel([TextElementModel(tagmap)])
 
 
-def hypertext_model(tagmap: dict[str, str]) -> ContentModel:
-    non_hypertext_model = text_model(tagmap)
+def hypertext(non_hypertext_model: ContentModel) -> ContentModel:
     return ExtLinkModel(non_hypertext_model) + non_hypertext_model
 
 

@@ -3,17 +3,20 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lxml.builder import ElementMaker
+
 if TYPE_CHECKING:
     from lxml.etree import _Element
 
-from .baseprint import Abstract, Author, Baseprint, ElementContent, SubElement
+from .baseprint import Abstract, Author, Baseprint, ElementContent, List, SubElement
 
 
-E = ElementMaker(nsmap={
-    'ali': "http://www.niso.org/schemas/ali/1.0",
-    'mml': "http://www.w3.org/1998/Math/MathML",
-    'xlink': "http://www.w3.org/1999/xlink",
-})
+E = ElementMaker(
+    nsmap={
+        'ali': "http://www.niso.org/schemas/ali/1.0",
+        'mml': "http://www.w3.org/1998/Math/MathML",
+        'xlink': "http://www.w3.org/1999/xlink",
+    }
+)
 
 
 def EL(tag: str, level: int, *children: str | _Element, **attrib: str) -> _Element:
@@ -22,15 +25,15 @@ def EL(tag: str, level: int, *children: str | _Element, **attrib: str) -> _Eleme
     return E(tag, newline, *chunks, **attrib)
 
 
-class DataObjectElement:
+class DataElement:
     def __init__(self, tag: str, level: int = 0, **attrib: str):
         self.level = level
         self.tag = tag
         self.attrib = attrib
-        self.children: list[_Element | DataObjectElement] = []
+        self.children: list[_Element | DataElement] = []
 
-    def append_data(self, tag: str, **attrib: str) -> DataObjectElement:
-        ret = DataObjectElement(tag, self.level + 1, **attrib)
+    def append_data(self, tag: str, **attrib: str) -> DataElement:
+        ret = DataElement(tag, self.level + 1, **attrib)
         self.children.append(ret)
         return ret
 
@@ -40,12 +43,12 @@ class DataObjectElement:
     def build(self) -> _Element:
         elements = []
         for c in self.children:
-            elements.append(c.build() if isinstance(c, DataObjectElement) else c)
+            elements.append(c.build() if isinstance(c, DataElement) else c)
         return EL(self.tag, self.level, *elements, **self.attrib)
 
 
 def baseprint_to_xml(src: Baseprint) -> _Element:
-    article = DataObjectElement('article')
+    article = DataElement('article')
     front = article.append_data('front')
 
     am = front.append_data('article-meta')
@@ -59,18 +62,18 @@ def baseprint_to_xml(src: Baseprint) -> _Element:
     return ret
 
 
-def title_group(parent: DataObjectElement, title: ElementContent) -> None:
+def title_group(parent: DataElement, title: ElementContent) -> None:
     r = parent.append_data('title-group')
     r.append_content(E('article-title', *content(title)))
 
 
-def contrib_group(parent: DataObjectElement, src: list[Author]) -> None:
+def contrib_group(parent: DataElement, src: list[Author]) -> None:
     cg = parent.append_data('contrib-group')
     for a in src:
         author(cg, a)
 
 
-def author(parent: DataObjectElement, src: Author) -> None:
+def author(parent: DataElement, src: Author) -> None:
     c = parent.append_data('contrib', **{'contrib-type': 'author'})
     n = c.append_data('name')
     if src.surname:
@@ -88,7 +91,14 @@ def abstract(src: Abstract | None) -> _Element:
 
 
 def sub_element(src: SubElement) -> _Element:
-    ret = E(src.xml_tag, *content(src), **src.xml_attrib)
+    ret: _Element
+    if isinstance(src, List):
+        data = DataElement('list', 0, **{'list-type': 'bullet'})
+        for it in src.items:
+            data.append_content(sub_element(it))
+        ret = data.build()
+    else:
+        ret = E(src.xml_tag, *content(src), **src.xml_attrib)
     ret.tail = src.tail
     return ret
 

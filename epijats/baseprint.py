@@ -1,7 +1,98 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Iterable, Iterator
+
+
+@dataclass
+class ElementContent:
+    text: str
+    _subelements: list[SubElement]
+
+    def __init__(self, text: str, elements: Iterable[SubElement]):
+        self.text = text
+        self._subelements = list(elements)
+
+    def __iter__(self) -> Iterator[SubElement]:
+        return iter(self._subelements)
+
+    def append(self, e: SubElement) -> None:
+        self._subelements.append(e)
+
+    def extend(self, es: Iterator[SubElement]) -> None:
+        self._subelements.extend(es)
+
+    def append_text(self, s: str | None) -> None:
+        if s:
+            if self._subelements:
+                self._subelements[-1].tail += s
+            else:
+                self.text += s
+
+
+@dataclass
+class SubElement(ElementContent):
+    """Common JATS/HTML element"""
+
+    xml_tag: str
+    html_tag: str
+    tail: str
+
+    def __init__(
+        self,
+        text: str,
+        elements: Iterable[SubElement],
+        xml_tag: str,
+        html_tag: str,
+        tail: str,
+    ):
+        super().__init__(text, elements)
+        self.xml_tag = xml_tag
+        self.html_tag = html_tag
+        self.tail = tail
+
+    @property
+    def xml_attrib(self) -> dict[str, str]:
+        return {}
+
+    @property
+    def html_attrib(self) -> dict[str, str]:
+        return {}
+
+
+@dataclass
+class Hyperlink(SubElement):
+    href: str
+
+    def __init__(self, text: str, subs: Iterable[SubElement], tail: str, href: str):
+        super().__init__(text, subs, 'ext-link', 'a', tail)
+        self.href = href
+
+    @property
+    def xml_attrib(self) -> dict[str, str]:
+        return {"{http://www.w3.org/1999/xlink}href": self.href}
+
+    @property
+    def html_attrib(self) -> dict[str, str]:
+        return {'href': self.href}
+
+
+class ListItem(SubElement):
+    def __init__(self, text: str, elements: Iterable[SubElement]):
+        super().__init__(text, elements, 'list-item', 'li', "")
+
+
+class List(SubElement):
+    def __init__(self, items: Iterable[ListItem], tail: str):
+        super().__init__("", items, 'list', 'ul', tail)
+
+    @property
+    def items(self) -> list[ListItem]:
+        ret = []
+        for sub in iter(self):
+            assert isinstance(sub, ListItem)
+            ret.append(sub)
+        return ret
 
 
 @dataclass(frozen=True)
@@ -44,62 +135,6 @@ class Author:
     def __post_init__(self) -> None:
         if not self.surname and not self.given_names:
             raise ValueError()
-
-
-@dataclass
-class ElementContent:
-    text: str
-    _subelements: list[SubElement]
-
-    def __iter__(self) -> Iterator[SubElement]:
-        return iter(self._subelements)
-
-    def append(self, e: SubElement) -> None:
-        self._subelements.append(e)
-
-    def extend(self, es: Iterator[SubElement]) -> None:
-        self._subelements.extend(es)
-
-    def append_text(self, s: str | None) -> None:
-        if s:
-            if self._subelements:
-                self._subelements[-1].tail += s
-            else:
-                self.text += s
-
-
-@dataclass
-class SubElement(ElementContent):
-    """Common JATS/HTML element"""
-
-    xml_tag: str
-    html_tag: str
-    tail: str
-
-    @property
-    def xml_attrib(self) -> dict[str, str]:
-        return {}
-
-    @property
-    def html_attrib(self) -> dict[str, str]:
-        return {}
-
-
-@dataclass
-class Hyperlink(SubElement):
-    href: str
-
-    def __init__(self, text: str, subs: list[SubElement], tail: str, href: str):
-        super().__init__(text, subs, 'ext-link', 'a', tail)
-        self.href = href
-
-    @property
-    def xml_attrib(self) -> dict[str, str]:
-        return {"{http://www.w3.org/1999/xlink}href": self.href}
-
-    @property
-    def html_attrib(self) -> dict[str, str]:
-        return {'href': self.href}
 
 
 @dataclass
