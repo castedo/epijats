@@ -57,21 +57,19 @@ def test_article_title():
 def xml2html(xml, tagmap = {}):
     et = etree.fromstring(xml)
     issues = []
-    out = _.ElementContent("", [])
-    par = _.RichTextParser(issues.append, tagmap, out)
-    par.parse(et)
+    out = _.parse_text_content(issues.append, et, tagmap)
     return (html.html_to_str(*GEN.content(out)), len(issues))
 
 
 def test_simple_xml_parse():
     xml = """<r>Foo<c>bar</c>baz</r>"""
-    assert ("Foobarbaz", 1) == xml2html(xml)
-    assert ("Foo<d>bar</d>baz", 0) == xml2html(xml, {'c': 'd'})
+    assert xml2html(xml) == ("Foobarbaz", 1) 
+    assert  xml2html(xml, {'c': 'd'}) == ("Foo<d>bar</d>baz", 0)
 
 
 def test_ext_link_xml_parse():
     xml = ("""<r xmlns:xlink="http://www.w3.org/1999/xlink">"""
          + """Foo<ext-link xlink:href="http://x.es">bar</ext-link>baz</r>""")
-    assert ("Foobarbaz", 1) == xml2html(xml)
+    assert xml2html(xml) == ("Foobarbaz", 1)
     expect = 'Foo<a href="http://x.es">bar</a>baz'
-    assert (expect, 0) == xml2html(xml, {'ext-link': 'a'})
+    assert xml2html(xml, {'ext-link': 'a'}) == (expect, 0) 
