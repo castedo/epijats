@@ -44,20 +44,21 @@ def test_roundtrip():
 def test_minimal_html_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "baseprint")
     expect = tostring(E.TITLE('A test'))
-    assert expect == tostring(E.TITLE(*GEN.content(bp.title)))
+    assert tostring(E.TITLE(*GEN.content(bp.title))) == expect
 
 
 def test_article_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
     expect = b"""<title>Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a></title>"""
-    assert expect == tostring(E.TITLE(*GEN.content(bp.title)))
+    assert tostring(E.TITLE(*GEN.content(bp.title))) == expect
     assert_bdom_roundtrip(bp)
 
 
-def xml2html(xml, tagmap = {}):
+def xml2html(xml, tagmap = {}, hypertext=False):
     et = etree.fromstring(xml)
     issues = []
-    out = _.parse_text_content(issues.append, et, tagmap)
+    model = _.hypertext_model(tagmap) if hypertext else _.text_model(tagmap)
+    out = _.parse_text_content(issues.append, et, model)
     return (html.html_to_str(*GEN.content(out)), len(issues))
 
 
@@ -72,4 +73,4 @@ def test_ext_link_xml_parse():
          + """Foo<ext-link xlink:href="http://x.es">bar</ext-link>baz</r>""")
     assert xml2html(xml) == ("Foobarbaz", 1)
     expect = 'Foo<a href="http://x.es">bar</a>baz'
-    assert xml2html(xml, {'ext-link': 'a'}) == (expect, 0) 
+    assert xml2html(xml, {'ext-link': 'a'}, True) == (expect, 0) 

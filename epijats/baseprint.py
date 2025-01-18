@@ -18,7 +18,7 @@ def parse_baseprint(src: Path) -> Baseprint | None:
 
 
 def parse_baseprint_root(root: etree._Element) -> Baseprint | None:
-    b= BaseprintBuilder(ignore_issue)
+    b = BaseprintBuilder(ignore_issue)
     return b.build_from_root(root)
 
 
@@ -135,7 +135,6 @@ class Baseprint:
 
 BARELY_RICH_TEXT_TAGS = {
     'bold': 'strong',
-    'ext-link': 'a',
     'italic': 'em',
     'sub': 'sub',
     'sup': 'sup',
@@ -187,6 +186,9 @@ class ElementModel:
     def parser(self, log: IssueCallback) -> ElementParser:
         raise NotImplementedError
 
+    def __add__(self, other: ContentModel | ElementModel) -> ContentModel:
+        return ContentModel([self]) + other
+
 
 class ContentParser(Checker):
     def __init__(
@@ -212,32 +214,36 @@ class ContentParser(Checker):
         return True
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContentModel:
-    union : list[ElementModel]
+    elements: list[ElementModel]
 
     def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser:
-        return ContentParser(log, dest, self.union)
+        return ContentParser(log, dest, self.elements)
 
     def parse_content(
         self, log: IssueCallback, e: etree._Element, dest: ElementContent
     ) -> bool:
         return self.parser(log, dest).parse_content(e)
 
+    def __add__(self, other: ContentModel | ElementModel) -> ContentModel:
+        union = self.elements.copy()
+        if isinstance(other, ContentModel):
+            union.extend(other.elements)
+        elif isinstance(other, ElementModel):
+            union.append(other)
+        else:
+            raise TypeError()
+        return ContentModel(union)
 
-def text_model(model: TextElementModel) -> ContentModel:
-    inner_model = ContentModel([model])
-    if 'ext-link' in model.tagmap:
-        return hypertext_model(inner_model)
-    else:
-        return inner_model
+
+def text_model(tagmap: dict[str, str]) -> ContentModel:
+    return ContentModel([TextElementModel(tagmap)])
 
 
-def hypertext_model(non_hypertext_model: ContentModel) -> ContentModel:
-    union: list[ElementModel] = []
-    union = [ExtLinkModel(non_hypertext_model)]
-    union.extend(non_hypertext_model.union)
-    return ContentModel(union)
+def hypertext_model(tagmap: dict[str, str]) -> ContentModel:
+    non_hypertext_model = text_model(tagmap)
+    return ExtLinkModel(non_hypertext_model) + non_hypertext_model
 
 
 @dataclass
@@ -254,11 +260,9 @@ class RichTextParseHelper:
 
 
 def parse_text_content(
-        log: IssueCallback, e: etree._Element, tagmap: dict[str, str]
-    ) -> ElementContent:
-    model = text_model(TextElementModel(tagmap))
-    helper = RichTextParseHelper(log, model)
-    return helper.content(e)
+    log: IssueCallback, e: etree._Element, model: ContentModel
+) -> ElementContent:
+    return RichTextParseHelper(log, model).content(e)
 
 
 class TextElementModel(ElementModel):
@@ -324,11 +328,10 @@ class ExtLinkModel(ElementModel):
 
 class AbstractParser(Checker):
     out: Abstract | None = None
-    
+
     def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
-        inner_text = TextElementModel(FAIRLY_RICH_TEXT_TAGS)
-        content_model = text_model(inner_text)
+        content_model = hypertext_model(FAIRLY_RICH_TEXT_TAGS)
         txt_parser = RichTextParseHelper(self._log, content_model)
         ps = []
         correction: ElementContent | None = None
@@ -423,6 +426,29 @@ class AuthorGroupParser(Checker):
         return (surname, given_names)
 
 
+class TitleGroupParser(Checker):
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+        self.out: ElementContent | None = None
+        model = hypertext_model(BARELY_RICH_TEXT_TAGS)
+        self._txt_parser = RichTextParseHelper(log, model)
+
+    def parse(self, e: etree._Element) -> bool:
+        if e.tag != 'title-group':
+            return False
+        self.check_no_attrib(e)
+        for s in e:
+            if s.tag == 'article-title':
+                self.check_no_attrib(s)
+                if self.out:
+                    self._log(ExcessElement.issue(s))
+                else:
+                    self.out = self._txt_parser.content(s)
+            else:
+                self._log(UnsupportedElement.issue(s))
+        return True
+
+
 @dataclass(frozen=True)
 class FormatCondition:
     def __str__(self) -> str:
@@ -449,11 +475,11 @@ if TYPE_CHECKING:
 
 
 class BaseprintBuilder(Checker):
-    def __init__(self, issue_callback: IssueCallback):
-        super().__init__(issue_callback)
-        self.title: ElementContent | None = None
-        self.authors = AuthorGroupParser(issue_callback)
-        self.abstract = AbstractParser(issue_callback)
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+        self.title = TitleGroupParser(log)
+        self.authors = AuthorGroupParser(log)
+        self.abstract = AbstractParser(log)
 
     def build(self, path: Path) -> Baseprint | None:
         path = Path(path)
@@ -499,11 +525,11 @@ class BaseprintBuilder(Checker):
                 pass
             else:
                 self._log(UnsupportedElement.issue(s))
-        if self.title is None:
+        if self.title.out is None:
             cond = MissingElement('article-title', 'title-group')
             self._log(FormatIssue(cond, e.sourceline))
             return None
-        return Baseprint(self.title, self.authors.out, self.abstract.out)
+        return Baseprint(self.title.out, self.authors.out, self.abstract.out)
 
     def _front(self, e: etree._Element) -> None:
         self.check_no_attrib(e)
@@ -514,7 +540,8 @@ class BaseprintBuilder(Checker):
                 self._log(UnsupportedElement.issue(s))
 
     def _body(self, e: etree._Element) -> None:
-        self.body = parse_text_content(self._log, e, VERY_RICH_TEXT_TAGS)
+        model = hypertext_model(VERY_RICH_TEXT_TAGS)
+        self.body = parse_text_content(self._log, e, model)
 
     def _article_meta(self, e: etree._Element) -> None:
         self.check_no_attrib(e)
@@ -526,17 +553,7 @@ class BaseprintBuilder(Checker):
             elif s.tag == 'permissions':
                 pass
             elif s.tag == 'title-group':
-                self._title_group(s)
-            else:
-                self._log(UnsupportedElement.issue(s))
-
-    def _title_group(self, e: etree._Element) -> None:
-        inner_text = TextElementModel(BARELY_RICH_TEXT_TAGS)
-        title_parser = RichTextParseHelper(self._log, text_model(inner_text))
-        self.check_no_attrib(e)
-        for s in e:
-            if s.tag == 'article-title':
-                self.title = title_parser.content(s)
+                self.title.parse(s)
             else:
                 self._log(UnsupportedElement.issue(s))
 
