@@ -63,7 +63,7 @@ def test_article_title():
 def xml2html(xml, tagmap = {}, hypertext=False):
     et = etree.fromstring(xml)
     issues = []
-    model = _.base_model(tagmap)
+    model = _.TextElementModel(tagmap)
     if hypertext:
         model = _.hypertext(model)
     out = _.parse_text_content(issues.append, et, model)
@@ -86,8 +86,7 @@ def test_ext_link_xml_parse():
 
 def wrap_xml(content: str):
     attribs = ['xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items()]
-    attribs = " ".join(attribs)
-    return ("<root {}>\n{}</root>\n".format(attribs, content))
+    return ("<root {}>\n{}</root>\n".format(" ".join(attribs), content))
 
 
 def xml_to_root_str(e: etree._Element) -> str:
@@ -119,8 +118,8 @@ def test_list_rountrip():
 </list>
 """)
     issues = []
-    parser = _.ListParser(issues.append, _.base_model(_.FAIRLY_RICH_TEXT_TAGS))
-    subel = parser.parse_element(wrap_to_xml(dump))
+    model = _.ListModel(_.TextElementModel(_.FAIRLY_RICH_TEXT_TAGS))
+    subel = model.parse(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(subel.items) == 3
     assert xml_to_root_str(sub_element(subel)) == dump
