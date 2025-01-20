@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Callable, Iterable, TYPE_CHECKING, Tuple, TypeAlias
 
 from lxml import etree
-from lxml.etree import QName
 
+from . import condition as fc
 from .baseprint import (
     Abstract,
     Author,
@@ -21,29 +21,8 @@ from .baseprint import (
 )
 
 
-@dataclass(frozen=True)
-class FormatCondition:
-    def __str__(self) -> str:
-        return self.__doc__ or type(self).__name__
-
-
-@dataclass(frozen=True)
-class FormatIssue:
-    condition: FormatCondition
-    sourceline: int | None = None
-    info: str | None = None
-
-    def __str__(self) -> str:
-        msg = str(self.condition)
-        if self.sourceline:
-            msg += f" (line {self.sourceline})"
-        if self.info:
-            msg += f": {self.info}"
-        return msg
-
-
 if TYPE_CHECKING:
-    IssueCallback: TypeAlias = Callable[[FormatIssue], None]
+    IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
 
 
 def check_no_attrib(
@@ -51,7 +30,7 @@ def check_no_attrib(
 ) -> None:
     for k in e.attrib.keys():
         if k not in ignore:
-            log(UnsupportedAttribute.issue(e, k))
+            log(fc.UnsupportedAttribute.issue(e, k))
 
 
 def parse_string(log: IssueCallback, e: etree._Element) -> str:
@@ -60,7 +39,7 @@ def parse_string(log: IssueCallback, e: etree._Element) -> str:
     if e.text:
         frags.append(e.text)
     for s in e:
-        log(UnsupportedElement.issue(s))
+        log(fc.UnsupportedElement.issue(s))
         frags += parse_string(log, s)
         if s.tail:
             frags.append(s.tail)
@@ -74,6 +53,13 @@ class Validator(ABC):
     @property
     def log(self) -> IssueCallback:
         return self._log
+
+    def log_issue(self, 
+        condition: fc.FormatCondition,
+        sourceline: int | None = None,
+        info: str | None = None,
+    ) -> None:
+        return self._log(fc.FormatIssue(condition, sourceline, info))
 
     def check_no_attrib(self, e: etree._Element, ignore: list[str] = []) -> None:
         check_no_attrib(self.log, e, ignore)
@@ -93,7 +79,7 @@ class ContentParser(Parser):
         self.dest.append_text(e.text)
         for s in e:
             if not self.parse_element(s):
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
                 self.parse_content(s)
                 self.dest.append_text(s.tail)
         return True
@@ -209,17 +195,16 @@ class ExtLinkParser(ContentParser):
             return False
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
-            cond = UnsupportedAttributeValue(e.tag, "ext-link-type", link_type)
-            self.log(FormatIssue(cond, e.sourceline))
+            self.log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
             return False
         k_href = "{http://www.w3.org/1999/xlink}href"
         href = e.attrib.get(k_href)
         self.check_no_attrib(e, ["ext-link-type", k_href])
         ret = None
         if href is None:
-            self.log(MissingAttribute.issue(e, k_href))
+            self.log(fc.MissingAttribute.issue(e, k_href))
         elif self.dest.hyperlinked:
-            self.log(NestedHyperlinkElement.issue(e))
+            self.log(fc.NestedHyperlinkElement.issue(e))
         else:
             ret = Hyperlink("", [], e.tail or "", href)
             self.content_model.parse_content(self.log, e, ret)
@@ -236,8 +221,7 @@ class ListModel(ElementModel):
             return None
         list_type = e.attrib.get("list-type")
         if list_type and list_type != "bullet":
-            cond = UnsupportedAttributeValue(e.tag, "list-type", list_type)
-            log(FormatIssue(cond, e.sourceline))
+            log(fc.UnsupportedAttributeValue.issue(e, "list-type", list_type))
             return None
         check_no_attrib(log, e, ['list-type'])
         # e.text silently ignored
@@ -248,7 +232,7 @@ class ListModel(ElementModel):
                 self.content_model.parse_content(log, s, item)
                 ret.append(item)
             else:
-                log(UnsupportedElement.issue(s))
+                log(fc.UnsupportedElement.issue(s))
         return ret
 
 
@@ -267,11 +251,11 @@ class TitleGroupParser(Parser):
             if s.tag == 'article-title':
                 self.check_no_attrib(s)
                 if self.out:
-                    self._log(ExcessElement.issue(s))
+                    self.log(fc.ExcessElement.issue(s))
                 else:
                     self.out = self._txt_parser.content(s)
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
         return True
 
 
@@ -281,7 +265,7 @@ class AuthorGroupParser(Validator):
     def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
         if self.out:
-            self._log(ExcessElement.issue(e))
+            self.log(fc.ExcessElement.issue(e))
             return False
         self.out = []
         for s in e:
@@ -289,19 +273,19 @@ class AuthorGroupParser(Validator):
                 if a := self._contrib(s):
                     self.out.append(a)
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
         return True
 
     def _contrib(self, e: etree._Element) -> Author | None:
         for k, v in e.attrib.items():
             if k == 'contrib-type':
                 if v != "author":
-                    self._log(UnsupportedAttributeValue.issue(e, k, v))
+                    self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
                     return None
             elif k == 'id':
                 pass
             else:
-                self._log(UnsupportedAttribute.issue(e, k))
+                self.log(fc.UnsupportedAttribute.issue(e, k))
         surname = None
         given_names = None
         email = None
@@ -310,27 +294,27 @@ class AuthorGroupParser(Validator):
             if s.tag == 'name':
                 (surname, given_names) = self._name(s)
             elif s.tag == 'email':
-                email = parse_string(self._log, s)
+                email = parse_string(self.log, s)
             elif s.tag == 'contrib-id':
                 k = 'contrib-id-type'
                 if s.attrib.get(k) == 'orcid':
                     del s.attrib[k]
-                    url = parse_string(self._log, s)
+                    url = parse_string(self.log, s)
                     try:
                         orcid = Orcid.from_url(url)
                     except ValueError:
-                        self._log(FormatIssue(InvalidOrcid(), s.sourceline, url))
+                        self.log_issue(fc.InvalidOrcid(), s.sourceline, url)
                 elif k in s.attrib:
                     v = s.attrib[k]
-                    self._log(UnsupportedAttributeValue.issue(s, k, v))
+                    self.log(fc.UnsupportedAttributeValue.issue(s, k, v))
                 else:
-                    self._log(UnsupportedElement.issue(s))
+                    self.log(fc.UnsupportedElement.issue(s))
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
         if surname or given_names:
             return Author(surname, given_names, email, orcid)
         else:
-            self._log(FormatIssue(MissingName(), s.sourceline))
+            self.log_issue(fc.MissingName(), s.sourceline)
             return None
 
     def _name(self, e: etree._Element) -> Tuple[str | None, str | None]:
@@ -339,11 +323,11 @@ class AuthorGroupParser(Validator):
         given_names = None
         for s in e:
             if s.tag == 'surname':
-                surname = parse_string(self._log, s)
+                surname = parse_string(self.log, s)
             elif s.tag == 'given-names':
-                given_names = parse_string(self._log, s)
+                given_names = parse_string(self.log, s)
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
         return (surname, given_names)
 
 
@@ -354,7 +338,7 @@ class AbstractParser(Validator):
         self.check_no_attrib(e)
         core_model = TextElementModel(FAIRLY_RICH_TEXT_TAGS)
         content_model = hypertext(core_model + ListModel(core_model))
-        txt_parser = RichTextParseHelper(self._log, content_model)
+        txt_parser = RichTextParseHelper(self.log, content_model)
         ps = []
         correction: ElementContent | None = None
         text = e.text or ""
@@ -372,11 +356,11 @@ class AbstractParser(Validator):
                     correction = ElementContent(text, [])
                     text = ""
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
                 if not correction:
                     correction = ElementContent(text, [])
                     text = ""
-                content_model.parse_element(self._log, s, correction)
+                content_model.parse_element(self.log, s, correction)
         if correction:
             ps.append(correction)
             correction = None
@@ -403,31 +387,31 @@ class BaseprintParser(Validator):
         try:
             et = etree.parse(xml_path, parser=xml_parser)
         except etree.XMLSyntaxError as ex:
-            self._log(FormatIssue(XMLSyntaxError(), ex.lineno, ex.msg))
+            self.log_issue(fc.XMLSyntaxError(), ex.lineno, ex.msg)
             return None
         if bool(et.docinfo.doctype):
-            self._log(FormatIssue(DoctypeDeclaration()))
+            self.log_issue(fc.DoctypeDeclaration())
         if et.docinfo.encoding.lower() != "utf-8":
-            self._log(FormatIssue(EncodingNotUtf8(et.docinfo.encoding)))
+            self.log_issue(fc.EncodingNotUtf8(et.docinfo.encoding))
         return self.parse_from_root(et.getroot())
 
     def parse_from_root(self, root: etree._Element) -> Baseprint | None:
         for pi in root.xpath("//processing-instruction()"):
-            self._log(FormatIssue(ProcessingInstruction(pi.text), pi.sourceline))
+            self.log(fc.ProcessingInstruction.issue(pi))
             etree.strip_elements(root, pi.tag, with_tail=False)
         if root.tag == 'article':
             return self._article(root)
         else:
-            self._log(UnsupportedElement.issue(root))
+            self.log(fc.UnsupportedElement.issue(root))
             return None
 
     def _article(self, e: etree._Element) -> Baseprint | None:
         for k, v in e.attrib.items():
             if k == '{http://www.w3.org/XML/1998/namespace}lang':
                 if v != "en":
-                    self._log(UnsupportedAttributeValue.issue(e, k, v))
+                    self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
             else:
-                self._log(UnsupportedAttribute.issue(e, k))
+                self.log(fc.UnsupportedAttribute.issue(e, k))
         for s in e:
             if s.tag == "front":
                 self._front(s)
@@ -436,10 +420,10 @@ class BaseprintParser(Validator):
             elif s.tag == "back":
                 pass
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
         if self.title.out is None:
-            cond = MissingElement('article-title', 'title-group')
-            self._log(FormatIssue(cond, e.sourceline))
+            cond = fc.MissingElement('article-title', 'title-group')
+            self.log_issue(cond, e.sourceline)
             return None
         return Baseprint(self.title.out, self.authors.out, self.abstract.out)
 
@@ -449,7 +433,7 @@ class BaseprintParser(Validator):
             if s.tag == 'article-meta':
                 self._article_meta(s)
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
 
     def _body(self, e: etree._Element) -> None:
         self.check_no_attrib(e)
@@ -459,7 +443,7 @@ class BaseprintParser(Validator):
             model = ListModel(core_model) + core_model
             model.parse_content(self.log, e, self.body)
         else:
-            self._log(ExcessElement.issue(e))
+            self.log(fc.ExcessElement.issue(e))
 
     def _article_meta(self, e: etree._Element) -> None:
         self.check_no_attrib(e)
@@ -473,7 +457,7 @@ class BaseprintParser(Validator):
             elif s.tag == 'title-group':
                 self.title.parse_element(s)
             else:
-                self._log(UnsupportedElement.issue(s))
+                self.log(fc.UnsupportedElement.issue(s))
 
 
 SUBSUP_TAGS = {
@@ -545,135 +529,17 @@ def parse_text_content(
     return RichTextParseHelper(log, model).content(e)
 
 
-def ignore_issue(issue: FormatIssue) -> None:
+def ignore_issue(issue: fc.FormatIssue) -> None:
     pass
 
 
-def parse_baseprint(src: Path) -> Baseprint | None:
-    b = BaseprintParser(ignore_issue)
-    return b.parse(src)
+def parse_baseprint(
+    src: Path, log: IssueCallback = ignore_issue
+) -> Baseprint | None:
+    return BaseprintParser(log).parse(src)
 
 
-def parse_baseprint_root(root: etree._Element) -> Baseprint | None:
-    b = BaseprintParser(ignore_issue)
-    return b.parse_from_root(root)
-
-
-class XMLSyntaxError(FormatCondition):
-    """XML syntax error"""
-
-
-class DoctypeDeclaration(FormatCondition):
-    """XML DOCTYPE declaration"""
-
-
-@dataclass(frozen=True)
-class EncodingNotUtf8(FormatCondition):
-    encoding: str | None
-
-
-@dataclass(frozen=True)
-class ProcessingInstruction(FormatCondition):
-    """XML processing instruction"""
-
-    text: str
-
-    def __str__(self) -> str:
-        return "{} {}".format(self.__doc__, repr(self.text))
-
-
-@dataclass(frozen=True)
-class ElementFormatCondition(FormatCondition):
-    tag: str | bytes | bytearray | QName
-    parent: str | bytes | bytearray | QName | None
-
-    def __str__(self) -> str:
-        parent = "" if self.parent is None else repr(self.parent)
-        return "{} {}/{!r}".format(self.__doc__, parent, self.tag)
-
-    @classmethod
-    def issue(klas, e: etree._Element) -> FormatIssue:
-        parent = e.getparent()
-        ptag = None if parent is None else parent.tag
-        return FormatIssue(klas(e.tag, ptag), e.sourceline)
-
-
-@dataclass(frozen=True)
-class UnsupportedElement(ElementFormatCondition):
-    """Unsupported XML element"""
-
-
-@dataclass(frozen=True)
-class ExcessElement(ElementFormatCondition):
-    """Excess XML element"""
-
-
-@dataclass(frozen=True)
-class NestedHyperlinkElement(ElementFormatCondition):
-    """Nested Hyperlinking XML element"""
-
-
-class InvalidOrcid(FormatCondition):
-    """Invalid ORCID"""
-
-
-class MissingName(FormatCondition):
-    """Missing name"""
-
-
-@dataclass(frozen=True)
-class UnsupportedAttribute(FormatCondition):
-    """Unsupported XML attribute"""
-
-    tag: str | bytes | bytearray | QName
-    attribute: str
-
-    def __str__(self) -> str:
-        return f"{self.__doc__} {self.tag!r}@{self.attribute!r}"
-
-    @staticmethod
-    def issue(e: etree._Element, key: str) -> FormatIssue:
-        return FormatIssue(UnsupportedAttribute(e.tag, key), e.sourceline)
-
-
-@dataclass(frozen=True)
-class UnsupportedAttributeValue(FormatCondition):
-    """Unsupported XML attribute value"""
-
-    tag: str | bytes | bytearray | QName
-    attribute: str
-    value: str
-
-    def __str__(self) -> str:
-        msg = "{} {!r}@{!r} = {!r}"
-        return msg.format(self.__doc__, self.tag, self.attribute, self.value)
-
-    @staticmethod
-    def issue(e: etree._Element, key: str, value: str) -> FormatIssue:
-        return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), e.sourceline)
-
-
-@dataclass(frozen=True)
-class MissingElement(FormatCondition):
-    """Missing XML element"""
-
-    tag: str
-    parent: str
-
-    def __str__(self) -> str:
-        return "{} {!r}/{!r}".format(self.__doc__, self.parent, self.tag)
-
-
-@dataclass(frozen=True)
-class MissingAttribute(FormatCondition):
-    """Missing XML attribute"""
-
-    tag: str | bytes | bytearray | QName
-    attribute: str
-
-    def __str__(self) -> str:
-        return f"{self.__doc__} {self.tag!r}@{self.attribute!r}"
-
-    @staticmethod
-    def issue(e: etree._Element, key: str) -> FormatIssue:
-        return FormatIssue(MissingAttribute(e.tag, key), e.sourceline)
+def parse_baseprint_root(
+    root: etree._Element, log: IssueCallback = ignore_issue
+) -> Baseprint | None:
+    return BaseprintParser(log).parse_from_root(root)
