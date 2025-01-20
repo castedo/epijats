@@ -19,7 +19,15 @@ class HtmlGenerator:
         return ret
 
     def sub_element(self, src: SubElement) -> HtmlElement:
-        ret = E(src.html_tag, *self.content(src), **src.html_attrib)
+        if src.data_model:
+            ret = E(src.html_tag, **src.html_attrib)
+            ret.text = "\n"
+            for it in src:
+                sub = self.sub_element(it)
+                sub.tail = "\n"
+                ret.append(sub)
+        else:
+            ret = E(src.html_tag, *self.content(src), **src.html_attrib)
         ret.tail = src.tail
         return ret
 

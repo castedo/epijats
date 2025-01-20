@@ -119,16 +119,16 @@ def wrap_to_xml(root_wrap: str) -> etree._Element:
 def test_list_rountrip():
     dump = wrap_xml("""
 <list list-type="bullet">
-  <list-item>
-    <p>Def <italic>time</italic>.</p>
-  </list-item>
-  <list-item>
-    <p>Foo
-    bar.</p>
-  </list-item>
-  <list-item>
-    <p>Baz</p>
-  </list-item>
+<list-item>
+<p>Def <italic>time</italic>.</p>
+</list-item>
+<list-item>
+<p>Foo
+bar.</p>
+</list-item>
+<list-item>
+<p>Baz</p>
+</list-item>
 </list>
 """)
     issues = []

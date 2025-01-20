@@ -12,7 +12,8 @@ class ElementContent:
     def __init__(self, text: str, elements: Iterable[SubElement]):
         self.text = text
         self._subelements = list(elements)
-        self.hyperlinked: bool = False
+        self.hyperlinked = False
+        self.data_model = False
 
     def __iter__(self) -> Iterator[SubElement]:
         return iter(self._subelements)
@@ -82,11 +83,17 @@ class Hyperlink(SubElement):
 class ListItem(SubElement):
     def __init__(self, text: str, elements: Iterable[SubElement]):
         super().__init__(text, elements, 'list-item', 'li', "")
+        self.data_model = True
 
 
 class List(SubElement):
     def __init__(self, items: Iterable[ListItem], tail: str):
         super().__init__("", items, 'list', 'ul', tail)
+        self.data_model = True
+
+    @property
+    def xml_attrib(self) -> dict[str, str]:
+        return {"list-type": "bullet"}
 
     @property
     def items(self) -> list[ListItem]:

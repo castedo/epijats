@@ -7,7 +7,7 @@ from lxml.builder import ElementMaker
 if TYPE_CHECKING:
     from lxml.etree import _Element
 
-from .baseprint import Abstract, Author, Baseprint, ElementContent, List, SubElement
+from .baseprint import Abstract, Author, Baseprint, ElementContent, SubElement
 
 
 E = ElementMaker(
@@ -92,11 +92,13 @@ def abstract(src: Abstract | None) -> _Element:
 
 def sub_element(src: SubElement) -> _Element:
     ret: _Element
-    if isinstance(src, List):
-        data = DataElement('list', 0, **{'list-type': 'bullet'})
-        for it in src.items:
-            data.append_content(sub_element(it))
-        ret = data.build()
+    if src.data_model:
+        ret = E(src.xml_tag, **src.xml_attrib)
+        ret.text = "\n"
+        for it in src:
+            sub = sub_element(it)
+            sub.tail = "\n"
+            ret.append(sub)
     else:
         ret = E(src.xml_tag, *content(src), **src.xml_attrib)
     ret.tail = src.tail
