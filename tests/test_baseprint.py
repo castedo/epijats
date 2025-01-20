@@ -22,6 +22,11 @@ NSMAP = {
 }
 
 
+def wrap_xml(content: str):
+    attribs = ['xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items()]
+    return ("<root {}>{}</root>\n".format(" ".join(attribs), content))
+
+
 def assert_bdom_roundtrip(expect: Baseprint):
     dump = etree.tostring(baseprint_to_xml(expect))
     root = etree.fromstring(dump, parser=XML)
@@ -63,9 +68,10 @@ def test_article_title():
 def xml2html(xml, tagmap = {}, hypertext=False):
     et = etree.fromstring(xml)
     issues = []
-    model = _.TextElementModel(tagmap)
+    model = _.UnionModel([])
+    model += _.TextElementModel(tagmap, model)
     if hypertext:
-        model = _.hypertext(model)
+        model += _.ExtLinkModel(model)
     out = _.parse_text_content(issues.append, et, model)
     return (html.html_to_str(*GEN.content(out)), len(issues))
 
@@ -81,12 +87,19 @@ def test_ext_link_xml_parse():
          + """Foo<ext-link xlink:href="http://x.es">bar</ext-link>baz</r>""")
     assert xml2html(xml) == ("Foobarbaz", 1)
     expect = 'Foo<a href="http://x.es">bar</a>baz'
-    assert xml2html(xml, {'ext-link': 'a'}, True) == (expect, 0) 
+    assert xml2html(xml, {}, True) == (expect, 0) 
 
 
-def wrap_xml(content: str):
-    attribs = ['xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items()]
-    return ("<root {}>\n{}</root>\n".format(" ".join(attribs), content))
+def test_nested_ext_link_xml_parse():
+    xml = wrap_xml('Foo<ext-link xlink:href="https://x.es">bar<b>baz</b>boo</ext-link>foo')
+    assert xml2html(xml, {'b': 'b'}, True) == ('Foo<a href="https://x.es">bar<b>baz</b>boo</a>foo', 0)
+    xml = wrap_xml('Foo<b><ext-link xlink:href="https://x.es">bar</ext-link>baz</b>boo')
+    assert xml2html(xml, {'b': 'b'}, True) == ('Foo<b><a href="https://x.es">bar</a>baz</b>boo', 0)
+    xml = wrap_xml('Foo<ext-link xlink:href="https://x.es">'
+        + '<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
+    assert xml2html(xml, {}, True) == ('Foo<a href="https://x.es">barbaz</a>boo', 2)
+    xml = wrap_xml('<ext-link>Foo<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
+    assert xml2html(xml, {}, True) == ('Foo<a href="https://y.es">bar</a>bazboo', 2)
 
 
 def xml_to_root_str(e: etree._Element) -> str:
@@ -104,7 +117,8 @@ def wrap_to_xml(root_wrap: str) -> etree._Element:
 
 
 def test_list_rountrip():
-    dump = wrap_xml("""<list list-type="bullet">
+    dump = wrap_xml("""
+<list list-type="bullet">
   <list-item>
     <p>Def <italic>time</italic>.</p>
   </list-item>
