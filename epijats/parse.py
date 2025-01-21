@@ -99,7 +99,7 @@ class Model(ABC):
     ) -> bool:
         return self.parser(log, dest).parse_content(e)
 
-    def __add__(self, other: Model) -> Model:
+    def __or__(self, other: Model) -> Model:
         union = self._models.copy() if isinstance(self, UnionModel) else [self]
         if isinstance(other, UnionModel):
             union.extend(other._models)
@@ -117,7 +117,7 @@ class UnionModel(Model):
     def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser:
         return UnionParser(log, dest, self._models)
 
-    def __iadd__(self, other: Model) -> UnionModel:
+    def __ior__(self, other: Model) -> UnionModel:
         if isinstance(other, UnionModel):
             self._models.extend(other._models)
         elif isinstance(other, Model):
@@ -153,8 +153,6 @@ class ElementParser(ContentParser):
 
     def parse_element(self, e: etree._Element) -> bool:
         if out := self.model.parse(self.log, e):
-            if self.dest.hyperlinked:
-                out.hyperlinked = True
             self.dest.append(out)
         return out is not None
 
@@ -178,38 +176,26 @@ class TextElementModel(ElementModel):
 
 
 @dataclass
-class ExtLinkModel(Model):
+class ExtLinkModel(ElementModel):
     content_model: Model
 
-    def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser:
-        return ExtLinkParser(log, dest, self.content_model)
-
-
-class ExtLinkParser(ContentParser):
-    def __init__(self, log: IssueCallback, dest: ElementContent, content_model: Model):
-        super().__init__(log, dest)
-        self.content_model = content_model
-
-    def parse_element(self, e: etree._Element) -> bool:
+    def parse(self, log: IssueCallback, e: etree._Element) -> SubElement | None:
         if e.tag != 'ext-link':
-            return False
+            return None
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
-            self.log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
-            return False
+            log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
+            return None
         k_href = "{http://www.w3.org/1999/xlink}href"
         href = e.attrib.get(k_href)
-        self.check_no_attrib(e, ["ext-link-type", k_href])
-        ret = None
+        check_no_attrib(log, e, ["ext-link-type", k_href])
         if href is None:
-            self.log(fc.MissingAttribute.issue(e, k_href))
-        elif self.dest.hyperlinked:
-            self.log(fc.NestedHyperlinkElement.issue(e))
+            log(fc.MissingAttribute.issue(e, k_href))
+            return None
         else:
             ret = Hyperlink("", [], e.tail or "", href)
-            self.content_model.parse_content(self.log, e, ret)
-            self.dest.append(ret)
-        return ret is not None
+            self.content_model.parse_content(log, e, ret)
+            return ret
 
 
 @dataclass
@@ -240,8 +226,7 @@ class TitleGroupParser(Parser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
         self.out: ElementContent | None = None
-        model = hypertext(TextElementModel(BARELY_RICH_TEXT_TAGS))
-        self._txt_parser = RichTextParseHelper(log, model)
+        self._txt_parser = RichTextParseHelper(log, base_hypertext_model())
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'title-group':
@@ -337,7 +322,7 @@ class AbstractParser(Validator):
     def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
         core_model = TextElementModel(FAIRLY_RICH_TEXT_TAGS)
-        content_model = hypertext(core_model + ListModel(core_model))
+        content_model = hypertext(core_model | ListModel(core_model))
         txt_parser = RichTextParseHelper(self.log, content_model)
         ps = []
         correction: ElementContent | None = None
@@ -440,7 +425,7 @@ class BaseprintParser(Validator):
         if self.body is None:
             self.body = ElementContent("", [])
             core_model = hypertext(TextElementModel(VERY_RICH_TEXT_TAGS))
-            model = ListModel(core_model) + core_model
+            model = ListModel(core_model) | core_model
             model.parse_content(self.log, e, self.body)
         else:
             self.log(fc.ExcessElement.issue(e))
@@ -489,24 +474,27 @@ VERY_RICH_TEXT_TAGS = {
     'preformat': 'pre',
 }
 
-def emphasized_text_model() -> Model:
-    """Emphasis Mix Elements (subset of JATS def).
 
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/emphasized-text.html
-    """
-    union = UnionModel()
-    tags = {
-        **EMPHASIS_TAGS,
-        **SUBSUP_TAGS,
+def base_hypertext_model() -> Model:
+    """Base hypertext model"""
+    base_element_tags = {
+        'bold': 'strong',
+        'italic': 'em',
+        'monospace': 'tt',
+        'sub': 'sub',
+        'sup': 'sup',
     }
-    union += TextElementModel(tags, union)
-    return union
+    base_markup = TextElementModel(base_element_tags)
+    hypertext = UnionModel()
+    hypertext |= ExtLinkModel(base_markup)
+    hypertext |= TextElementModel(base_element_tags, hypertext)
+    return hypertext
 
 
 def hypertext(non_hypertext_model: Model) -> Model:
     ret = UnionModel()
-    ret += ExtLinkModel(ret)
-    ret += non_hypertext_model
+    ret |= ExtLinkModel(ret)
+    ret |= non_hypertext_model
     return ret
 
 

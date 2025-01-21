@@ -12,7 +12,6 @@ class ElementContent:
     def __init__(self, text: str, elements: Iterable[SubElement]):
         self.text = text
         self._subelements = list(elements)
-        self.hyperlinked = False
         self.data_model = False
 
     def __iter__(self) -> Iterator[SubElement]:
@@ -69,7 +68,6 @@ class Hyperlink(SubElement):
     def __init__(self, text: str, subs: Iterable[SubElement], tail: str, href: str):
         super().__init__(text, subs, 'ext-link', 'a', tail)
         self.href = href
-        self.hyperlinked = True
 
     @property
     def xml_attrib(self) -> dict[str, str]:

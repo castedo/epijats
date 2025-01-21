@@ -79,11 +79,6 @@ class ExcessElement(ElementFormatCondition):
     """Excess XML element"""
 
 
-@dataclass(frozen=True)
-class NestedHyperlinkElement(ElementFormatCondition):
-    """Nested Hyperlinking XML element"""
-
-
 class InvalidOrcid(FormatCondition):
     """Invalid ORCID"""
 
