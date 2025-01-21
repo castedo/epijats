@@ -222,10 +222,25 @@ class ListModel(ElementModel):
         return ret
 
 
-class TitleGroupParser(Parser):
+class BaseprintBuilder(Validator):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
-        self.out: ElementContent | None = None
+        self.title: ElementContent | None = None
+        self.authors: list[Author] = []
+        self.abstract: Abstract | None = None
+        self.body : ElementContent | None = None
+
+    def build(self) -> Baseprint | None:
+        if self.title is None:
+            self.log_issue(fc.MissingElement('article-title', 'title-group'))
+            return None
+        return Baseprint(self.title, self.authors, self.abstract)
+
+
+class TitleGroupParser(Parser):
+    def __init__(self, log: IssueCallback, dest: BaseprintBuilder):
+        super().__init__(log)
+        self.dest = dest
         self._txt_parser = RichTextParseHelper(log, base_hypertext_model())
 
     def parse_element(self, e: etree._Element) -> bool:
@@ -235,28 +250,29 @@ class TitleGroupParser(Parser):
         for s in e:
             if s.tag == 'article-title':
                 self.check_no_attrib(s)
-                if self.out:
+                if self.dest.title:
                     self.log(fc.ExcessElement.issue(s))
                 else:
-                    self.out = self._txt_parser.content(s)
+                    self.dest.title = self._txt_parser.content(s)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
         return True
 
 
 class AuthorGroupParser(Validator):
-    out: list[Author] = []
+    def __init__(self, log: IssueCallback, dest: BaseprintBuilder):
+        super().__init__(log)
+        self.dest = dest
 
     def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
-        if self.out:
+        if self.dest.authors:
             self.log(fc.ExcessElement.issue(e))
             return False
-        self.out = []
         for s in e:
             if s.tag == 'contrib':
                 if a := self._contrib(s):
-                    self.out.append(a)
+                    self.dest.authors.append(a)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
         return True
@@ -317,12 +333,14 @@ class AuthorGroupParser(Validator):
 
 
 class AbstractParser(Validator):
-    out: Abstract | None = None
+    def __init__(self, log: IssueCallback, dest: BaseprintBuilder, p_elements: Model):
+        super().__init__(log)
+        self.dest = dest
+        self.p_elements = p_elements
 
     def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
-        content_model = p_elements_model()
-        txt_parser = RichTextParseHelper(self.log, content_model)
+        txt_parser = RichTextParseHelper(self.log, self.p_elements)
         ps = []
         correction: ElementContent | None = None
         text = e.text or ""
@@ -344,22 +362,87 @@ class AbstractParser(Validator):
                 if not correction:
                     correction = ElementContent(text, [])
                     text = ""
-                content_model.parse_element(self.log, s, correction)
+                self.p_elements.parse_element(self.log, s, correction)
         if correction:
             ps.append(correction)
             correction = None
         if ps:
-            self.out = Abstract(ps)
-        return bool(self.out)
+            self.dest.abstract = Abstract(ps)
+        return bool(ps)
+
+
+class ArticleParser(Parser):
+    def __init__(self, log: IssueCallback, dest: BaseprintBuilder):
+        super().__init__(log)
+        self.dest = dest
+
+        p_elements = p_elements_model()
+        p = TextElementModel({'p': 'p'}, p_elements) 
+        model = UnionModel()
+        model |= p
+        model |= TextElementModel({'sec': 'div'}, model)
+        self.body_model = model
+
+        self.title = TitleGroupParser(log, dest)
+        self.authors = AuthorGroupParser(log, dest)
+        self.abstract = AbstractParser(log, dest, p_elements)
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'article':
+            return False
+        for k, v in e.attrib.items():
+            if k == '{http://www.w3.org/XML/1998/namespace}lang':
+                if v != "en":
+                    self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
+            else:
+                self.log(fc.UnsupportedAttribute.issue(e, k))
+        for s in e:
+            if s.tag == "front":
+                self._front(s)
+            elif s.tag == "body":
+                self._body(s)
+            elif s.tag == "back":
+                pass
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
+        return True
+
+    def _front(self, e: etree._Element) -> None:
+        self.check_no_attrib(e)
+        for s in e:
+            if s.tag == 'article-meta':
+                self._article_meta(s)
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
+
+    def _body(self, e: etree._Element) -> None:
+        self.check_no_attrib(e)
+        if self.dest.body is None:
+            self.dest.body = ElementContent("", [])
+            self.body_model.parse_content(self.log, e, self.dest.body)
+        else:
+            self.log(fc.ExcessElement.issue(e))
+
+    def _article_meta(self, e: etree._Element) -> None:
+        self.check_no_attrib(e)
+        for s in e:
+            if s.tag == 'abstract':
+                self.abstract.parse(s)
+            elif s.tag == 'contrib-group':
+                self.authors.parse(s)
+            elif s.tag == 'permissions':
+                pass
+            elif s.tag == 'title-group':
+                self.title.parse_element(s)
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
 
 
 class BaseprintParser(Validator):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
-        self.title = TitleGroupParser(log)
-        self.authors = AuthorGroupParser(log)
-        self.abstract = AbstractParser(log)
-        self.body: ElementContent | None = None
+        self.out = BaseprintBuilder(log)
+        self.article = ArticleParser(log, self.out)
 
     def parse(self, path: Path) -> Baseprint | None:
         path = Path(path)
@@ -380,71 +463,14 @@ class BaseprintParser(Validator):
         return self.parse_from_root(et.getroot())
 
     def parse_from_root(self, root: etree._Element) -> Baseprint | None:
+        if root.tag != 'article':
+            self.log(fc.UnsupportedElement.issue(root))
+            return None
         for pi in root.xpath("//processing-instruction()"):
             self.log(fc.ProcessingInstruction.issue(pi))
             etree.strip_elements(root, pi.tag, with_tail=False)
-        if root.tag == 'article':
-            return self._article(root)
-        else:
-            self.log(fc.UnsupportedElement.issue(root))
-            return None
-
-    def _article(self, e: etree._Element) -> Baseprint | None:
-        for k, v in e.attrib.items():
-            if k == '{http://www.w3.org/XML/1998/namespace}lang':
-                if v != "en":
-                    self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
-            else:
-                self.log(fc.UnsupportedAttribute.issue(e, k))
-        for s in e:
-            if s.tag == "front":
-                self._front(s)
-            elif s.tag == "body":
-                self._body(s)
-            elif s.tag == "back":
-                pass
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
-        if self.title.out is None:
-            cond = fc.MissingElement('article-title', 'title-group')
-            self.log_issue(cond, e.sourceline)
-            return None
-        return Baseprint(self.title.out, self.authors.out, self.abstract.out)
-
-    def _front(self, e: etree._Element) -> None:
-        self.check_no_attrib(e)
-        for s in e:
-            if s.tag == 'article-meta':
-                self._article_meta(s)
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
-
-    def _body(self, e: etree._Element) -> None:
-        self.check_no_attrib(e)
-        if self.body is None:
-            self.body = ElementContent("", [])
-            p_elements = p_elements_model()
-            p = TextElementModel({'p': 'p'}, p_elements) 
-            model = UnionModel()
-            model |= p
-            model |= TextElementModel({'sec': 'div'}, model)
-            model.parse_content(self.log, e, self.body)
-        else:
-            self.log(fc.ExcessElement.issue(e))
-
-    def _article_meta(self, e: etree._Element) -> None:
-        self.check_no_attrib(e)
-        for s in e:
-            if s.tag == 'abstract':
-                self.abstract.parse(s)
-            elif s.tag == 'contrib-group':
-                self.authors.parse(s)
-            elif s.tag == 'permissions':
-                pass
-            elif s.tag == 'title-group':
-                self.title.parse_element(s)
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
+        self.article.parse_element(root)
+        return self.out.build()
 
 
 def formatted_text_model(sub_model: Model | None = None) -> Model:
