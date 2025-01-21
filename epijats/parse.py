@@ -321,8 +321,7 @@ class AbstractParser(Validator):
 
     def parse(self, e: etree._Element) -> bool:
         self.check_no_attrib(e)
-        core_model = TextElementModel(FAIRLY_RICH_TEXT_TAGS)
-        content_model = hypertext(core_model | ListModel(core_model))
+        content_model = p_elements_model()
         txt_parser = RichTextParseHelper(self.log, content_model)
         ps = []
         correction: ElementContent | None = None
@@ -424,8 +423,11 @@ class BaseprintParser(Validator):
         self.check_no_attrib(e)
         if self.body is None:
             self.body = ElementContent("", [])
-            core_model = hypertext(TextElementModel(VERY_RICH_TEXT_TAGS))
-            model = ListModel(core_model) | core_model
+            p_elements = p_elements_model()
+            p = TextElementModel({'p': 'p'}, p_elements) 
+            model = UnionModel()
+            model |= p
+            model |= TextElementModel({'sec': 'div'}, model)
             model.parse_content(self.log, e, self.body)
         else:
             self.log(fc.ExcessElement.issue(e))
@@ -445,57 +447,49 @@ class BaseprintParser(Validator):
                 self.log(fc.UnsupportedElement.issue(s))
 
 
-SUBSUP_TAGS = {
-    'sub': 'sub',
-    'sup': 'sup',
-}
-
-EMPHASIS_TAGS = {
-    'bold': 'strong',
-    'italic': 'em',
-    'monospace': 'tt',
-}
-# subset of JATS emphasis class elements
-# https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/emphasis.class.html
-
-BARELY_RICH_TEXT_TAGS = {
-    **SUBSUP_TAGS,
-    **EMPHASIS_TAGS,
-}
-
-FAIRLY_RICH_TEXT_TAGS = {
-    **BARELY_RICH_TEXT_TAGS,
-    'p': 'p',
-}
-
-VERY_RICH_TEXT_TAGS = {
-    **FAIRLY_RICH_TEXT_TAGS,
-    'code': 'code',
-    'preformat': 'pre',
-}
-
-
-def base_hypertext_model() -> Model:
-    """Base hypertext model"""
-    base_element_tags = {
+def formatted_text_model(sub_model: Model | None = None) -> Model:
+    formatted_text_tags = {
         'bold': 'strong',
         'italic': 'em',
         'monospace': 'tt',
         'sub': 'sub',
         'sup': 'sup',
     }
-    base_markup = TextElementModel(base_element_tags)
+    content_model = True if sub_model is None else sub_model
+    return TextElementModel(formatted_text_tags, content_model)
+
+
+def base_hypertext_model() -> Model:
+    """Base hypertext model"""
     hypertext = UnionModel()
-    hypertext |= ExtLinkModel(base_markup)
-    hypertext |= TextElementModel(base_element_tags, hypertext)
+    hypertext |= ExtLinkModel(formatted_text_model())
+    hypertext |= formatted_text_model(hypertext)
     return hypertext
 
 
-def hypertext(non_hypertext_model: Model) -> Model:
-    ret = UnionModel()
-    ret |= ExtLinkModel(ret)
-    ret |= non_hypertext_model
-    return ret
+def p_elements_model() -> Model:
+    """Paragraph Elements
+
+    Similar to JATS def, but using more restrictive base hypertext model.
+    """
+    p_elements = UnionModel()
+
+    # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
+    # %list-item-model
+    list_item_content = UnionModel()
+    list_item_content |= TextElementModel({'p': 'p'}, p_elements)
+    list_item_content |= ListModel(list_item_content)
+
+    hypertext = base_hypertext_model() #TODO: add xref as hyperlink element
+    #NOTE: open issue whether xref should be allowed in preformatted
+    preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
+
+    # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
+    # %p-elements
+    p_elements |= hypertext
+    p_elements |= preformatted
+    p_elements |= ListModel(list_item_content)
+    return p_elements
 
 
 @dataclass

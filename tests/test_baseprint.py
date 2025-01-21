@@ -129,7 +129,7 @@ bar.</p>
 </list>
 """)
     issues = []
-    model = _.ListModel(_.TextElementModel(_.FAIRLY_RICH_TEXT_TAGS))
+    model = _.ListModel(_.TextElementModel({'p': 'p'}, _.base_hypertext_model()))
     subel = model.parse(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(subel.items) == 3
