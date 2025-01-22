@@ -3,7 +3,7 @@ from __future__ import annotations
 from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
-from .baseprint import Abstract, ElementContent, SubElement
+from .baseprint import Abstract, ElementContent, ProtoSection, SubElement
 
 
 def html_to_str(*ins: str | HtmlElement) -> str:
@@ -32,9 +32,12 @@ class HtmlGenerator:
         return ret
 
     def abstract(self, src: Abstract) -> list[str | HtmlElement]:
+        return self._proto_section_content(src)
+
+    def _proto_section_content(self, src: ProtoSection) -> list[str | HtmlElement]:
         ret: list[str | HtmlElement] = []
-        for p in src.paragraphs:
+        for p in src.presection:
             if ret:
                 ret.append("\n")
-            ret.append(E('p', *self.content(p)))
+            ret.append(self.sub_element(p))
         return ret

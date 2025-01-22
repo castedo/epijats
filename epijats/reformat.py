@@ -7,7 +7,7 @@ from lxml.builder import ElementMaker
 if TYPE_CHECKING:
     from lxml.etree import _Element
 
-from .baseprint import Abstract, Author, Baseprint, ElementContent, SubElement
+from . import baseprint
 
 
 E = ElementMaker(
@@ -47,7 +47,7 @@ class DataElement:
         return EL(self.tag, self.level, *elements, **self.attrib)
 
 
-def baseprint_to_xml(src: Baseprint) -> _Element:
+def baseprint_to_xml(src: baseprint.Baseprint) -> _Element:
     article = DataElement('article')
     front = article.append_data('front')
 
@@ -62,18 +62,18 @@ def baseprint_to_xml(src: Baseprint) -> _Element:
     return ret
 
 
-def title_group(parent: DataElement, title: ElementContent) -> None:
+def title_group(parent: DataElement, title: baseprint.ElementContent) -> None:
     r = parent.append_data('title-group')
     r.append_content(E('article-title', *content(title)))
 
 
-def contrib_group(parent: DataElement, src: list[Author]) -> None:
+def contrib_group(parent: DataElement, src: list[baseprint.Author]) -> None:
     cg = parent.append_data('contrib-group')
     for a in src:
         author(cg, a)
 
 
-def author(parent: DataElement, src: Author) -> None:
+def author(parent: DataElement, src: baseprint.Author) -> None:
     c = parent.append_data('contrib', **{'contrib-type': 'author'})
     n = c.append_data('name')
     if src.surname:
@@ -82,15 +82,36 @@ def author(parent: DataElement, src: Author) -> None:
         n.append_content(E('given-names', src.given_names))
 
 
-def abstract(src: Abstract | None) -> _Element:
+def abstract(src: baseprint.Abstract | None) -> _Element:
+    if src is None:
+        return E('abstract')
     ret = E('abstract')
-    if src is not None:
-        for p in src.paragraphs:
-            ret.append(E('p', *content(p)))
+    _proto_section_content(src, ret)
+    ret.tail = "\n"
     return ret
 
 
-def sub_element(src: SubElement) -> _Element:
+def section(src: baseprint.Section) -> _Element:
+    ret = E('sec')
+    #TODO: title
+    _proto_section_content(src, ret)
+    ret.tail = "\n"
+    return ret
+
+
+def _proto_section_content(src: baseprint.ProtoSection, dest: _Element) -> None:
+    dest.text = "\n"
+    for s in src.presection:
+        sub = sub_element(s)
+        sub.tail = "\n"
+        dest.append(sub)
+    for ss in src.subsections:
+        sub = section(ss)
+        sub.tail = "\n"
+        dest.append(sub)
+
+
+def sub_element(src: baseprint.SubElement) -> _Element:
     ret: _Element
     if src.data_model:
         ret = E(src.xml_tag, **src.xml_attrib)
@@ -105,7 +126,7 @@ def sub_element(src: SubElement) -> _Element:
     return ret
 
 
-def content(ec: ElementContent) -> list[str | _Element]:
+def content(ec: baseprint.ElementContent) -> list[str | _Element]:
     ret: list[str | _Element] = [ec.text]
     for sub in ec:
         ret.append(sub_element(sub))

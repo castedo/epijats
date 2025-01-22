@@ -30,6 +30,9 @@ class ElementContent:
             else:
                 self.text += s
 
+    def empty(self) -> bool:
+        return not self.text and not self._subelements
+
 
 @dataclass
 class SubElement(ElementContent):
@@ -145,8 +148,19 @@ class Author:
 
 
 @dataclass
-class Abstract:
-    paragraphs: list[ElementContent]
+class ProtoSection:
+    presection: ElementContent
+    subsections: list[Section]
+
+
+@dataclass
+class Section(ProtoSection):
+    title: ElementContent
+
+
+@dataclass
+class Abstract(ProtoSection):
+    pass
 
 
 @dataclass

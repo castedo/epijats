@@ -17,6 +17,8 @@ from .baseprint import (
     List,
     ListItem,
     Orcid,
+    ProtoSection,
+    Section,
     SubElement,
 )
 
@@ -81,7 +83,8 @@ class ContentParser(Parser):
             if not self.parse_element(s):
                 self.log(fc.UnsupportedElement.issue(s))
                 self.parse_content(s)
-                self.dest.append_text(s.tail)
+                if not self.dest.data_model:
+                    self.dest.append_text(s.tail)
         return True
 
 
@@ -332,43 +335,51 @@ class AuthorGroupParser(Validator):
         return (surname, given_names)
 
 
-class AbstractParser(Validator):
+class AbstractParser(Parser):
     def __init__(self, log: IssueCallback, dest: BaseprintBuilder, p_elements: Model):
         super().__init__(log)
         self.dest = dest
         self.p_elements = p_elements
 
-    def parse(self, e: etree._Element) -> bool:
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'abstract':
+            return False
         self.check_no_attrib(e)
-        txt_parser = RichTextParseHelper(self.log, self.p_elements)
-        ps = []
-        correction: ElementContent | None = None
+        if self.dest.abstract:
+            self.log(fc.ExcessElement.issue(e))
+            return True
+        presection = ElementContent("", [])
+        presection.data_model = True
+        p_level = TextElementModel({'p': 'p'}, self.p_elements)
+        p_parser = p_level.parser(self.log, presection)
+        correction: SubElement | None = None
         text = e.text or ""
         if text.strip():
-            correction = ElementContent(text, [])
+            correction = SubElement(text, [], 'p', 'p', "")
             text = ""
         for s in e:
             if s.tag == "p":
                 if correction:
-                    ps.append(correction)
+                    presection.append(correction)
                     correction = None
-                ps.append(txt_parser.content(s))
                 text = s.tail or ""
+                s.tail = None
+                p_parser.parse_element(s)
                 if text.strip():
-                    correction = ElementContent(text, [])
+                    correction = SubElement(text, [], 'p', 'p', "")
                     text = ""
             else:
                 self.log(fc.UnsupportedElement.issue(s))
                 if not correction:
-                    correction = ElementContent(text, [])
+                    correction = SubElement(text, [], 'p', 'p', "")
                     text = ""
                 self.p_elements.parse_element(self.log, s, correction)
         if correction:
-            ps.append(correction)
+            presection.append(correction)
             correction = None
-        if ps:
-            self.dest.abstract = Abstract(ps)
-        return bool(ps)
+        if not presection.empty():
+            self.dest.abstract = Abstract(presection, [])
+        return True
 
 
 class ArticleParser(Parser):
@@ -377,7 +388,7 @@ class ArticleParser(Parser):
         self.dest = dest
 
         p_elements = p_elements_model()
-        p = TextElementModel({'p': 'p'}, p_elements) 
+        p = TextElementModel({'p': 'p'}, p_elements)
         model = UnionModel()
         model |= p
         model |= TextElementModel({'sec': 'div'}, model)
@@ -427,7 +438,7 @@ class ArticleParser(Parser):
         self.check_no_attrib(e)
         for s in e:
             if s.tag == 'abstract':
-                self.abstract.parse(s)
+                self.abstract.parse_element(s)
             elif s.tag == 'contrib-group':
                 self.authors.parse(s)
             elif s.tag == 'permissions':

@@ -6,20 +6,24 @@ from lxml import etree
 
 import epijats.parse as _
 from epijats import html
-from epijats.baseprint import Baseprint, List
-from epijats.reformat import baseprint_to_xml, sub_element
+from epijats.baseprint import Baseprint, ElementContent, List
+from epijats.reformat import abstract, baseprint_to_xml, sub_element
 
 
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
 ROUNDTRIP_CASE = Path(__file__).parent / "cases" / "roundtrip"
 
-GEN = html.HtmlGenerator()
-XML = etree.XMLParser(remove_comments=True, load_dtd=False)
+HTML = html.HtmlGenerator()
 NSMAP = {
     'ali': "http://www.niso.org/schemas/ali/1.0",
     'mml': "http://www.w3.org/1998/Math/MathML",
     'xlink': "http://www.w3.org/1999/xlink",
 }
+
+
+def xml_fromstring(src: str) -> etree._Element:
+    parser = etree.XMLParser(remove_comments=True, load_dtd=False)
+    return etree.fromstring(src, parser=parser)
 
 
 def wrap_xml(content: str):
@@ -29,7 +33,7 @@ def wrap_xml(content: str):
 
 def assert_bdom_roundtrip(expect: Baseprint):
     dump = etree.tostring(baseprint_to_xml(expect))
-    root = etree.fromstring(dump, parser=XML)
+    root = xml_fromstring(dump)
     assert _.parse_baseprint_root(root) == expect
 
 
@@ -37,9 +41,10 @@ def test_minimal():
     issues = []
     got = _.BaseprintParser(issues.append).parse(SNAPSHOT_CASE / "baseprint")
     assert not issues
-    assert [_.Author("Wang")] == got.authors
-    expect = _.Abstract([_.ElementContent('A simple test.', [])])
-    assert expect == got.abstract
+    assert got.authors == [_.Author("Wang")]
+    paragraph = _.SubElement('A simple test.', [], 'p', 'p', "")
+    expect = _.Abstract(ElementContent("", [paragraph]), [])
+    assert got.abstract == expect
     assert_bdom_roundtrip(got)
 
 def test_roundtrip():
@@ -55,13 +60,13 @@ def test_roundtrip():
 def test_minimal_html_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "baseprint")
     expect = tostring(E.TITLE('A test'))
-    assert tostring(E.TITLE(*GEN.content(bp.title))) == expect
+    assert tostring(E.TITLE(*HTML.content(bp.title))) == expect
 
 
 def test_article_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
     expect = b"""<title>Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a></title>"""
-    assert tostring(E.TITLE(*GEN.content(bp.title))) == expect
+    assert tostring(E.TITLE(*HTML.content(bp.title))) == expect
     assert_bdom_roundtrip(bp)
 
 
@@ -70,7 +75,7 @@ def xml2html(xml):
     issues = []
     model = _.base_hypertext_model()
     out = _.parse_text_content(issues.append, et, model)
-    return (html.html_to_str(*GEN.content(out)), len(issues))
+    return (html.html_to_str(*HTML.content(out)), len(issues))
 
 
 def test_simple_xml_parse():
@@ -108,7 +113,7 @@ def xml_to_root_str(e: etree._Element) -> str:
 
 
 def wrap_to_xml(root_wrap: str) -> etree._Element:
-    root = etree.fromstring(root_wrap, parser=XML)
+    root = xml_fromstring(root_wrap)
     assert root.tag == 'root'
     return root[0]
 
@@ -134,3 +139,41 @@ bar.</p>
     assert isinstance(subel, List)
     assert len(subel.items) == 3
     assert xml_to_root_str(sub_element(subel)) == dump
+
+
+def test_abstract_restyle():
+    dump = wrap_xml("""
+<abstract>
+<p>OK</p>
+<list list-type="bullet"><list-item><p>Restyle!</p></list-item></list>
+<p>OK</p>
+</abstract>
+""")
+    issues = []
+    dest = _.BaseprintBuilder(issues.append)
+    parser = _.AbstractParser(issues.append, dest, _.p_elements_model())
+    parser.parse_element(wrap_to_xml(dump))
+    restyled = wrap_xml("""
+<abstract>
+<p>OK</p>
+<p>
+<list list-type="bullet">
+<list-item>
+<p>Restyle!</p>
+</list-item>
+</list>
+</p>
+<p>OK</p>
+</abstract>
+""")
+    assert xml_to_root_str(abstract(dest.abstract)) == restyled
+    expect = """<p>OK</p>
+<p>
+<ul>
+<li>
+<p>Restyle!</p>
+</li>
+</ul>
+</p>
+<p>OK</p>"""
+    assert html.html_to_str(*HTML.abstract(dest.abstract)) == expect
