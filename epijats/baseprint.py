@@ -9,7 +9,7 @@ class ElementContent:
     text: str
     _subelements: list[SubElement]
 
-    def __init__(self, text: str, elements: Iterable[SubElement]):
+    def __init__(self, text: str = "", elements: Iterable[SubElement] = []):
         self.text = text
         self._subelements = list(elements)
         self.data_model = False
@@ -152,13 +152,20 @@ class ProtoSection:
     presection: ElementContent
     subsections: list[Section]
 
+    def __init__(self) -> None:
+        self.presection = ElementContent()
+        self.presection.data_model = True
+        self.subsections = []
+
+    def has_no_content(self) -> bool:
+        return self.presection.empty() and not len(self.subsections)
+
 
 @dataclass
 class Section(ProtoSection):
     title: ElementContent
 
 
-@dataclass
 class Abstract(ProtoSection):
     pass
 
@@ -167,5 +174,11 @@ class Abstract(ProtoSection):
 class Baseprint:
     title: ElementContent
     authors: list[Author]
-    abstract: Abstract | None = None
-    body: ElementContent | None = None
+    abstract: Abstract
+    body: ProtoSection
+
+    def __init__(self) -> None:
+        self.title = ElementContent()
+        self.authors = []
+        self.abstract = Abstract()
+        self.body = ProtoSection()

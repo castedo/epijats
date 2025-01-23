@@ -44,7 +44,11 @@ class DataElement:
         elements = []
         for c in self.children:
             elements.append(c.build() if isinstance(c, DataElement) else c)
-        return EL(self.tag, self.level, *elements, **self.attrib)
+        if elements:
+            ret = EL(self.tag, self.level, *elements, **self.attrib)
+        else:
+            ret = EL(self.tag, self.level, **self.attrib)
+        return ret
 
 
 def baseprint_to_xml(src: baseprint.Baseprint) -> _Element:
@@ -54,9 +58,10 @@ def baseprint_to_xml(src: baseprint.Baseprint) -> _Element:
     am = front.append_data('article-meta')
     title_group(am, src.title)
     contrib_group(am, src.authors)
-    am.append_content(abstract(src.abstract))
+    _proto_section(src.abstract, 'abstract', am)
 
-    article.append_content(E('body'))
+    _proto_section(src.body, 'body', article)
+
     ret = article.build()
     ret.tail = "\n"
     return ret
@@ -82,11 +87,10 @@ def author(parent: DataElement, src: baseprint.Author) -> None:
         n.append_content(E('given-names', src.given_names))
 
 
-def abstract(src: baseprint.Abstract | None) -> _Element:
-    if src is None:
-        return E('abstract')
+def abstract(src: baseprint.Abstract) -> _Element:
     ret = E('abstract')
     _proto_section_content(src, ret)
+    ret.text = "\n"
     ret.tail = "\n"
     return ret
 
@@ -99,8 +103,18 @@ def section(src: baseprint.Section) -> _Element:
     return ret
 
 
-def _proto_section_content(src: baseprint.ProtoSection, dest: _Element) -> None:
-    dest.text = "\n"
+def _proto_section(
+    src: baseprint.ProtoSection, tag: str, parent: DataElement
+) -> None:
+    c = E(tag)
+    _proto_section_content(src, c, parent.level + 1)
+    parent.append_content(c)
+
+
+def _proto_section_content(
+    src: baseprint.ProtoSection, dest: _Element, level: int = 0
+) -> None:
+    sub: _Element | None = None
     for s in src.presection:
         sub = sub_element(s)
         sub.tail = "\n"
@@ -109,6 +123,12 @@ def _proto_section_content(src: baseprint.ProtoSection, dest: _Element) -> None:
         sub = section(ss)
         sub.tail = "\n"
         dest.append(sub)
+    newline =  "\n" + "  " * level
+    if sub is None:
+        dest.text = newline
+    else:
+        dest.text = "\n"
+        sub.tail = newline
 
 
 def sub_element(src: baseprint.SubElement) -> _Element:

@@ -79,6 +79,11 @@ class ExcessElement(ElementFormatCondition):
     """Excess XML element"""
 
 
+@dataclass(frozen=True)
+class MissingContent(ElementFormatCondition):
+    """Missing XML element content"""
+
+
 class InvalidOrcid(FormatCondition):
     """Invalid ORCID"""
 

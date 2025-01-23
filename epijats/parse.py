@@ -18,7 +18,6 @@ from .baseprint import (
     ListItem,
     Orcid,
     ProtoSection,
-    Section,
     SubElement,
 )
 
@@ -225,23 +224,8 @@ class ListModel(ElementModel):
         return ret
 
 
-class BaseprintBuilder(Validator):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
-        self.title: ElementContent | None = None
-        self.authors: list[Author] = []
-        self.abstract: Abstract | None = None
-        self.body : ElementContent | None = None
-
-    def build(self) -> Baseprint | None:
-        if self.title is None:
-            self.log_issue(fc.MissingElement('article-title', 'title-group'))
-            return None
-        return Baseprint(self.title, self.authors, self.abstract)
-
-
 class TitleGroupParser(Parser):
-    def __init__(self, log: IssueCallback, dest: BaseprintBuilder):
+    def __init__(self, log: IssueCallback, dest: Baseprint):
         super().__init__(log)
         self.dest = dest
         self._txt_parser = RichTextParseHelper(log, base_hypertext_model())
@@ -253,17 +237,17 @@ class TitleGroupParser(Parser):
         for s in e:
             if s.tag == 'article-title':
                 self.check_no_attrib(s)
-                if self.dest.title:
-                    self.log(fc.ExcessElement.issue(s))
-                else:
+                if self.dest.title.empty():
                     self.dest.title = self._txt_parser.content(s)
+                else:
+                    self.log(fc.ExcessElement.issue(s))
             else:
                 self.log(fc.UnsupportedElement.issue(s))
         return True
 
 
 class AuthorGroupParser(Validator):
-    def __init__(self, log: IssueCallback, dest: BaseprintBuilder):
+    def __init__(self, log: IssueCallback, dest: Baseprint):
         super().__init__(log)
         self.dest = dest
 
@@ -335,21 +319,20 @@ class AuthorGroupParser(Validator):
         return (surname, given_names)
 
 
-class AbstractParser(Parser):
-    def __init__(self, log: IssueCallback, dest: BaseprintBuilder, p_elements: Model):
+class ProtoSectionParser(Parser):
+    def __init__(self, log: IssueCallback, dest: ProtoSection, p_elements: Model):
         super().__init__(log)
         self.dest = dest
         self.p_elements = p_elements
 
     def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'abstract':
+        if e.tag not in ['abstract', 'body']:
             return False
         self.check_no_attrib(e)
-        if self.dest.abstract:
+        if not self.dest.has_no_content():
             self.log(fc.ExcessElement.issue(e))
             return True
-        presection = ElementContent("", [])
-        presection.data_model = True
+        presection = self.dest.presection
         p_level = TextElementModel({'p': 'p'}, self.p_elements)
         p_parser = p_level.parser(self.log, presection)
         correction: SubElement | None = None
@@ -377,26 +360,18 @@ class AbstractParser(Parser):
         if correction:
             presection.append(correction)
             correction = None
-        if not presection.empty():
-            self.dest.abstract = Abstract(presection, [])
         return True
 
 
 class ArticleParser(Parser):
-    def __init__(self, log: IssueCallback, dest: BaseprintBuilder):
+    def __init__(self, log: IssueCallback, dest: Baseprint):
         super().__init__(log)
         self.dest = dest
-
         p_elements = p_elements_model()
-        p = TextElementModel({'p': 'p'}, p_elements)
-        model = UnionModel()
-        model |= p
-        model |= TextElementModel({'sec': 'div'}, model)
-        self.body_model = model
-
         self.title = TitleGroupParser(log, dest)
         self.authors = AuthorGroupParser(log, dest)
-        self.abstract = AbstractParser(log, dest, p_elements)
+        self.abstract = ProtoSectionParser(log, dest.abstract, p_elements)
+        self.body = ProtoSectionParser(log, dest.body, p_elements)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'article':
@@ -411,11 +386,19 @@ class ArticleParser(Parser):
             if s.tag == "front":
                 self._front(s)
             elif s.tag == "body":
-                self._body(s)
+                self.body.parse_element(s)
             elif s.tag == "back":
                 pass
             else:
                 self.log(fc.UnsupportedElement.issue(s))
+        if self.dest.title.empty():
+            self.log_issue(fc.MissingContent('article-title', 'title-group'))
+        if not len(self.dest.authors):
+            self.log_issue(fc.MissingContent('contrib', 'contrib-group'))
+        if self.dest.abstract.has_no_content():
+            self.log_issue(fc.MissingContent('abstract', 'article-meta'))
+        if self.dest.body.has_no_content():
+            self.log_issue(fc.MissingContent('body', 'article'))
         return True
 
     def _front(self, e: etree._Element) -> None:
@@ -425,14 +408,6 @@ class ArticleParser(Parser):
                 self._article_meta(s)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
-
-    def _body(self, e: etree._Element) -> None:
-        self.check_no_attrib(e)
-        if self.dest.body is None:
-            self.dest.body = ElementContent("", [])
-            self.body_model.parse_content(self.log, e, self.dest.body)
-        else:
-            self.log(fc.ExcessElement.issue(e))
 
     def _article_meta(self, e: etree._Element) -> None:
         self.check_no_attrib(e)
@@ -452,8 +427,8 @@ class ArticleParser(Parser):
 class BaseprintParser(Validator):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
-        self.out = BaseprintBuilder(log)
-        self.article = ArticleParser(log, self.out)
+        self._out = Baseprint()
+        self.article = ArticleParser(log, self._out)
 
     def parse(self, path: Path) -> Baseprint | None:
         path = Path(path)
@@ -481,7 +456,7 @@ class BaseprintParser(Validator):
             self.log(fc.ProcessingInstruction.issue(pi))
             etree.strip_elements(root, pi.tag, with_tail=False)
         self.article.parse_element(root)
-        return self.out.build()
+        return self._out
 
 
 def formatted_text_model(sub_model: Model | None = None) -> Model:

@@ -6,8 +6,9 @@ from lxml import etree
 
 import epijats.parse as _
 from epijats import html
-from epijats.baseprint import Baseprint, ElementContent, List
+from epijats.baseprint import Baseprint, List
 from epijats.reformat import abstract, baseprint_to_xml, sub_element
+from epijats import condition as fc
 
 
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
@@ -19,6 +20,7 @@ NSMAP = {
     'mml': "http://www.w3.org/1998/Math/MathML",
     'xlink': "http://www.w3.org/1999/xlink",
 }
+NSMAP_STR = " ".join('xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items())
 
 
 def xml_fromstring(src: str) -> etree._Element:
@@ -27,8 +29,7 @@ def xml_fromstring(src: str) -> etree._Element:
 
 
 def wrap_xml(content: str):
-    attribs = ['xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items()]
-    return ("<root {}>{}</root>\n".format(" ".join(attribs), content))
+    return ("<root {}>{}</root>\n".format(NSMAP_STR, content))
 
 
 def assert_bdom_roundtrip(expect: Baseprint):
@@ -37,15 +38,17 @@ def assert_bdom_roundtrip(expect: Baseprint):
     assert _.parse_baseprint_root(root) == expect
 
 
-def test_minimal():
+def test_minimalish():
     issues = []
     got = _.BaseprintParser(issues.append).parse(SNAPSHOT_CASE / "baseprint")
     assert not issues
     assert got.authors == [_.Author("Wang")]
     paragraph = _.SubElement('A simple test.', [], 'p', 'p', "")
-    expect = _.Abstract(ElementContent("", [paragraph]), [])
+    expect = _.Abstract()
+    expect.presection.append(paragraph)
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
+
 
 def test_roundtrip():
     xml_path = ROUNDTRIP_CASE / "minimal" / "article.xml"
@@ -150,8 +153,8 @@ def test_abstract_restyle():
 </abstract>
 """)
     issues = []
-    dest = _.BaseprintBuilder(issues.append)
-    parser = _.AbstractParser(issues.append, dest, _.p_elements_model())
+    dest = _.Abstract()
+    parser = _.ProtoSectionParser(issues.append, dest, _.p_elements_model())
     parser.parse_element(wrap_to_xml(dump))
     restyled = wrap_xml("""
 <abstract>
@@ -166,7 +169,7 @@ def test_abstract_restyle():
 <p>OK</p>
 </abstract>
 """)
-    assert xml_to_root_str(abstract(dest.abstract)) == restyled
+    assert xml_to_root_str(abstract(dest)) == restyled
     expect = """<p>OK</p>
 <p>
 <ul>
@@ -176,4 +179,36 @@ def test_abstract_restyle():
 </ul>
 </p>
 <p>OK</p>"""
-    assert html.html_to_str(*HTML.abstract(dest.abstract)) == expect
+    assert html.html_to_str(*HTML.abstract(dest)) == expect
+
+
+def test_minimal_with_issues():
+    issues = set()
+    bp = _.parse_baseprint_root(xml_fromstring("<article/>"), issues.add)
+    print(issues)
+    assert bp == Baseprint()
+    assert len(issues) == 4
+    assert set(i.condition for i in issues) == { 
+        fc.MissingContent('article-title', 'title-group'),
+        fc.MissingContent('contrib', 'contrib-group'),
+        fc.MissingContent('abstract', 'article-meta'),
+        fc.MissingContent('body', 'article'),
+    }
+    expect = f"""\
+<article {NSMAP_STR}>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title></article-title>
+      </title-group>
+      <contrib-group>
+      </contrib-group>
+      <abstract>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+  </body>
+</article>
+"""
+    assert etree.tostring(baseprint_to_xml(bp)).decode() == expect
