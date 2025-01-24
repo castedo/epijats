@@ -4,7 +4,7 @@ from importlib import resources
 from typing import Any, Iterable
 
 from .parse import parse_baseprint
-from .html import HtmlGenerator, html_to_str
+from .html import HtmlGenerator
 from .webstract import Webstract, Source
 
 
@@ -44,10 +44,10 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     if bp is None:
         raise ValueError()
     gen = HtmlGenerator()
-    ret['title'] = html_to_str(*gen.content(bp.title))
+    ret['title'] = gen.content_to_str(bp.title)
     ret['contributors'] = list()
     if bp.abstract and "EPIJATS_NO_PANDOC" in os.environ:
-        ret['abstract'] = html_to_str(*gen.abstract(bp.abstract))
+        ret['abstract'] = gen.proto_section_to_str(bp.abstract)
     for a in bp.authors:
         d: dict[str, Any] = {'surname': a.surname, 'type': 'author'}
         if a.given_names:

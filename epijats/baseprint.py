@@ -1,67 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Iterator
+from typing import Iterable
 
-
-@dataclass
-class ElementContent:
-    text: str
-    _subelements: list[SubElement]
-
-    def __init__(self, text: str = "", elements: Iterable[SubElement] = []):
-        self.text = text
-        self._subelements = list(elements)
-        self.data_model = False
-
-    def __iter__(self) -> Iterator[SubElement]:
-        return iter(self._subelements)
-
-    def append(self, e: SubElement) -> None:
-        self._subelements.append(e)
-
-    def extend(self, es: Iterator[SubElement]) -> None:
-        self._subelements.extend(es)
-
-    def append_text(self, s: str | None) -> None:
-        if s:
-            if self._subelements:
-                self._subelements[-1].tail += s
-            else:
-                self.text += s
-
-    def empty(self) -> bool:
-        return not self.text and not self._subelements
-
-
-@dataclass
-class SubElement(ElementContent):
-    """Common JATS/HTML element"""
-
-    xml_tag: str
-    html_tag: str
-    tail: str
-
-    def __init__(
-        self,
-        text: str,
-        elements: Iterable[SubElement],
-        xml_tag: str,
-        html_tag: str,
-        tail: str,
-    ):
-        super().__init__(text, elements)
-        self.xml_tag = xml_tag
-        self.html_tag = html_tag
-        self.tail = tail
-
-    @property
-    def xml_attrib(self) -> dict[str, str]:
-        return {}
-
-    @property
-    def html_attrib(self) -> dict[str, str]:
-        return {}
+from .tree import ElementContent, SubElement
 
 
 @dataclass

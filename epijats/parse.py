@@ -11,14 +11,13 @@ from . import condition as fc
 from .baseprint import (
     Author,
     Baseprint,
-    ElementContent,
     Hyperlink,
     List,
     ListItem,
     Orcid,
     ProtoSection,
-    SubElement,
 )
+from .tree import ElementContent, SubElement
 
 
 if TYPE_CHECKING:

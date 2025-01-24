@@ -90,7 +90,7 @@ def xml2html(xml):
     issues = []
     model = _.base_hypertext_model()
     out = _.parse_text_content(issues.append, et, model)
-    return (html.html_to_str(*HTML.content(out)), len(issues))
+    return (HTML.content_to_str(out), len(issues))
 
 
 def test_simple_xml_parse():
@@ -215,7 +215,7 @@ def test_abstract_restyle():
 </ul>
 </p>
 <p>OK</p>"""
-    assert html.html_to_str(*HTML.abstract(dest)) == expect
+    assert HTML.proto_section_to_str(dest) == expect
 
 
 def test_minimal_with_issues():

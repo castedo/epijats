@@ -3,15 +3,22 @@ from __future__ import annotations
 from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
-from .baseprint import Abstract, ElementContent, ProtoSection, SubElement
+from .baseprint import Abstract, ProtoSection
+from .tree import ElementContent, SubElement
 
 
-def html_to_str(*ins: str | HtmlElement) -> str:
+def _html_to_str(*ins: str | HtmlElement) -> str:
     ss = [x if isinstance(x, str) else tostring(x).decode() for x in ins]
     return "".join(ss)
 
 
 class HtmlGenerator:
+    def content_to_str(self, src: ElementContent) -> str:
+        return _html_to_str(*self.content(src))
+
+    def proto_section_to_str(self, src: ProtoSection) -> str:
+        return _html_to_str(*self._proto_section_content(src))
+
     def content(self, src: ElementContent) -> list[str | HtmlElement]:
         ret: list[str | HtmlElement] = [src.text]
         for sub in src:

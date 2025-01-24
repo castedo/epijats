@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from . import baseprint
-from .tree import DataElement, DataSubElement, MarkupElement, MarkupSubElement
+from .tree import DataElement, DataSubElement, ElementContent, MarkupElement, MarkupSubElement, SubElement
 
 
-def sub_element(src: baseprint.SubElement) -> MarkupSubElement | DataSubElement:
+def sub_element(src: SubElement) -> MarkupSubElement | DataSubElement:
     ret: MarkupSubElement | DataSubElement
     if src.data_model:
         ret = DataSubElement(src.xml_tag, src.xml_attrib)
@@ -17,7 +17,7 @@ def sub_element(src: baseprint.SubElement) -> MarkupSubElement | DataSubElement:
     return ret
 
 
-def element(src: baseprint.SubElement) -> DataElement | MarkupElement:
+def element(src: SubElement) -> DataElement | MarkupElement:
     ret: DataElement | MarkupElement
     if src.data_model:
         ret = DataElement(src.xml_tag, src.xml_attrib)
@@ -31,7 +31,7 @@ def element(src: baseprint.SubElement) -> DataElement | MarkupElement:
     return ret
 
 
-def data_content(src: baseprint.ElementContent, dest: DataElement) -> None:
+def data_content(src: ElementContent, dest: DataElement) -> None:
     assert src.data_model
     assert not src.text
     for it in src:
@@ -39,7 +39,7 @@ def data_content(src: baseprint.ElementContent, dest: DataElement) -> None:
         dest.append(element(it))
 
 
-def title_group(src: baseprint.ElementContent) -> DataElement:
+def title_group(src: ElementContent) -> DataElement:
     title = MarkupElement('article-title', {}, src.text)
     for it in src:
         title.append(sub_element(it))
