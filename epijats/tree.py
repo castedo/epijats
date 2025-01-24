@@ -36,11 +36,29 @@ class ElementContent:
 
 @dataclass
 class SubElement(ElementContent):
-    """Common JATS/HTML element"""
-
     xml_tag: str
-    html_tag: str
     tail: str
+
+    def __init__(
+        self,
+        text: str,
+        elements: Iterable[SubElement],
+        xml_tag: str,
+        tail: str,
+    ):
+        super().__init__(text, elements)
+        self.xml_tag = xml_tag
+        self.tail = tail
+
+    @property
+    def xml_attrib(self) -> dict[str, str]:
+        return {}
+
+
+@dataclass
+class CommonElement(SubElement):
+    """Common JATS/HTML element"""
+    html_tag: str
 
     def __init__(
         self,
@@ -50,14 +68,11 @@ class SubElement(ElementContent):
         html_tag: str,
         tail: str,
     ):
-        super().__init__(text, elements)
+        super().__init__(text, elements, xml_tag, tail)
         self.xml_tag = xml_tag
         self.html_tag = html_tag
+        self.html_tag = html_tag
         self.tail = tail
-
-    @property
-    def xml_attrib(self) -> dict[str, str]:
-        return {}
 
     @property
     def html_attrib(self) -> dict[str, str]:

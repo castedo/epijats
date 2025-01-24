@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .tree import ElementContent, SubElement
+from .tree import ElementContent, CommonElement, SubElement
 
 
 @dataclass
-class Hyperlink(SubElement):
+class Hyperlink(CommonElement):
     href: str
 
     def __init__(self, text: str, subs: Iterable[SubElement], tail: str, href: str):
@@ -23,13 +23,13 @@ class Hyperlink(SubElement):
         return {'href': self.href}
 
 
-class ListItem(SubElement):
+class ListItem(CommonElement):
     def __init__(self, elements: Iterable[SubElement]):
         super().__init__("", elements, 'list-item', 'li', "")
         self.data_model = True
 
 
-class List(SubElement):
+class List(CommonElement):
     def __init__(self, items: Iterable[ListItem], tail: str):
         super().__init__("", items, 'list', 'ul', tail)
         self.data_model = True

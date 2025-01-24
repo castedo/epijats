@@ -1,8 +1,6 @@
 import os, pytest
 from pathlib import Path
 
-from lxml.html import builder as E
-from lxml.html import tostring
 from lxml import etree
 
 import epijats.parse as _
@@ -52,7 +50,7 @@ def test_minimalish():
     got = _.BaseprintParser(issues.append).parse(SNAPSHOT_CASE / "baseprint")
     assert not issues
     assert got.authors == [_.Author("Wang")]
-    paragraph = _.SubElement('A simple test.', [], 'p', 'p', "")
+    paragraph = _.CommonElement('A simple test.', [], 'p', 'p', "")
     expect = Abstract()
     expect.presection.append(paragraph)
     assert got.abstract == expect
@@ -74,14 +72,13 @@ def test_roundtrip(case):
 
 def test_minimal_html_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "baseprint")
-    expect = tostring(E.TITLE('A test'))
-    assert tostring(E.TITLE(*HTML.content(bp.title))) == expect
+    assert HTML.content_to_str(bp.title) == 'A test'
 
 
 def test_article_title():
     bp = _.parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
-    expect = b"""<title>Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a></title>"""
-    assert tostring(E.TITLE(*HTML.content(bp.title))) == expect
+    expect = """Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a>"""
+    assert HTML.content_to_str(bp.title) == expect
     assert_bdom_roundtrip(bp)
 
 
