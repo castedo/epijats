@@ -6,9 +6,11 @@ from lxml import etree
 
 import epijats.parse as _
 from epijats import html
-from epijats.baseprint import Baseprint, List
+from epijats.baseprint import Abstract, Baseprint, List
 from epijats.reformat import abstract, baseprint_to_xml, sub_element
 from epijats import condition as fc
+from epijats import restyle
+from epijats.xml import data_content
 
 
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
@@ -44,7 +46,7 @@ def test_minimalish():
     assert not issues
     assert got.authors == [_.Author("Wang")]
     paragraph = _.SubElement('A simple test.', [], 'p', 'p', "")
-    expect = _.Abstract()
+    expect = Abstract()
     expect.presection.append(paragraph)
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
@@ -144,6 +146,29 @@ bar.</p>
     assert xml_to_root_str(sub_element(subel)) == dump
 
 
+def test_author_restyle():
+    dump = wrap_xml("""
+<contrib-group>
+  <contrib contrib-type="author">
+    <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
+    <name>
+      <surname>Ellerman</surname>
+      <given-names>E. Castedo</given-names>
+    </name>
+    <email>castedo@castedo.com</email>
+  </contrib>
+</contrib-group>
+""")
+    issues = []
+    parser = _.AuthorGroupParser(issues.append)
+    assert parser.parse_element(wrap_to_xml(dump))
+    assert parser.out is not None
+    assert len(issues) == 0
+    x = data_content(restyle.contrib_group(parser.out), 0)
+    x.tail = "\n"
+    assert xml_to_root_str(x) == dump
+
+
 def test_abstract_restyle():
     dump = wrap_xml("""
 <abstract>
@@ -153,7 +178,7 @@ def test_abstract_restyle():
 </abstract>
 """)
     issues = []
-    dest = _.Abstract()
+    dest = Abstract()
     parser = _.ProtoSectionParser(issues.append, dest, _.p_elements_model())
     parser.parse_element(wrap_to_xml(dump))
     restyled = wrap_xml("""

@@ -9,7 +9,6 @@ from lxml import etree
 
 from . import condition as fc
 from .baseprint import (
-    Abstract,
     Author,
     Baseprint,
     ElementContent,
@@ -55,7 +54,8 @@ class Validator(ABC):
     def log(self) -> IssueCallback:
         return self._log
 
-    def log_issue(self, 
+    def log_issue(
+        self,
         condition: fc.FormatCondition,
         sourceline: int | None = None,
         info: str | None = None,
@@ -246,64 +246,90 @@ class TitleGroupParser(Parser):
         return True
 
 
-class AuthorGroupParser(Validator):
-    def __init__(self, log: IssueCallback, dest: Baseprint):
+class ContribIdParser(Validator):
+    def __init__(self, log: IssueCallback):
         super().__init__(log)
-        self.dest = dest
+        self.out: Orcid | None = None
 
     def parse(self, e: etree._Element) -> bool:
-        self.check_no_attrib(e)
-        if self.dest.authors:
-            self.log(fc.ExcessElement.issue(e))
+        if e.tag != 'contrib-id':
             return False
+        k = 'contrib-id-type'
+        if e.attrib.get(k) == 'orcid':
+            del e.attrib[k]
+            url = parse_string(self.log, e)
+            try:
+                self.out = Orcid.from_url(url)
+            except ValueError:
+                self.log_issue(fc.InvalidOrcid(), e.sourceline, url)
+        elif k in e.attrib:
+            v = e.attrib[k]
+            self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
+        else:
+            self.log(fc.UnsupportedElement.issue(e))
+        return True
+
+
+class AuthorGroupParser(Parser):
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+        self.out: list[Author] | None = None
+        self.author_parser = AuthorParser(log)
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'contrib-group':
+            return False
+        self.check_no_attrib(e)
+        if self.out is not None:
+            self.log(fc.ExcessElement.issue(e))
+            return True
+        self.out = []
         for s in e:
-            if s.tag == 'contrib':
-                if a := self._contrib(s):
-                    self.dest.authors.append(a)
+            if self.author_parser.parse_element(s):
+                if self.author_parser.out:
+                    self.out.append(self.author_parser.out)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
         return True
 
-    def _contrib(self, e: etree._Element) -> Author | None:
+
+class AuthorParser(Parser):
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+        self.out: Author | None = None
+        self.orcid_parser = ContribIdParser(self.log)
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'contrib':
+            return False
         for k, v in e.attrib.items():
             if k == 'contrib-type':
                 if v != "author":
                     self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
-                    return None
+                    return False
             elif k == 'id':
                 pass
             else:
                 self.log(fc.UnsupportedAttribute.issue(e, k))
+        self.check_no_attrib(e, ['contrib-type'])
         surname = None
         given_names = None
         email = None
-        orcid = None
         for s in e:
             if s.tag == 'name':
                 (surname, given_names) = self._name(s)
             elif s.tag == 'email':
                 email = parse_string(self.log, s)
-            elif s.tag == 'contrib-id':
-                k = 'contrib-id-type'
-                if s.attrib.get(k) == 'orcid':
-                    del s.attrib[k]
-                    url = parse_string(self.log, s)
-                    try:
-                        orcid = Orcid.from_url(url)
-                    except ValueError:
-                        self.log_issue(fc.InvalidOrcid(), s.sourceline, url)
-                elif k in s.attrib:
-                    v = s.attrib[k]
-                    self.log(fc.UnsupportedAttributeValue.issue(s, k, v))
-                else:
-                    self.log(fc.UnsupportedElement.issue(s))
+            elif self.orcid_parser.parse(s):
+                pass
             else:
                 self.log(fc.UnsupportedElement.issue(s))
         if surname or given_names:
-            return Author(surname, given_names, email, orcid)
+            self.out = Author(surname, given_names, email, self.orcid_parser.out)
+            return True
         else:
             self.log_issue(fc.MissingName(), s.sourceline)
-            return None
+            return True
 
     def _name(self, e: etree._Element) -> Tuple[str | None, str | None]:
         self.check_no_attrib(e)
@@ -369,7 +395,7 @@ class ArticleParser(Parser):
         self.dest = dest
         p_elements = p_elements_model()
         self.title = TitleGroupParser(log, dest)
-        self.authors = AuthorGroupParser(log, dest)
+        self.authors = AuthorGroupParser(log)
         self.abstract = ProtoSectionParser(log, dest.abstract, p_elements)
         self.body = ProtoSectionParser(log, dest.body, p_elements)
 
@@ -414,8 +440,9 @@ class ArticleParser(Parser):
         for s in e:
             if s.tag == 'abstract':
                 self.abstract.parse_element(s)
-            elif s.tag == 'contrib-group':
-                self.authors.parse(s)
+            elif self.authors.parse_element(s):
+                if self.authors.out is not None:
+                    self.dest.authors = self.authors.out
             elif s.tag == 'permissions':
                 pass
             elif s.tag == 'title-group':
@@ -492,8 +519,8 @@ def p_elements_model() -> Model:
     list_item_content |= TextElementModel({'p': 'p'}, p_elements)
     list_item_content |= ListModel(list_item_content)
 
-    hypertext = base_hypertext_model() #TODO: add xref as hyperlink element
-    #NOTE: open issue whether xref should be allowed in preformatted
+    hypertext = base_hypertext_model()  # TODO: add xref as hyperlink element
+    # NOTE: open issue whether xref should be allowed in preformatted
     preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
 
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
@@ -527,9 +554,7 @@ def ignore_issue(issue: fc.FormatIssue) -> None:
     pass
 
 
-def parse_baseprint(
-    src: Path, log: IssueCallback = ignore_issue
-) -> Baseprint | None:
+def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint | None:
     return BaseprintParser(log).parse(src)
 
 
