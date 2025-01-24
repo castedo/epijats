@@ -82,8 +82,8 @@ class Hyperlink(SubElement):
 
 
 class ListItem(SubElement):
-    def __init__(self, text: str, elements: Iterable[SubElement]):
-        super().__init__(text, elements, 'list-item', 'li', "")
+    def __init__(self, elements: Iterable[SubElement]):
+        super().__init__("", elements, 'list-item', 'li', "")
         self.data_model = True
 
 

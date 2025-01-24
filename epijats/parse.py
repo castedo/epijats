@@ -216,8 +216,9 @@ class ListModel(ElementModel):
         ret = List([], e.tail or "")
         for s in e:
             if s.tag == 'list-item':
-                item = ListItem("", [])
+                item = ListItem([])
                 self.content_model.parse_content(log, s, item)
+                item.text = ""
                 ret.append(item)
             else:
                 log(fc.UnsupportedElement.issue(s))

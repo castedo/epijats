@@ -7,7 +7,7 @@ from lxml.builder import ElementMaker
 if TYPE_CHECKING:
     from lxml.etree import _Element
 
-from .tree import DataContent, MarkupContent
+from .tree import DataElement, MarkupElement
 
 
 E = ElementMaker(
@@ -19,27 +19,35 @@ E = ElementMaker(
 )
 
 
-def markup_content(src: MarkupContent) -> _Element:
-    ret = E(src.xml_tag, src.text, **src.xml_attrib)
+def markup_element(src: MarkupElement) -> _Element:
+    ret = E(src.xml_tag, **src.xml_attrib)
+    ret.text = src.text
     for it in src:
-        sub = markup_content(it)
-        sub.tail = it.tail
+        if isinstance(it, DataElement):
+            sub = data_element(it, 0)
+            sub.tail = "\n"
+        else:
+            sub = markup_element(it)
+            sub.tail = it.tail
         ret.append(sub)
     return ret
 
 
-def data_content(src: DataContent, level: int) -> _Element:
+def data_element(src: DataElement, level: int) -> _Element:
     ret = E(src.xml_tag, **src.xml_attrib)
     ret.text = "\n" + "  " * level
+    presub = "\n"
+    if src.indent:
+        presub += "  " * (level + 1)
     sub: _Element | None = None
     for it in src:
-        if isinstance(it, DataContent):
-            sub = data_content(it, level + 1)
+        if isinstance(it, DataElement):
+            sub = data_element(it, level + 1)
         else:
-            sub = markup_content(it)
-        sub.tail = "\n" + "  " * (level + 1)
+            sub = markup_element(it)
+        sub.tail = presub
         ret.append(sub)
     if sub is not None:
-        ret.text = "\n" + "  " * (level + 1)
-        sub.tail = "\n" + "  " * level
+        sub.tail = ret.text
+        ret.text = presub
     return ret
