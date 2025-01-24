@@ -1,3 +1,4 @@
+import os, pytest
 from pathlib import Path
 
 from lxml.html import builder as E
@@ -58,15 +59,17 @@ def test_minimalish():
     assert_bdom_roundtrip(got)
 
 
-def test_roundtrip():
-    xml_path = ROUNDTRIP_CASE / "minimal" / "article.xml"
+@pytest.mark.parametrize("case", os.listdir(ROUNDTRIP_CASE))
+def test_roundtrip(case):
+    xml_path = ROUNDTRIP_CASE / case / "article.xml"
     with open(xml_path, "r") as f:
         expect = f.read()
     issues = []
     bp = _.BaseprintParser(issues.append).parse(xml_path)
-    assert not issues
+    assert bp is not None, issues
     xe = data_sub_element(restyle.article(bp), 0)
     assert etree.tostring(xe).decode() == expect
+    assert not issues
 
 
 def test_minimal_html_title():

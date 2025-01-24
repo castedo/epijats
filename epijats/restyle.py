@@ -25,6 +25,7 @@ def element(src: baseprint.SubElement) -> DataElement | MarkupElement:
     else:
         # assert not src.tail
         ret = MarkupElement(src.xml_tag, src.xml_attrib, src.text)
+        ret.block_level = True
         for it in src:
             ret.append(sub_element(it))
     return ret
@@ -36,8 +37,6 @@ def data_content(src: baseprint.ElementContent, dest: DataElement) -> None:
     for it in src:
         # assert not it.tail
         dest.append(element(it))
-        if not it.data_model:
-            dest.indent = False
 
 
 def title_group(src: baseprint.ElementContent) -> DataElement:
@@ -72,7 +71,6 @@ def contrib_group(src: list[baseprint.Author]) -> DataElement:
 
 def proto_section(tag: str, src: baseprint.ProtoSection) -> DataElement:
     ret = DataElement(tag)
-    ret.indent = False
     data_content(src.presection, ret)
 #    for ss in src.subsections:
 #        ret.append(sub)

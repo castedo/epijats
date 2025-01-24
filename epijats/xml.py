@@ -37,7 +37,7 @@ def data_element(src: DataElement, level: int) -> _Element:
     ret = E(src.xml_tag, **src.xml_attrib)
     ret.text = "\n" + "  " * level
     presub = "\n"
-    if src.indent:
+    if not src.has_block_level_markup():
         presub += "  " * (level + 1)
     sub: _Element | None = None
     for it in src:

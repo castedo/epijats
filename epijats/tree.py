@@ -14,6 +14,7 @@ class Element:
 class MarkupElement(Element):
     text: str = ""
     _children: list[MarkupSubElement | DataSubElement] = field(default_factory=list)
+    block_level = False
 
     def __iter__(self) -> Iterator[MarkupSubElement | DataSubElement]:
         return iter(self._children)
@@ -30,13 +31,15 @@ class MarkupSubElement(MarkupElement):
 @dataclass
 class DataElement(Element):
     _children: list[DataElement | MarkupElement] = field(default_factory=list)
-    indent: bool = True
 
     def __iter__(self) -> Iterator[DataElement | MarkupElement]:
         return iter(self._children)
 
     def append(self, e: DataElement | MarkupElement) -> None:
         self._children.append(e)
+
+    def has_block_level_markup(self) -> bool:
+        return any(isinstance(c, MarkupElement) and c.block_level for c in self)
 
 
 @dataclass

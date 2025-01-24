@@ -1,0 +1,47 @@
+<article xmlns:ali="http://www.niso.org/schemas/ali/1.0" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Lineal admixture time: an interdisciplinary definition</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
+          <name>
+            <surname>Ellerman</surname>
+            <given-names>E. Castedo</given-names>
+          </name>
+          <email>castedo@castedo.com</email>
+        </contrib>
+      </contrib-group>
+      <abstract>
+<p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
+<p><bold>OBJECTIVES:</bold></p>
+<p>
+<list list-type="bullet">
+  <list-item>
+<p>Define <italic>lineal admixture time</italic>.</p>
+  </list-item>
+  <list-item>
+<p>Invite discussion and feedback, especially regarding questions at the end of
+    this document.</p>
+  </list-item>
+  <list-item>
+<p>Facilitate the discovery of mathematical tools, using this definition, that
+    are useful to downstream empirical research.</p>
+  </list-item>
+</list>
+</p>
+<p><bold>SIGNIFICANCE:</bold>
+This definition is interpretable within empirical research without assuming
+particular mathematical models of demographic or genetic processes.</p>
+<p><bold>DOWNSTREAM RESEARCH:</bold>
+The estimation of the timing and extent of interbreeding between previously
+separated populations.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+<p></p>
+  </body>
+</article>
