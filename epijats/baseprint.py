@@ -18,7 +18,7 @@ class ListItem(SubElement):
     def __init__(self, elements: Iterable[SubElement]):
         super().__init__("", elements, 'list-item')
         self.html = StartTag('li')
-        self.data_model = True
+        self.content.data_model = True
 
 
 class List(SubElement):
@@ -26,12 +26,12 @@ class List(SubElement):
         super().__init__("", items, 'list', tail)
         self.xml.attrib = {"list-type": "bullet"}
         self.html = StartTag('ul')
-        self.data_model = True
+        self.content.data_model = True
 
     @property
     def items(self) -> list[ListItem]:
         ret = []
-        for sub in iter(self):
+        for sub in self.content:
             assert isinstance(sub, ListItem)
             ret.append(sub)
         return ret

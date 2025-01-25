@@ -4,30 +4,34 @@ from . import baseprint
 from .tree import DataElement, DataSubElement, ElementContent, MarkupElement, MarkupSubElement, SubElement
 
 
-def sub_element(src: SubElement) -> MarkupSubElement | DataSubElement:
+def sub_element(src: SubElement | DataSubElement) -> MarkupSubElement | DataSubElement:
+    if isinstance(src, DataSubElement):
+        return src
     ret: MarkupSubElement | DataSubElement
     if src.data_model:
         ret = DataSubElement(src.xml.tag, src.xml.attrib)
-        data_content(src, ret)
+        data_content(src.content, ret)
     else:
-        ret = MarkupSubElement(src.xml.tag, src.xml.attrib, src.text)
-        for it in src:
-            ret.append(sub_element(it))
+        ret = MarkupSubElement(src.xml.tag, src.xml.attrib, src.content.text)
+        for it in src.content:
+            ret.content.append(sub_element(it))
     ret.tail = src.tail
     return ret
 
 
-def element(src: SubElement) -> DataElement | MarkupElement:
+def element(src: SubElement | DataElement) -> DataElement | MarkupElement:
+    if isinstance(src, DataElement):
+        return src
     ret: DataElement | MarkupElement
     if src.data_model:
         ret = DataElement(src.xml.tag, src.xml.attrib)
-        data_content(src, ret)
+        data_content(src.content, ret)
     else:
         # assert not src.tail
-        ret = MarkupElement(src.xml.tag, src.xml.attrib, src.text)
+        ret = MarkupElement(src.xml.tag, src.xml.attrib, src.content.text)
         ret.block_level = True
-        for it in src:
-            ret.append(sub_element(it))
+        for it in src.content:
+            ret.content.append(sub_element(it))
     return ret
 
 
@@ -42,7 +46,7 @@ def data_content(src: ElementContent, dest: DataElement) -> None:
 def title_group(src: ElementContent) -> DataElement:
     title = MarkupElement('article-title', {}, src.text)
     for it in src:
-        title.append(sub_element(it))
+        title.content.append(sub_element(it))
     return DataElement('title-group', {}, [title])
 
 

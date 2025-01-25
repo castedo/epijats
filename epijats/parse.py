@@ -173,7 +173,7 @@ class TextElementModel(ElementModel):
             ret = SubElement("", [], e.tag, e.tail or "")
             ret.html = StartTag(html_tag)
             if self.content_model:
-                self.content_model.parse_content(log, e, ret)
+                self.content_model.parse_content(log, e, ret.content)
         return ret
 
 
@@ -196,7 +196,7 @@ class ExtLinkModel(ElementModel):
             return None
         else:
             ret = Hyperlink("", [], e.tail or "", href)
-            self.content_model.parse_content(log, e, ret)
+            self.content_model.parse_content(log, e, ret.content)
             return ret
 
 
@@ -217,9 +217,9 @@ class ListModel(ElementModel):
         for s in e:
             if s.tag == 'list-item':
                 item = ListItem([])
-                self.content_model.parse_content(log, s, item)
-                item.text = ""
-                ret.append(item)
+                self.content_model.parse_content(log, s, item.content)
+                item.content.text = ""
+                ret.content.append(item)
             else:
                 log(fc.UnsupportedElement.issue(s))
         return ret
@@ -383,7 +383,7 @@ class ProtoSectionParser(Parser):
                 if not correction:
                     correction = make_paragraph(text)
                     text = ""
-                self.p_elements.parse_element(self.log, s, correction)
+                self.p_elements.parse_element(self.log, s, correction.content)
         if correction:
             presection.append(correction)
             correction = None

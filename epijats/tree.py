@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Literal
 
 
 @dataclass
@@ -13,14 +13,15 @@ class StartTag:
 @dataclass
 class ElementContent:
     text: str
-    _subelements: list[SubElement]
+    _subelements: list[SubElement | DataSubElement]
+    data_model: bool
 
     def __init__(self, text: str = "", elements: Iterable[SubElement] = []):
         self.text = text
         self._subelements = list(elements)
         self.data_model = False
 
-    def __iter__(self) -> Iterator[SubElement]:
+    def __iter__(self) -> Iterator[SubElement | DataSubElement]:
         return iter(self._subelements)
 
     def append(self, e: SubElement) -> None:
@@ -41,9 +42,27 @@ class ElementContent:
 
 
 @dataclass
-class SubElement(ElementContent):
+class MixedContent:
+    text: str
+    _children: list[MarkupSubElement | DataSubElement]
+
+    def __init__(self, text: str = ""):
+        self.text = text
+        self._children = []
+
+    def __iter__(self) -> Iterator[MarkupSubElement | DataSubElement]:
+        return iter(self._children)
+
+    def append(self, e: MarkupSubElement | DataSubElement) -> None:
+        self._children.append(e)
+
+
+@dataclass
+class SubElement:
     xml: StartTag
     html: StartTag | None
+    content: ElementContent
+    block_level: bool
     tail: str
 
     def __init__(
@@ -53,17 +72,22 @@ class SubElement(ElementContent):
         xml_tag: str,
         tail: str = "",
     ):
-        super().__init__(text, elements)
         self.xml = StartTag(xml_tag)
-        self.tail = tail
         self.html = None
+        self.content = ElementContent(text, elements)
+        self.block_level = False
+        self.tail = tail
+
+    @property
+    def data_model(self) -> bool:
+        return self.content.data_model
 
 
 @dataclass
 class MarkupElement:
     xml: StartTag
-    text: str
-    _children: list[MarkupSubElement | DataSubElement]
+    html: StartTag | None
+    content: MixedContent
     block_level: bool
 
     def __init__(
@@ -73,15 +97,9 @@ class MarkupElement:
         text: str = "",
     ):
         self.xml = StartTag(xml_tag, xml_attrib)
-        self.text = text
-        self._children = []
+        self.html = None
+        self.content = MixedContent(text)
         self.block_level = False
-
-    def __iter__(self) -> Iterator[MarkupSubElement | DataSubElement]:
-        return iter(self._children)
-
-    def append(self, e: MarkupSubElement | DataSubElement) -> None:
-        self._children.append(e)
 
 
 @dataclass
@@ -101,6 +119,7 @@ class MarkupSubElement(MarkupElement):
 @dataclass
 class DataElement:
     xml: StartTag
+    html: StartTag | None
     _children: list[DataElement | MarkupElement]
 
     def __init__(
@@ -120,6 +139,10 @@ class DataElement:
 
     def has_block_level_markup(self) -> bool:
         return any(isinstance(c, MarkupElement) and c.block_level for c in self)
+
+    @property
+    def data_model(self) -> Literal[True]:
+        return True
 
 
 @dataclass

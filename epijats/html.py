@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
 from .baseprint import ProtoSection
-from .tree import ElementContent, SubElement
+from .tree import DataElement, DataSubElement, ElementContent, MarkupElement, SubElement
+from .xml import ElementFormatter
+
+if TYPE_CHECKING:
+    from lxml.etree import _Element
 
 
 def _html_to_str(*ins: str | HtmlElement) -> str:
@@ -12,7 +18,15 @@ def _html_to_str(*ins: str | HtmlElement) -> str:
     return "".join(ss)
 
 
-class HtmlGenerator:
+class HtmlGenerator(ElementFormatter):
+    def make_element(self, src: MarkupElement | DataElement) -> _Element:
+        return self.make_html_element(src)
+
+    def make_html_element(self, src: MarkupElement | DataElement) -> HtmlElement:
+        if src.html is None:
+            raise ValueError
+        return E(src.html.tag, **src.html.attrib)
+
     def content_to_str(self, src: ElementContent) -> str:
         return _html_to_str(*self._content(src))
 
@@ -25,18 +39,21 @@ class HtmlGenerator:
             ret.append(self._sub_element(sub))
         return ret
 
-    def _sub_element(self, src: SubElement) -> HtmlElement:
+    def _sub_element(self, src: SubElement | DataSubElement) -> HtmlElement:
         if src.html is None:
             raise NotImplementedError
         if src.data_model:
             ret = E(src.html.tag, **src.html.attrib)
             ret.text = "\n"
-            for it in src:
-                sub = self._sub_element(it)
-                sub.tail = "\n"
-                ret.append(sub)
+            if isinstance(src, DataSubElement):
+                self.data_content(src, ret, 0)
+            else:
+                for it in src.content:
+                    sub = self._sub_element(it)
+                    sub.tail = "\n"
+                    ret.append(sub)
         else:
-            ret = E(src.html.tag, *self._content(src), **src.html.attrib)
+            ret = E(src.html.tag, *self._content(src.content), **src.html.attrib)
         ret.tail = src.tail
         return ret
 

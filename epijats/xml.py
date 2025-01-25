@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from lxml.builder import ElementMaker
@@ -7,10 +8,53 @@ from lxml.builder import ElementMaker
 if TYPE_CHECKING:
     from lxml.etree import _Element
 
-from .tree import DataElement, MarkupElement
+from .tree import DataElement, MarkupElement, MixedContent
 
 
-E = ElementMaker(
+class ElementFormatter(ABC):
+    @abstractmethod
+    def make_element(self, src: MarkupElement | DataElement) -> _Element: ...
+
+    def markup_content(self, src: MixedContent, dest: _Element) -> None:
+        dest.text = src.text
+        for it in src:
+            sub = self.make_element(it)
+            if isinstance(it, DataElement):
+                self.data_content(it, sub, 0)
+                sub.tail = "\n"
+            else:
+                self.markup_content(it.content, sub)
+                sub.tail = it.tail
+            dest.append(sub)
+
+    def data_content(self, src: DataElement, dest: _Element, level: int) -> None:
+        dest.text = "\n" + "  " * level
+        presub = "\n"
+        if not src.has_block_level_markup():
+            presub += "  " * (level + 1)
+        sub: _Element | None = None
+        for it in src:
+            sub = self.make_element(it)
+            if isinstance(it, DataElement):
+                self.data_content(it, sub, level + 1)
+            else:
+                self.markup_content(it.content, sub)
+            sub.tail = presub
+            dest.append(sub)
+        if sub is not None:
+            sub.tail = dest.text
+            dest.text = presub
+
+
+class XmlFormatter(ElementFormatter):
+    def __init__(self, *, nsmap: dict[str, str]):
+        self.EM = ElementMaker(nsmap=nsmap)
+
+    def make_element(self, src: MarkupElement | DataElement) -> _Element:
+        return self.EM(src.xml.tag, **src.xml.attrib)
+
+
+XML = XmlFormatter(
     nsmap={
         'ali': "http://www.niso.org/schemas/ali/1.0",
         'mml': "http://www.w3.org/1998/Math/MathML",
@@ -20,34 +64,12 @@ E = ElementMaker(
 
 
 def markup_element(src: MarkupElement) -> _Element:
-    ret = E(src.xml.tag, **src.xml.attrib)
-    ret.text = src.text
-    for it in src:
-        if isinstance(it, DataElement):
-            sub = data_element(it, 0)
-            sub.tail = "\n"
-        else:
-            sub = markup_element(it)
-            sub.tail = it.tail
-        ret.append(sub)
+    ret = XML.make_element(src)
+    XML.markup_content(src.content, ret)
     return ret
 
 
 def data_element(src: DataElement, level: int) -> _Element:
-    ret = E(src.xml.tag, **src.xml.attrib)
-    ret.text = "\n" + "  " * level
-    presub = "\n"
-    if not src.has_block_level_markup():
-        presub += "  " * (level + 1)
-    sub: _Element | None = None
-    for it in src:
-        if isinstance(it, DataElement):
-            sub = data_element(it, level + 1)
-        else:
-            sub = markup_element(it)
-        sub.tail = presub
-        ret.append(sub)
-    if sub is not None:
-        sub.tail = ret.text
-        ret.text = presub
+    ret = XML.make_element(src)
+    XML.data_content(src, ret, level)
     return ret
