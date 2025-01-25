@@ -8,12 +8,12 @@ from lxml.builder import ElementMaker
 if TYPE_CHECKING:
     from lxml.etree import _Element
 
-from .tree import DataElement, MarkupElement, MixedContent
+from .tree import DataElement, Element, MarkupElement, MixedContent
 
 
 class ElementFormatter(ABC):
     @abstractmethod
-    def make_element(self, src: MarkupElement | DataElement) -> _Element: ...
+    def make_element(self, src: Element) -> _Element: ...
 
     def markup_content(self, src: MixedContent, dest: _Element) -> None:
         dest.text = src.text
@@ -50,7 +50,7 @@ class XmlFormatter(ElementFormatter):
     def __init__(self, *, nsmap: dict[str, str]):
         self.EM = ElementMaker(nsmap=nsmap)
 
-    def make_element(self, src: MarkupElement | DataElement) -> _Element:
+    def make_element(self, src: Element) -> _Element:
         return self.EM(src.xml.tag, **src.xml.attrib)
 
 

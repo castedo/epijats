@@ -1,32 +1,34 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
 
 from .tree import ElementContent, StartTag, SubElement
 
 
 @dataclass
 class Hyperlink(SubElement):
-    def __init__(self, text: str, subs: Iterable[SubElement], tail: str, href: str):
-        super().__init__(text, subs, 'ext-link', tail)
+    def __init__(self, href: str, tail: str):
+        super().__init__('ext-link')
         self.xml.attrib = {"{http://www.w3.org/1999/xlink}href": href}
         self.html = StartTag('a', {'href': href})
+        self.tail = tail
 
 
 class ListItem(SubElement):
-    def __init__(self, elements: Iterable[SubElement]):
-        super().__init__("", elements, 'list-item')
+    def __init__(self) -> None:
+        super().__init__('list-item')
         self.html = StartTag('li')
         self.content.data_model = True
 
 
 class List(SubElement):
-    def __init__(self, items: Iterable[ListItem], tail: str):
-        super().__init__("", items, 'list', tail)
+    def __init__(self, tail: str | None):
+        super().__init__('list')
         self.xml.attrib = {"list-type": "bullet"}
         self.html = StartTag('ul')
         self.content.data_model = True
+        assert tail is not None
+        self.tail = tail
 
     @property
     def items(self) -> list[ListItem]:

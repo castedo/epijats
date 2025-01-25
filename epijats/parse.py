@@ -170,7 +170,8 @@ class TextElementModel(ElementModel):
         if isinstance(e.tag, str) and e.tag in self.tagmap:
             check_no_attrib(log, e)
             html_tag = self.tagmap[e.tag]
-            ret = SubElement("", [], e.tag, e.tail or "")
+            ret = SubElement(e.tag)
+            ret.tail = e.tail or ""
             ret.html = StartTag(html_tag)
             if self.content_model:
                 self.content_model.parse_content(log, e, ret.content)
@@ -195,7 +196,7 @@ class ExtLinkModel(ElementModel):
             log(fc.MissingAttribute.issue(e, k_href))
             return None
         else:
-            ret = Hyperlink("", [], e.tail or "", href)
+            ret = Hyperlink(href, e.tail or "")
             self.content_model.parse_content(log, e, ret.content)
             return ret
 
@@ -213,10 +214,10 @@ class ListModel(ElementModel):
             return None
         check_no_attrib(log, e, ['list-type'])
         # e.text silently ignored
-        ret = List([], e.tail or "")
+        ret = List(e.tail)
         for s in e:
             if s.tag == 'list-item':
-                item = ListItem([])
+                item = ListItem()
                 self.content_model.parse_content(log, s, item.content)
                 item.content.text = ""
                 ret.content.append(item)

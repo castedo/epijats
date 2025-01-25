@@ -6,7 +6,7 @@ from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
 from .baseprint import ProtoSection
-from .tree import DataElement, DataSubElement, ElementContent, MarkupElement, SubElement
+from .tree import Element, DataSubElement, ElementContent, SubElement
 from .xml import ElementFormatter
 
 if TYPE_CHECKING:
@@ -19,10 +19,10 @@ def _html_to_str(*ins: str | HtmlElement) -> str:
 
 
 class HtmlGenerator(ElementFormatter):
-    def make_element(self, src: MarkupElement | DataElement) -> _Element:
+    def make_element(self, src: Element) -> _Element:
         return self.make_html_element(src)
 
-    def make_html_element(self, src: MarkupElement | DataElement) -> HtmlElement:
+    def make_html_element(self, src: Element) -> HtmlElement:
         if src.html is None:
             raise ValueError
         return E(src.html.tag, **src.html.attrib)

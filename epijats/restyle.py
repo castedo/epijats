@@ -12,7 +12,9 @@ def sub_element(src: SubElement | DataSubElement) -> MarkupSubElement | DataSubE
         ret = DataSubElement(src.xml.tag, src.xml.attrib)
         data_content(src.content, ret)
     else:
-        ret = MarkupSubElement(src.xml.tag, src.xml.attrib, src.content.text)
+        ret = MarkupSubElement(src.xml.tag)
+        ret.xml.attrib = src.xml.attrib
+        ret.content.text = src.content.text
         for it in src.content:
             ret.content.append(sub_element(it))
     ret.tail = src.tail
