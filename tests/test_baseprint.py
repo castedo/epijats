@@ -8,6 +8,7 @@ from epijats import html
 from epijats.baseprint import Abstract, Baseprint, List
 from epijats import condition as fc
 from epijats import restyle
+from epijats.tree import make_paragraph
 from epijats.xml import data_element
 
 
@@ -50,9 +51,8 @@ def test_minimalish():
     got = _.BaseprintParser(issues.append).parse(SNAPSHOT_CASE / "baseprint")
     assert not issues
     assert got.authors == [_.Author("Wang")]
-    paragraph = _.CommonElement('A simple test.', [], 'p', 'p', "")
     expect = Abstract()
-    expect.presection.append(paragraph)
+    expect.presection.append(make_paragraph('A simple test.'))
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
 

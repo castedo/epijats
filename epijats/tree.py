@@ -5,6 +5,12 @@ from typing import Iterable, Iterator
 
 
 @dataclass
+class StartTag:
+    tag: str
+    attrib: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class ElementContent:
     text: str
     _subelements: list[SubElement]
@@ -37,46 +43,22 @@ class ElementContent:
 @dataclass
 class SubElement(ElementContent):
     xml_tag: str
+    xml_attrib: dict[str, str]
     tail: str
+    html: StartTag | None
 
     def __init__(
         self,
         text: str,
         elements: Iterable[SubElement],
         xml_tag: str,
-        tail: str,
+        tail: str = "",
     ):
         super().__init__(text, elements)
         self.xml_tag = xml_tag
+        self.xml_attrib = {}
         self.tail = tail
-
-    @property
-    def xml_attrib(self) -> dict[str, str]:
-        return {}
-
-
-@dataclass
-class CommonElement(SubElement):
-    """Common JATS/HTML element"""
-    html_tag: str
-
-    def __init__(
-        self,
-        text: str,
-        elements: Iterable[SubElement],
-        xml_tag: str,
-        html_tag: str,
-        tail: str,
-    ):
-        super().__init__(text, elements, xml_tag, tail)
-        self.xml_tag = xml_tag
-        self.html_tag = html_tag
-        self.html_tag = html_tag
-        self.tail = tail
-
-    @property
-    def html_attrib(self) -> dict[str, str]:
-        return {}
+        self.html = None
 
 
 @dataclass
@@ -120,3 +102,9 @@ class DataElement(Element):
 @dataclass
 class DataSubElement(DataElement):
     tail: str = ""
+
+
+def make_paragraph(text: str) -> SubElement:
+    ret = SubElement(text, [], 'p')
+    ret.html = StartTag('p')
+    return ret

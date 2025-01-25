@@ -17,7 +17,7 @@ from .baseprint import (
     Orcid,
     ProtoSection,
 )
-from .tree import ElementContent, CommonElement, SubElement
+from .tree import ElementContent, StartTag, SubElement, make_paragraph
 
 
 if TYPE_CHECKING:
@@ -170,7 +170,8 @@ class TextElementModel(ElementModel):
         if isinstance(e.tag, str) and e.tag in self.tagmap:
             check_no_attrib(log, e)
             html_tag = self.tagmap[e.tag]
-            ret = CommonElement("", [], e.tag, html_tag, e.tail or "")
+            ret = SubElement("", [], e.tag, e.tail or "")
+            ret.html = StartTag(html_tag)
             if self.content_model:
                 self.content_model.parse_content(log, e, ret)
         return ret
@@ -364,7 +365,7 @@ class ProtoSectionParser(Parser):
         correction: SubElement | None = None
         text = e.text or ""
         if text.strip():
-            correction = CommonElement(text, [], 'p', 'p', "")
+            correction = make_paragraph(text)
             text = ""
         for s in e:
             if s.tag == "p":
@@ -375,12 +376,12 @@ class ProtoSectionParser(Parser):
                 s.tail = None
                 p_parser.parse_element(s)
                 if text.strip():
-                    correction = CommonElement(text, [], 'p', 'p', "")
+                    correction = make_paragraph(text)
                     text = ""
             else:
                 self.log(fc.UnsupportedElement.issue(s))
                 if not correction:
-                    correction = CommonElement(text, [], 'p', 'p', "")
+                    correction = make_paragraph(text)
                     text = ""
                 self.p_elements.parse_element(self.log, s, correction)
         if correction:

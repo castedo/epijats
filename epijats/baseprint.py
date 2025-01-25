@@ -3,40 +3,30 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .tree import ElementContent, CommonElement, SubElement
+from .tree import ElementContent, StartTag, SubElement
 
 
 @dataclass
-class Hyperlink(CommonElement):
-    href: str
-
+class Hyperlink(SubElement):
     def __init__(self, text: str, subs: Iterable[SubElement], tail: str, href: str):
-        super().__init__(text, subs, 'ext-link', 'a', tail)
-        self.href = href
-
-    @property
-    def xml_attrib(self) -> dict[str, str]:
-        return {"{http://www.w3.org/1999/xlink}href": self.href}
-
-    @property
-    def html_attrib(self) -> dict[str, str]:
-        return {'href': self.href}
+        super().__init__(text, subs, 'ext-link', tail)
+        self.xml_attrib = {"{http://www.w3.org/1999/xlink}href": href}
+        self.html = StartTag('a', {'href': href})
 
 
-class ListItem(CommonElement):
+class ListItem(SubElement):
     def __init__(self, elements: Iterable[SubElement]):
-        super().__init__("", elements, 'list-item', 'li', "")
+        super().__init__("", elements, 'list-item')
+        self.html = StartTag('li')
         self.data_model = True
 
 
-class List(CommonElement):
+class List(SubElement):
     def __init__(self, items: Iterable[ListItem], tail: str):
-        super().__init__("", items, 'list', 'ul', tail)
+        super().__init__("", items, 'list', tail)
+        self.xml_attrib = {"list-type": "bullet"}
+        self.html = StartTag('ul')
         self.data_model = True
-
-    @property
-    def xml_attrib(self) -> dict[str, str]:
-        return {"list-type": "bullet"}
 
     @property
     def items(self) -> list[ListItem]:

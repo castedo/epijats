@@ -4,7 +4,7 @@ from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
 from .baseprint import ProtoSection
-from .tree import CommonElement, ElementContent, SubElement
+from .tree import ElementContent, SubElement
 
 
 def _html_to_str(*ins: str | HtmlElement) -> str:
@@ -26,17 +26,17 @@ class HtmlGenerator:
         return ret
 
     def _sub_element(self, src: SubElement) -> HtmlElement:
-        if not isinstance(src, CommonElement):
+        if src.html is None:
             raise NotImplementedError
         if src.data_model:
-            ret = E(src.html_tag, **src.html_attrib)
+            ret = E(src.html.tag, **src.html.attrib)
             ret.text = "\n"
             for it in src:
                 sub = self._sub_element(it)
                 sub.tail = "\n"
                 ret.append(sub)
         else:
-            ret = E(src.html_tag, *self._content(src), **src.html_attrib)
+            ret = E(src.html.tag, *self._content(src), **src.html.attrib)
         ret.tail = src.tail
         return ret
 
