@@ -17,7 +17,7 @@ from .baseprint import (
     Orcid,
     ProtoSection,
 )
-from .tree import ElementContent, StartTag, SubElement, make_paragraph
+from .tree import ElementContent, StartTag, MarkupSubElement, make_paragraph
 
 
 if TYPE_CHECKING:
@@ -141,7 +141,7 @@ class UnionParser(ContentParser):
 
 class ElementModel(Model):
     @abstractmethod
-    def parse(self, log: IssueCallback, e: etree._Element) -> SubElement | None: ...
+    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupSubElement | None: ...
 
     def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser:
         return ElementParser(log, dest, self)
@@ -165,12 +165,12 @@ class TextElementModel(ElementModel):
         if content_model:
             self.content_model = self if content_model == True else content_model
 
-    def parse(self, log: IssueCallback, e: etree._Element) -> SubElement | None:
+    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupSubElement | None:
         ret = None
         if isinstance(e.tag, str) and e.tag in self.tagmap:
             check_no_attrib(log, e)
             html_tag = self.tagmap[e.tag]
-            ret = SubElement(e.tag)
+            ret = MarkupSubElement(e.tag)
             ret.tail = e.tail or ""
             ret.html = StartTag(html_tag)
             if self.content_model:
@@ -182,7 +182,7 @@ class TextElementModel(ElementModel):
 class ExtLinkModel(ElementModel):
     content_model: Model
 
-    def parse(self, log: IssueCallback, e: etree._Element) -> SubElement | None:
+    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupSubElement | None:
         if e.tag != 'ext-link':
             return None
         link_type = e.attrib.get("ext-link-type")
@@ -205,7 +205,7 @@ class ExtLinkModel(ElementModel):
 class ListModel(ElementModel):
     content_model: Model
 
-    def parse(self, log: IssueCallback, e: etree._Element) -> SubElement | None:
+    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupSubElement | None:
         if e.tag != 'list':
             return None
         list_type = e.attrib.get("list-type")
@@ -363,7 +363,7 @@ class ProtoSectionParser(Parser):
         presection = self.dest.presection
         p_level = TextElementModel({'p': 'p'}, self.p_elements)
         p_parser = p_level.parser(self.log, presection)
-        correction: SubElement | None = None
+        correction: MarkupSubElement | None = None
         text = e.text or ""
         if text.strip():
             correction = make_paragraph(text)

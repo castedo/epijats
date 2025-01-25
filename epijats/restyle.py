@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from . import baseprint
-from .tree import DataElement, DataSubElement, ElementContent, MarkupElement, MarkupSubElement, SubElement
+from .tree import DataElement, DataSubElement, ElementContent, MarkupElement, MarkupSubElement
 
 
-def sub_element(src: SubElement | DataSubElement) -> MarkupSubElement | DataSubElement:
+def sub_element(src: MarkupSubElement | DataSubElement) -> MarkupSubElement | DataSubElement:
     if isinstance(src, DataSubElement):
         return src
     ret: MarkupSubElement | DataSubElement
@@ -21,7 +21,7 @@ def sub_element(src: SubElement | DataSubElement) -> MarkupSubElement | DataSubE
     return ret
 
 
-def element(src: SubElement | DataElement) -> DataElement | MarkupElement:
+def element(src: MarkupSubElement | DataElement) -> DataElement | MarkupElement:
     if isinstance(src, DataElement):
         return src
     ret: DataElement | MarkupElement

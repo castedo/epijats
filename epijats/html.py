@@ -6,7 +6,7 @@ from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
 from .baseprint import ProtoSection
-from .tree import Element, DataSubElement, ElementContent, SubElement
+from .tree import Element, DataSubElement, ElementContent, MarkupSubElement
 from .xml import ElementFormatter
 
 if TYPE_CHECKING:
@@ -39,7 +39,7 @@ class HtmlGenerator(ElementFormatter):
             ret.append(self._sub_element(sub))
         return ret
 
-    def _sub_element(self, src: SubElement | DataSubElement) -> HtmlElement:
+    def _sub_element(self, src: MarkupSubElement | DataSubElement) -> HtmlElement:
         if src.html is None:
             raise NotImplementedError
         if src.data_model:
