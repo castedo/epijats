@@ -42,10 +42,9 @@ class ElementContent:
 
 @dataclass
 class SubElement(ElementContent):
-    xml_tag: str
-    xml_attrib: dict[str, str]
-    tail: str
+    xml: StartTag
     html: StartTag | None
+    tail: str
 
     def __init__(
         self,
@@ -55,23 +54,28 @@ class SubElement(ElementContent):
         tail: str = "",
     ):
         super().__init__(text, elements)
-        self.xml_tag = xml_tag
-        self.xml_attrib = {}
+        self.xml = StartTag(xml_tag)
         self.tail = tail
         self.html = None
 
 
 @dataclass
-class Element:
-    xml_tag: str
-    xml_attrib: dict[str, str] = field(default_factory=dict)
+class MarkupElement:
+    xml: StartTag
+    text: str
+    _children: list[MarkupSubElement | DataSubElement]
+    block_level: bool
 
-
-@dataclass
-class MarkupElement(Element):
-    text: str = ""
-    _children: list[MarkupSubElement | DataSubElement] = field(default_factory=list)
-    block_level = False
+    def __init__(
+        self,
+        xml_tag: str,
+        xml_attrib: dict[str, str] = {},
+        text: str = "",
+    ):
+        self.xml = StartTag(xml_tag, xml_attrib)
+        self.text = text
+        self._children = []
+        self.block_level = False
 
     def __iter__(self) -> Iterator[MarkupSubElement | DataSubElement]:
         return iter(self._children)
@@ -82,12 +86,31 @@ class MarkupElement(Element):
 
 @dataclass
 class MarkupSubElement(MarkupElement):
-    tail: str = ""
+    tail: str
+
+    def __init__(
+        self,
+        xml_tag: str,
+        xml_attrib: dict[str, str] = {},
+        text: str = "",
+    ):
+        super().__init__(xml_tag, xml_attrib, text)
+        self.tail = ""
 
 
 @dataclass
-class DataElement(Element):
-    _children: list[DataElement | MarkupElement] = field(default_factory=list)
+class DataElement:
+    xml: StartTag
+    _children: list[DataElement | MarkupElement]
+
+    def __init__(
+        self,
+        xml_tag: str,
+        xml_attrib: dict[str, str] = {},
+        children: list[DataElement | MarkupElement] = [],
+    ):
+        self.xml = StartTag(xml_tag, xml_attrib)
+        self._children = list(children)
 
     def __iter__(self) -> Iterator[DataElement | MarkupElement]:
         return iter(self._children)
@@ -101,7 +124,15 @@ class DataElement(Element):
 
 @dataclass
 class DataSubElement(DataElement):
-    tail: str = ""
+    tail: str
+
+    def __init__(
+        self,
+        xml_tag: str,
+        xml_attrib: dict[str, str] = {},
+    ):
+        super().__init__(xml_tag, xml_attrib)
+        self.tail = ""
 
 
 def make_paragraph(text: str) -> SubElement:

@@ -20,7 +20,7 @@ E = ElementMaker(
 
 
 def markup_element(src: MarkupElement) -> _Element:
-    ret = E(src.xml_tag, **src.xml_attrib)
+    ret = E(src.xml.tag, **src.xml.attrib)
     ret.text = src.text
     for it in src:
         if isinstance(it, DataElement):
@@ -34,7 +34,7 @@ def markup_element(src: MarkupElement) -> _Element:
 
 
 def data_element(src: DataElement, level: int) -> _Element:
-    ret = E(src.xml_tag, **src.xml_attrib)
+    ret = E(src.xml.tag, **src.xml.attrib)
     ret.text = "\n" + "  " * level
     presub = "\n"
     if not src.has_block_level_markup():

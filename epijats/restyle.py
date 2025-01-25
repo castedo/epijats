@@ -7,10 +7,10 @@ from .tree import DataElement, DataSubElement, ElementContent, MarkupElement, Ma
 def sub_element(src: SubElement) -> MarkupSubElement | DataSubElement:
     ret: MarkupSubElement | DataSubElement
     if src.data_model:
-        ret = DataSubElement(src.xml_tag, src.xml_attrib)
+        ret = DataSubElement(src.xml.tag, src.xml.attrib)
         data_content(src, ret)
     else:
-        ret = MarkupSubElement(src.xml_tag, src.xml_attrib, src.text)
+        ret = MarkupSubElement(src.xml.tag, src.xml.attrib, src.text)
         for it in src:
             ret.append(sub_element(it))
     ret.tail = src.tail
@@ -20,11 +20,11 @@ def sub_element(src: SubElement) -> MarkupSubElement | DataSubElement:
 def element(src: SubElement) -> DataElement | MarkupElement:
     ret: DataElement | MarkupElement
     if src.data_model:
-        ret = DataElement(src.xml_tag, src.xml_attrib)
+        ret = DataElement(src.xml.tag, src.xml.attrib)
         data_content(src, ret)
     else:
         # assert not src.tail
-        ret = MarkupElement(src.xml_tag, src.xml_attrib, src.text)
+        ret = MarkupElement(src.xml.tag, src.xml.attrib, src.text)
         ret.block_level = True
         for it in src:
             ret.append(sub_element(it))

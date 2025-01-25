@@ -10,7 +10,7 @@ from .tree import ElementContent, StartTag, SubElement
 class Hyperlink(SubElement):
     def __init__(self, text: str, subs: Iterable[SubElement], tail: str, href: str):
         super().__init__(text, subs, 'ext-link', tail)
-        self.xml_attrib = {"{http://www.w3.org/1999/xlink}href": href}
+        self.xml.attrib = {"{http://www.w3.org/1999/xlink}href": href}
         self.html = StartTag('a', {'href': href})
 
 
@@ -24,7 +24,7 @@ class ListItem(SubElement):
 class List(SubElement):
     def __init__(self, items: Iterable[ListItem], tail: str):
         super().__init__("", items, 'list', tail)
-        self.xml_attrib = {"list-type": "bullet"}
+        self.xml.attrib = {"list-type": "bullet"}
         self.html = StartTag('ul')
         self.data_model = True
 
