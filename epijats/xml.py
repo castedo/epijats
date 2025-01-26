@@ -19,15 +19,15 @@ class ElementFormatter(ABC):
         dest.text = src.text
         for it in src:
             sub = self.make_element(it)
-            if isinstance(it, DataElement):
-                self.data_content(it, sub, 0)
-                sub.tail = "\n"
-            else:
+            if isinstance(it, MarkupElement):
                 self.markup_content(it.content, sub)
                 sub.tail = it.tail
+            else:
+                self.data_content(it, sub, 0)
+                sub.tail = "\n"
             dest.append(sub)
 
-    def data_content(self, src: DataElement, dest: _Element, level: int) -> None:
+    def data_content(self, src: Element, dest: _Element, level: int) -> None:
         dest.text = "\n" + "  " * level
         presub = "\n"
         if not src.has_block_level_markup():
@@ -35,10 +35,10 @@ class ElementFormatter(ABC):
         sub: _Element | None = None
         for it in src:
             sub = self.make_element(it)
-            if isinstance(it, DataElement):
-                self.data_content(it, sub, level + 1)
-            else:
+            if isinstance(it, MarkupElement):
                 self.markup_content(it.content, sub)
+            else:
+                self.data_content(it, sub, level + 1)
             sub.tail = presub
             dest.append(sub)
         if sub is not None:

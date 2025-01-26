@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .tree import ElementContent, StartTag, MarkupSubElement
+from .tree import ElementContent, StartTag, MarkupElement
 
 
 @dataclass
-class Hyperlink(MarkupSubElement):
+class Hyperlink(MarkupElement):
     def __init__(self, href: str, tail: str):
         super().__init__('ext-link')
         self.xml.attrib = {"{http://www.w3.org/1999/xlink}href": href}
@@ -14,14 +14,14 @@ class Hyperlink(MarkupSubElement):
         self.tail = tail
 
 
-class ListItem(MarkupSubElement):
+class ListItem(MarkupElement):
     def __init__(self) -> None:
         super().__init__('list-item')
         self.html = StartTag('li')
         self.content.data_model = True
 
 
-class List(MarkupSubElement):
+class List(MarkupElement):
     def __init__(self, tail: str | None):
         super().__init__('list')
         self.xml.attrib = {"list-type": "bullet"}

@@ -6,7 +6,7 @@ from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
 from .baseprint import ProtoSection
-from .tree import Element, DataSubElement, ElementContent, MarkupSubElement
+from .tree import Element, ElementContent, MarkupElement
 from .xml import ElementFormatter
 
 if TYPE_CHECKING:
@@ -39,21 +39,21 @@ class HtmlGenerator(ElementFormatter):
             ret.append(self._sub_element(sub))
         return ret
 
-    def _sub_element(self, src: MarkupSubElement | DataSubElement) -> HtmlElement:
+    def _sub_element(self, src: Element) -> HtmlElement:
         if src.html is None:
             raise NotImplementedError
-        if src.data_model:
+        if isinstance(src, MarkupElement) and not src.data_model:
+            ret = E(src.html.tag, *self._content(src.content), **src.html.attrib)
+        else:
             ret = E(src.html.tag, **src.html.attrib)
             ret.text = "\n"
-            if isinstance(src, DataSubElement):
-                self.data_content(src, ret, 0)
-            else:
+            if isinstance(src, MarkupElement):
                 for it in src.content:
                     sub = self._sub_element(it)
                     sub.tail = "\n"
                     ret.append(sub)
-        else:
-            ret = E(src.html.tag, *self._content(src.content), **src.html.attrib)
+            else:
+                self.data_content(src, ret, 0)
         ret.tail = src.tail
         return ret
 
