@@ -8,6 +8,7 @@ from epijats import html
 from epijats.baseprint import Abstract, Baseprint, List
 from epijats import condition as fc
 from epijats import restyle
+from epijats.parse import parse_baseprint
 from epijats.tree import make_paragraph
 from epijats.xml import data_element
 
@@ -22,6 +23,12 @@ NSMAP = {
     'xlink': "http://www.w3.org/1999/xlink",
 }
 NSMAP_STR = " ".join('xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items())
+
+
+def assert_eq_if_exists(got: str, expect: Path):
+    if expect.exists():
+        with open(expect, "r") as f:
+            assert got == f.read()
 
 
 def data_sub_element(src, level: int) -> etree._Element:
@@ -68,6 +75,19 @@ def test_roundtrip(case):
     xe = data_sub_element(restyle.article(bp), 0)
     assert etree.tostring(xe).decode() == expect
     assert not issues
+
+
+@pytest.mark.parametrize("case", os.listdir(ROUNDTRIP_CASE))
+def test_html(case):
+    case_path = ROUNDTRIP_CASE / case
+    issues = []
+    bp = parse_baseprint(case_path / "article.xml", issues.append)
+    title = HTML.content_to_str(bp.title)
+    assert_eq_if_exists(title, case_path / "title.html")
+    abstract = HTML.proto_section_to_str(bp.abstract)
+    assert_eq_if_exists(abstract, case_path / "abstract.html")
+    body = HTML.proto_section_to_str(bp.body)
+    assert_eq_if_exists(body, case_path / "body.html")
 
 
 def test_minimal_html_title():
@@ -211,7 +231,8 @@ def test_abstract_restyle():
   </li>
 </ul>
 </p>
-<p>OK</p>"""
+<p>OK</p>
+"""
     assert HTML.proto_section_to_str(dest) == expect
 
 

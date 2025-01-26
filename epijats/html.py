@@ -42,19 +42,11 @@ class HtmlGenerator(ElementFormatter):
     def _element(self, src: Element) -> HtmlElement:
         if src.html is None:
             raise NotImplementedError
+        ret = E(src.html.tag, **src.html.attrib)
         if isinstance(src, MarkupElement):
-            hack = self._content(src.content)
-            ret = E(src.html.tag, *hack, **src.html.attrib)
+            self.markup_content(src.content, ret)
         else:
-            ret = E(src.html.tag, **src.html.attrib)
-            ret.text = "\n"
-            if isinstance(src, MarkupElement):
-                for it in src.content:
-                    sub = self._sub_element(it)
-                    sub.tail = "\n"
-                    ret.append(sub)
-            else:
-                self.data_content(src, ret, 0)
+            self.data_content(src, ret, 0)
         return ret
 
     def _sub_element(self, src: Element) -> HtmlElement:
@@ -65,7 +57,6 @@ class HtmlGenerator(ElementFormatter):
     def _proto_section_content(self, src: ProtoSection) -> list[str | HtmlElement]:
         ret: list[str | HtmlElement] = []
         for p in src.presection:
-            if ret:
-                ret.append("\n")
             ret.append(self._element(p))
+            ret.append("\n")
         return ret

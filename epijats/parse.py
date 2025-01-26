@@ -92,7 +92,7 @@ class ArrayParser(Parser):
 class MixedContentParser(Parser):
     def __init__(self, log: IssueCallback, dest: MixedContent, model: Model):
         super().__init__(log)
-        self._parser = model.a_parser(log, dest.append)
+        self._parser = model.parser(log, dest.append)
         self.dest = dest
 
     def parse_element(self, e: etree._Element) -> bool:
@@ -109,26 +109,23 @@ class MixedContentParser(Parser):
 
 class Model(ABC):
     @abstractmethod
-    def a_parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser: ...
-
-    def parser(self, log: IssueCallback, dest: MixedContent) -> MixedContentParser:
-        return MixedContentParser(log, dest, self)
+    def parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser: ...
 
     def parse_element(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
     ) -> bool:
-        return self.parser(log, dest).parse_element(e)
+        return MixedContentParser(log, dest, self).parse_element(e)
 
     def parse_array(
         self, log: IssueCallback, e: etree._Element, dest: ElementHandler
     ) -> None:
         pass
-        self.a_parser(log, dest).parse_array(e)
+        self.parser(log, dest).parse_array(e)
 
     def parse_content(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
     ) -> None:
-        self.parser(log, dest).parse_content(e)
+        return MixedContentParser(log, dest, self).parse_content(e)
 
     def __or__(self, other: Model) -> Model:
         union = self._models.copy() if isinstance(self, UnionModel) else [self]
@@ -145,7 +142,7 @@ class UnionModel(Model):
     def __init__(self, models: Iterable[Model] | None = None):
         self._models = list(models) if models else []
 
-    def a_parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
+    def parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
         return UnionParser(log, dest, self._models)
 
     def __ior__(self, other: Model) -> UnionModel:
@@ -163,7 +160,7 @@ class UnionParser(ArrayParser):
         self, log: IssueCallback, dest: ElementHandler, models: Iterable[Model]
     ):
         super().__init__(log, dest)
-        self._parsers = list(m.a_parser(log, dest) for m in models)
+        self._parsers = list(m.parser(log, dest) for m in models)
 
     def parse_element(self, e: etree._Element) -> bool:
         return any(p.parse_element(e) for p in self._parsers)
@@ -173,7 +170,7 @@ class ElementModel(Model):
     @abstractmethod
     def parse(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
 
-    def a_parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
+    def parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
         return ElementParser(log, dest, self)
 
 
@@ -388,6 +385,7 @@ class ProtoSectionParser(Parser):
         super().__init__(log)
         self.dest = dest
         self.p_elements = p_elements
+        self.p_level = TextElementModel({'p': 'p'}, self.p_elements)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag not in ['abstract', 'body']:
@@ -397,15 +395,14 @@ class ProtoSectionParser(Parser):
             self.log(fc.ExcessElement.issue(e))
             return True
         presection = self.dest.presection
-        p_level = TextElementModel({'p': 'p'}, self.p_elements)
-        p_parser = p_level.a_parser(self.log, presection.append)
+        p_parser = self.p_level.parser(self.log, presection.append)
         correction: MarkupElement | None = None
         text = e.text or ""
         if text.strip():
             correction = make_paragraph(text)
             text = ""
         for s in e:
-            if s.tag == "p":
+            if s.tag == 'p':
                 if correction:
                     presection.append(correction)
                     correction = None
@@ -576,7 +573,7 @@ class RichTextParseHelper:
 
     def content(self, e: etree._Element) -> MixedContent:
         ret = MixedContent()
-        parser = self.content_model.parser(self.log, ret)
+        parser = MixedContentParser(self.log, ret, self.content_model)
         parser.check_no_attrib(e)
         parser.parse_content(e)
         return ret
