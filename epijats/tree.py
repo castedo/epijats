@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Iterator, Literal
+from typing import Iterator, Literal
 
 
 @dataclass
@@ -16,9 +16,9 @@ class MixedContent:
     _children: list[MarkupSubElement | DataSubElement]
     data_model: bool
 
-    def __init__(self, text: str = "", elements: Iterable[MarkupSubElement] = []):
+    def __init__(self, text: str = ""):
         self.text = text
-        self._children = list(elements)
+        self._children = []
         self.data_model = False
 
     def __iter__(self) -> Iterator[MarkupSubElement | DataSubElement]:
@@ -74,11 +74,7 @@ class MarkupElement(Element):
 class MarkupSubElement(SubElement):
     content: MixedContent
 
-    def __init__(
-        self,
-        xml_tag: str,
-        text: str = "",
-    ):
+    def __init__(self, xml_tag: str, text: str = ""):
         super().__init__(xml_tag)
         self.content = MixedContent(text)
 
@@ -89,22 +85,22 @@ class MarkupSubElement(SubElement):
 
 @dataclass
 class DataElement(Element):
-    _children: list[DataElement | MarkupElement]
+    array: list[DataElement | MarkupElement]
 
     def __init__(
         self,
         xml_tag: str,
         xml_attrib: dict[str, str] = {},
-        children: list[DataElement | MarkupElement] = [],
+        array: list[DataElement | MarkupElement] = [],
     ):
         super().__init__(StartTag(xml_tag, xml_attrib))
-        self._children = list(children)
+        self.array = list(array)
 
     def __iter__(self) -> Iterator[DataElement | MarkupElement]:
-        return iter(self._children)
+        return iter(self.array)
 
     def append(self, e: DataElement | MarkupElement) -> None:
-        self._children.append(e)
+        self.array.append(e)
 
     def has_block_level_markup(self) -> bool:
         return any(c.block_level for c in self)
@@ -118,16 +114,13 @@ class DataElement(Element):
 class DataSubElement(DataElement):
     tail: str
 
-    def __init__(
-        self,
-        xml_tag: str,
-        xml_attrib: dict[str, str] = {},
-    ):
-        super().__init__(xml_tag, xml_attrib)
+    def __init__(self, xml_tag: str):
+        super().__init__(xml_tag)
         self.tail = ""
 
 
 def make_paragraph(text: str) -> MarkupSubElement:
     ret = MarkupSubElement('p', text)
     ret.html = StartTag('p')
+    ret.block_level = True
     return ret

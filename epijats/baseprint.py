@@ -29,14 +29,7 @@ class List(MarkupSubElement):
         self.content.data_model = True
         assert tail is not None
         self.tail = tail
-
-    @property
-    def items(self) -> list[ListItem]:
-        ret = []
-        for sub in self.content:
-            assert isinstance(sub, ListItem)
-            ret.append(sub)
-        return ret
+        self.block_level = True
 
 
 @dataclass(frozen=True)

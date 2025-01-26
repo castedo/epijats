@@ -17,7 +17,7 @@ from .baseprint import (
     Orcid,
     ProtoSection,
 )
-from .tree import ElementContent, StartTag, MarkupSubElement, make_paragraph
+from .tree import ElementContent, MarkupSubElement, MixedContent, StartTag, make_paragraph
 
 
 if TYPE_CHECKING:
@@ -171,6 +171,8 @@ class TextElementModel(ElementModel):
             check_no_attrib(log, e)
             html_tag = self.tagmap[e.tag]
             ret = MarkupSubElement(e.tag)
+            if e.tag == 'p':
+                ret.block_level = True
             ret.tail = e.tail or ""
             ret.html = StartTag(html_tag)
             if self.content_model:
@@ -538,8 +540,8 @@ class RichTextParseHelper:
     log: IssueCallback
     content_model: Model
 
-    def content(self, e: etree._Element) -> ElementContent:
-        ret = ElementContent("", [])
+    def content(self, e: etree._Element) -> MixedContent:
+        ret = MixedContent()
         parser = self.content_model.parser(self.log, ret)
         parser.check_no_attrib(e)
         parser.parse_content(e)
@@ -548,7 +550,7 @@ class RichTextParseHelper:
 
 def parse_text_content(
     log: IssueCallback, e: etree._Element, model: Model
-) -> ElementContent:
+) -> MixedContent:
     return RichTextParseHelper(log, model).content(e)
 
 

@@ -149,7 +149,7 @@ bar.</p>
     model = _.ListModel(_.TextElementModel({'p': 'p'}, _.base_hypertext_model()))
     subel = model.parse(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
-    assert len(subel.items) == 3
+    assert len(list(subel.content)) == 3
     xe = data_sub_element(restyle.element(subel), 0)
     assert xml_to_root_str(xe) == dump
 
