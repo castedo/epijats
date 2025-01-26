@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Literal
+from typing import Iterator, TYPE_CHECKING, TypeAlias
 
 
 @dataclass
@@ -16,43 +16,6 @@ class StartTag:
         else:
             self.tag = tag.tag
             self.attrib = tag.attrib | attrib
-
-
-@dataclass
-class ArrayContent:
-    _children: list[Element]
-    data_model: bool
-
-    def __init__(self) -> None:
-        self._children = []
-        self.data_model = False
-
-    def __iter__(self) -> Iterator[Element]:
-        return iter(self._children)
-
-    def append(self, e: Element) -> None:
-        self._children.append(e)
-
-
-@dataclass
-class MixedContent(ArrayContent):
-    text: str
-
-    def __init__(self, text: str = ""):
-        super().__init__()
-        self.text = text
-
-    def append_text(self, s: str | None) -> None:
-        if s:
-            if self._children:
-                self._children[-1].tail += s
-            else:
-                self.text += s
-
-    def empty(self) -> bool:
-        return not self.text and not self._children
-
-ElementContent = MixedContent
 
 
 @dataclass
@@ -74,9 +37,36 @@ class Element:
     def has_block_level_markup(self) -> bool:
         return any(c.block_level for c in self)
 
-    @property
-    def data_model(self) -> bool:
-        return False
+
+if TYPE_CHECKING:
+    ArrayContent: TypeAlias = list[Element]
+
+
+@dataclass
+class MixedContent:
+    text: str
+    _children: ArrayContent
+
+    def __init__(self, text: str = ""):
+        super().__init__()
+        self.text = text
+        self._children = []
+
+    def __iter__(self) -> Iterator[Element]:
+        return iter(self._children)
+
+    def append(self, e: Element) -> None:
+        self._children.append(e)
+
+    def append_text(self, s: str | None) -> None:
+        if s:
+            if self._children:
+                self._children[-1].tail += s
+            else:
+                self.text += s
+
+    def empty(self) -> bool:
+        return not self.text and not self._children
 
 
 @dataclass
@@ -86,10 +76,6 @@ class MarkupElement(Element):
     def __init__(self, xml_tag: str | StartTag, text: str = ""):
         super().__init__(xml_tag)
         self.content = MixedContent(text)
-
-    @property
-    def data_model(self) -> bool:
-        return self.content.data_model
 
 
 @dataclass
@@ -109,10 +95,6 @@ class DataElement(Element):
 
     def append(self, e: Element) -> None:
         self.array.append(e)
-
-    @property
-    def data_model(self) -> Literal[True]:
-        return True
 
 
 def make_paragraph(text: str) -> MarkupElement:

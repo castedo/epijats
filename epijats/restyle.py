@@ -1,43 +1,7 @@
 from __future__ import annotations
 
 from . import baseprint
-from .tree import DataElement, Element, ElementContent, MarkupElement, MixedContent, StartTag
-
-
-def sub_element(src: Element) -> Element:
-    if isinstance(src, MarkupElement) and src.data_model:
-        ret = DataElement(src.xml.tag)
-        ret.xml.attrib = src.xml.attrib
-        data_content(src.content, ret)
-        ret.tail = src.tail
-        return ret
-    else:
-        return src
-
-def element(src: Element) -> Element:
-    if isinstance(src, DataElement):
-        return src
-    ret: DataElement | MarkupElement
-    if src.data_model:
-        assert isinstance(src, MarkupElement)
-        ret = DataElement(src.xml)
-        data_content(src.content, ret)
-    else:
-        # assert not src.tail
-        assert isinstance(src, MarkupElement)
-        ret = MarkupElement(src.xml, src.content.text)
-        ret.block_level = src.block_level
-        for it in src.content:
-            ret.content.append(sub_element(it))
-    return ret
-
-
-def data_content(src: ElementContent, dest: DataElement) -> None:
-    assert src.data_model
-    assert not src.text
-    for it in src:
-        # assert not it.tail
-        dest.append(element(it))
+from .tree import DataElement, MarkupElement, MixedContent, StartTag
 
 
 def title_group(src: MixedContent) -> DataElement:
@@ -74,7 +38,7 @@ def contrib_group(src: list[baseprint.Author]) -> DataElement:
 def proto_section(tag: str, src: baseprint.ProtoSection) -> DataElement:
     ret = DataElement(tag)
     for e in src.presection:
-        ret.append(element(e))
+        ret.append(e)
 #    for ss in src.subsections:
 #        ret.append(sub)
     return ret

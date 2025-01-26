@@ -43,6 +43,7 @@ class EncodingNotUtf8(FormatCondition):
 @dataclass(frozen=True)
 class ProcessingInstruction(FormatCondition):
     """XML processing instruction"""
+
     text: str | None
 
     def __str__(self) -> str:
@@ -82,6 +83,11 @@ class ExcessElement(ElementFormatCondition):
 @dataclass(frozen=True)
 class MissingContent(ElementFormatCondition):
     """Missing XML element content"""
+
+
+@dataclass(frozen=True)
+class IgnoredText(ElementFormatCondition):
+    """Unexpected text ignored within XML element"""
 
 
 class InvalidOrcid(FormatCondition):
@@ -127,6 +133,7 @@ class UnsupportedAttributeValue(FormatCondition):
 @dataclass(frozen=True)
 class MissingElement(FormatCondition):
     """Missing XML element"""
+
     tag: str
     parent: str
 

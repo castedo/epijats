@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .tree import ElementContent, StartTag, MarkupElement
+from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
 
 
 @dataclass
@@ -14,21 +14,17 @@ class Hyperlink(MarkupElement):
         self.tail = tail
 
 
-class ListItem(MarkupElement):
+class ListItem(DataElement):
     def __init__(self) -> None:
         super().__init__('list-item')
         self.html = StartTag('li')
-        self.content.data_model = True
 
 
-class List(MarkupElement):
-    def __init__(self, tail: str | None):
+class List(DataElement):
+    def __init__(self) -> None:
         super().__init__('list')
         self.xml.attrib = {"list-type": "bullet"}
         self.html = StartTag('ul')
-        self.content.data_model = True
-        assert tail is not None
-        self.tail = tail
         self.block_level = True
 
 
@@ -76,21 +72,20 @@ class Author:
 
 @dataclass
 class ProtoSection:
-    presection: ElementContent
+    presection: list[Element]
     subsections: list[Section]
 
     def __init__(self) -> None:
-        self.presection = ElementContent()
-        self.presection.data_model = True
+        self.presection = []
         self.subsections = []
 
     def has_no_content(self) -> bool:
-        return self.presection.empty() and not len(self.subsections)
+        return not len(self.presection) and not len(self.subsections)
 
 
 @dataclass
 class Section(ProtoSection):
-    title: ElementContent
+    title: MixedContent
 
 
 class Abstract(ProtoSection):
@@ -99,13 +94,13 @@ class Abstract(ProtoSection):
 
 @dataclass
 class Baseprint:
-    title: ElementContent
+    title: MixedContent
     authors: list[Author]
     abstract: Abstract
     body: ProtoSection
 
     def __init__(self) -> None:
-        self.title = ElementContent()
+        self.title = MixedContent()
         self.authors = []
         self.abstract = Abstract()
         self.body = ProtoSection()

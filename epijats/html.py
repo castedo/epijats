@@ -6,7 +6,7 @@ from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
 from .baseprint import ProtoSection
-from .tree import Element, ElementContent, MarkupElement
+from .tree import Element, MixedContent, MarkupElement
 from .xml import ElementFormatter
 
 if TYPE_CHECKING:
@@ -27,23 +27,24 @@ class HtmlGenerator(ElementFormatter):
             raise ValueError
         return E(src.html.tag, **src.html.attrib)
 
-    def content_to_str(self, src: ElementContent) -> str:
+    def content_to_str(self, src: MixedContent) -> str:
         return _html_to_str(*self._content(src))
 
     def proto_section_to_str(self, src: ProtoSection) -> str:
         return _html_to_str(*self._proto_section_content(src))
 
-    def _content(self, src: ElementContent) -> list[str | HtmlElement]:
+    def _content(self, src: MixedContent) -> list[str | HtmlElement]:
         ret: list[str | HtmlElement] = [src.text]
         for sub in src:
             ret.append(self._sub_element(sub))
         return ret
 
-    def _sub_element(self, src: Element) -> HtmlElement:
+    def _element(self, src: Element) -> HtmlElement:
         if src.html is None:
             raise NotImplementedError
-        if isinstance(src, MarkupElement) and not src.data_model:
-            ret = E(src.html.tag, *self._content(src.content), **src.html.attrib)
+        if isinstance(src, MarkupElement):
+            hack = self._content(src.content)
+            ret = E(src.html.tag, *hack, **src.html.attrib)
         else:
             ret = E(src.html.tag, **src.html.attrib)
             ret.text = "\n"
@@ -54,6 +55,10 @@ class HtmlGenerator(ElementFormatter):
                     ret.append(sub)
             else:
                 self.data_content(src, ret, 0)
+        return ret
+
+    def _sub_element(self, src: Element) -> HtmlElement:
+        ret = self._element(src)
         ret.tail = src.tail
         return ret
 
@@ -62,5 +67,5 @@ class HtmlGenerator(ElementFormatter):
         for p in src.presection:
             if ret:
                 ret.append("\n")
-            ret.append(self._sub_element(p))
+            ret.append(self._element(p))
         return ret

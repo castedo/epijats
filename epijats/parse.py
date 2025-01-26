@@ -17,7 +17,7 @@ from .baseprint import (
     Orcid,
     ProtoSection,
 )
-from .tree import ElementContent, MarkupElement, MixedContent, StartTag, make_paragraph
+from .tree import Element, MarkupElement, MixedContent, StartTag, make_paragraph
 
 
 if TYPE_CHECKING:
@@ -70,35 +70,65 @@ class Parser(Validator):
     def parse_element(self, e: etree._Element) -> bool: ...
 
 
-class ContentParser(Parser):
-    def __init__(self, log: IssueCallback, dest: ElementContent):
+if TYPE_CHECKING:
+    ElementHandler: TypeAlias = Callable[[Element], None]
+
+
+class ArrayParser(Parser):
+    def __init__(self, log: IssueCallback, dest: ElementHandler):
         super().__init__(log)
         self.dest = dest
 
-    def parse_content(self, e: etree._Element) -> bool:
+    def parse_array(self, e: etree._Element) -> None:
+        if e.text and e.text.strip():
+            self.log(fc.IgnoredText.issue(e))
+        for s in e:
+            if not self.parse_element(s):
+                self.log(fc.UnsupportedElement.issue(s))
+            if s.tail and s.tail.strip():
+                self.log(fc.IgnoredText.issue(e))
+
+
+class MixedContentParser(Parser):
+    def __init__(self, log: IssueCallback, dest: MixedContent, model: Model):
+        super().__init__(log)
+        self._parser = model.a_parser(log, dest.append)
+        self.dest = dest
+
+    def parse_element(self, e: etree._Element) -> bool:
+        return self._parser.parse_element(e)
+
+    def parse_content(self, e: etree._Element) -> None:
         self.dest.append_text(e.text)
         for s in e:
             if not self.parse_element(s):
                 self.log(fc.UnsupportedElement.issue(s))
                 self.parse_content(s)
-                if not self.dest.data_model:
-                    self.dest.append_text(s.tail)
-        return True
+                self.dest.append_text(s.tail)
 
 
 class Model(ABC):
     @abstractmethod
-    def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser: ...
+    def a_parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser: ...
+
+    def parser(self, log: IssueCallback, dest: MixedContent) -> MixedContentParser:
+        return MixedContentParser(log, dest, self)
 
     def parse_element(
-        self, log: IssueCallback, e: etree._Element, dest: ElementContent
+        self, log: IssueCallback, e: etree._Element, dest: MixedContent
     ) -> bool:
         return self.parser(log, dest).parse_element(e)
 
+    def parse_array(
+        self, log: IssueCallback, e: etree._Element, dest: ElementHandler
+    ) -> None:
+        pass
+        self.a_parser(log, dest).parse_array(e)
+
     def parse_content(
-        self, log: IssueCallback, e: etree._Element, dest: ElementContent
-    ) -> bool:
-        return self.parser(log, dest).parse_content(e)
+        self, log: IssueCallback, e: etree._Element, dest: MixedContent
+    ) -> None:
+        self.parser(log, dest).parse_content(e)
 
     def __or__(self, other: Model) -> Model:
         union = self._models.copy() if isinstance(self, UnionModel) else [self]
@@ -115,7 +145,7 @@ class UnionModel(Model):
     def __init__(self, models: Iterable[Model] | None = None):
         self._models = list(models) if models else []
 
-    def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser:
+    def a_parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
         return UnionParser(log, dest, self._models)
 
     def __ior__(self, other: Model) -> UnionModel:
@@ -128,12 +158,12 @@ class UnionModel(Model):
         return self
 
 
-class UnionParser(ContentParser):
+class UnionParser(ArrayParser):
     def __init__(
-        self, log: IssueCallback, dest: ElementContent, models: Iterable[Model]
+        self, log: IssueCallback, dest: ElementHandler, models: Iterable[Model]
     ):
         super().__init__(log, dest)
-        self._parsers = list(m.parser(log, dest) for m in models)
+        self._parsers = list(m.a_parser(log, dest) for m in models)
 
     def parse_element(self, e: etree._Element) -> bool:
         return any(p.parse_element(e) for p in self._parsers)
@@ -141,20 +171,22 @@ class UnionParser(ContentParser):
 
 class ElementModel(Model):
     @abstractmethod
-    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupElement | None: ...
+    def parse(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
 
-    def parser(self, log: IssueCallback, dest: ElementContent) -> ContentParser:
+    def a_parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
         return ElementParser(log, dest, self)
 
 
-class ElementParser(ContentParser):
-    def __init__(self, log: IssueCallback, dest: ElementContent, model: ElementModel):
+class ElementParser(ArrayParser):
+    def __init__(self, log: IssueCallback, dest: ElementHandler, model: ElementModel):
         super().__init__(log, dest)
         self.model = model
 
     def parse_element(self, e: etree._Element) -> bool:
         if out := self.model.parse(self.log, e):
-            self.dest.append(out)
+            if e.tail:
+                out.tail = e.tail
+            self.dest(out)
         return out is not None
 
 
@@ -165,7 +197,7 @@ class TextElementModel(ElementModel):
         if content_model:
             self.content_model = self if content_model == True else content_model
 
-    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupElement | None:
+    def parse(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None
         if isinstance(e.tag, str) and e.tag in self.tagmap:
             check_no_attrib(log, e)
@@ -184,7 +216,7 @@ class TextElementModel(ElementModel):
 class ExtLinkModel(ElementModel):
     content_model: Model
 
-    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupElement | None:
+    def parse(self, log: IssueCallback, e: etree._Element) -> Element | None:
         if e.tag != 'ext-link':
             return None
         link_type = e.attrib.get("ext-link-type")
@@ -207,7 +239,7 @@ class ExtLinkModel(ElementModel):
 class ListModel(ElementModel):
     content_model: Model
 
-    def parse(self, log: IssueCallback, e: etree._Element) -> MarkupElement | None:
+    def parse(self, log: IssueCallback, e: etree._Element) -> Element | None:
         if e.tag != 'list':
             return None
         list_type = e.attrib.get("list-type")
@@ -215,16 +247,18 @@ class ListModel(ElementModel):
             log(fc.UnsupportedAttributeValue.issue(e, "list-type", list_type))
             return None
         check_no_attrib(log, e, ['list-type'])
-        # e.text silently ignored
-        ret = List(e.tail)
+        if e.text and e.text.strip():
+            log(fc.IgnoredText.issue(e))
+        ret = List()
         for s in e:
             if s.tag == 'list-item':
                 item = ListItem()
-                self.content_model.parse_content(log, s, item.content)
-                item.content.text = ""
-                ret.content.append(item)
+                self.content_model.parse_array(log, s, item.array.append)
+                ret.array.append(item)
             else:
                 log(fc.UnsupportedElement.issue(s))
+            if s.tail and s.tail.strip():
+                log(fc.IgnoredText.issue(e))
         return ret
 
 
@@ -364,7 +398,7 @@ class ProtoSectionParser(Parser):
             return True
         presection = self.dest.presection
         p_level = TextElementModel({'p': 'p'}, self.p_elements)
-        p_parser = p_level.parser(self.log, presection)
+        p_parser = p_level.a_parser(self.log, presection.append)
         correction: MarkupElement | None = None
         text = e.text or ""
         if text.strip():

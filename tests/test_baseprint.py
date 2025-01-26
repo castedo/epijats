@@ -149,8 +149,8 @@ bar.</p>
     model = _.ListModel(_.TextElementModel({'p': 'p'}, _.base_hypertext_model()))
     subel = model.parse(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
-    assert len(list(subel.content)) == 3
-    xe = data_sub_element(restyle.element(subel), 0)
+    assert len(list(subel)) == 3
+    xe = data_sub_element(subel, 0)
     assert xml_to_root_str(xe) == dump
 
 
@@ -206,9 +206,9 @@ def test_abstract_restyle():
     expect = """<p>OK</p>
 <p>
 <ul>
-<li>
+  <li>
 <p>Restyle!</p>
-</li>
+  </li>
 </ul>
 </p>
 <p>OK</p>"""
