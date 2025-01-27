@@ -260,10 +260,11 @@ class ListModel(ElementModel):
 
 
 class TitleGroupParser(Parser):
-    def __init__(self, log: IssueCallback, dest: Baseprint):
+    def __init__(self, log: IssueCallback, dest: MixedContent):
         super().__init__(log)
         self.dest = dest
-        self._txt_parser = RichTextParseHelper(log, base_hypertext_model())
+        model = base_hypertext_model()
+        self._parser = MixedContentParser(log, self.dest, model)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'title-group':
@@ -272,8 +273,8 @@ class TitleGroupParser(Parser):
         for s in e:
             if s.tag == 'article-title':
                 self.check_no_attrib(s)
-                if self.dest.title.empty_or_ws():
-                    self.dest.title = self._txt_parser.content(s)
+                if self.dest.empty_or_ws():
+                    self._parser.parse_content(s)
                 else:
                     self.log(fc.ExcessElement.issue(s))
             else:
@@ -442,7 +443,7 @@ class ArticleParser(Parser):
         super().__init__(log)
         self.dest = dest
         p_elements = p_elements_model()
-        self.title = TitleGroupParser(log, dest)
+        self.title = TitleGroupParser(log, dest.title)
         self.authors = AuthorGroupParser(log)
         self.abstract = ProtoSectionParser(log, dest.abstract, p_elements)
         self.body = ProtoSectionParser(log, dest.body, p_elements)
@@ -577,25 +578,6 @@ def p_elements_model() -> Model:
     p_elements |= preformatted
     p_elements |= ListModel(list_item_content)
     return p_elements
-
-
-@dataclass
-class RichTextParseHelper:
-    log: IssueCallback
-    content_model: Model
-
-    def content(self, e: etree._Element) -> MixedContent:
-        ret = MixedContent()
-        parser = MixedContentParser(self.log, ret, self.content_model)
-        parser.check_no_attrib(e)
-        parser.parse_content(e)
-        return ret
-
-
-def parse_text_content(
-    log: IssueCallback, e: etree._Element, model: Model
-) -> MixedContent:
-    return RichTextParseHelper(log, model).content(e)
 
 
 def ignore_issue(issue: fc.FormatIssue) -> None:

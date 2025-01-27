@@ -35,12 +35,18 @@ def contrib_group(src: list[baseprint.Author]) -> DataElement:
     return ret
 
 
-def proto_section(tag: str, src: baseprint.ProtoSection) -> DataElement:
+def proto_section(
+        tag: str, src: baseprint.ProtoSection, title: MixedContent | None = None
+) -> DataElement:
     ret = DataElement(tag)
+    if title is not None:
+        t = MarkupElement('title')
+        t.content = title
+        ret.append(t)
     for e in src.presection:
         ret.append(e)
-#    for ss in src.subsections:
-#        ret.append(sub)
+    for ss in src.subsections:
+        ret.append(proto_section('sec', ss, ss.title))
     return ret
 
 

@@ -106,7 +106,9 @@ def xml2html(xml):
     et = etree.fromstring(xml)
     issues = []
     model = _.base_hypertext_model()
-    out = _.parse_text_content(issues.append, et, model)
+    out = _.MixedContent()
+    parser = _.MixedContentParser(issues.append, out, model)
+    parser.parse_content(et)
     return (HTML.content_to_str(out), len(issues))
 
 
