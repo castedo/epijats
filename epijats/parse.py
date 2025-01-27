@@ -272,7 +272,7 @@ class TitleGroupParser(Parser):
         for s in e:
             if s.tag == 'article-title':
                 self.check_no_attrib(s)
-                if self.dest.title.empty():
+                if self.dest.title.empty_or_ws():
                     self.dest.title = self._txt_parser.content(s)
                 else:
                     self.log(fc.ExcessElement.issue(s))
@@ -380,12 +380,42 @@ class AuthorParser(Parser):
         return (surname, given_names)
 
 
+class AutoCorrector(Validator):
+    def __init__(self, log: IssueCallback, dest: ElementHandler, p_elements: Model):
+        super().__init__(log)
+        self.dest = dest
+        self.p_elements = p_elements
+        self.text = ""
+        self.correction: MarkupElement | None  = None
+
+    def possible_misplaced_text(self, text: str) -> None:
+        if text.strip():
+            self.correction = make_paragraph(text)
+            self.text = ""
+        else:
+            self.text = text
+
+    def unsupported_element(self, e: etree._Element) -> None:
+        if not self.correction:
+            self.correction = make_paragraph(self.text)
+            self.text = ""
+        self.p_elements.parse_element(self.log, e, self.correction.content)
+
+    def handle_paragraph(self, e: Element | None) -> None:
+        if self.correction:
+            self.dest(self.correction)
+            self.correction = None
+        if e is not None:
+            self.dest(e)
+
+
 class ProtoSectionParser(Parser):
     def __init__(self, log: IssueCallback, dest: ProtoSection, p_elements: Model):
         super().__init__(log)
         self.dest = dest
-        self.p_elements = p_elements
-        self.p_level = TextElementModel({'p': 'p'}, self.p_elements)
+        self._corrector = AutoCorrector(log, dest.presection.append, p_elements)
+        p_level = TextElementModel({'p': 'p'}, p_elements)
+        self.p_parser = p_level.parser(self.log, self._corrector.handle_paragraph)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag not in ['abstract', 'body']:
@@ -394,33 +424,16 @@ class ProtoSectionParser(Parser):
         if not self.dest.has_no_content():
             self.log(fc.ExcessElement.issue(e))
             return True
-        presection = self.dest.presection
-        p_parser = self.p_level.parser(self.log, presection.append)
-        correction: MarkupElement | None = None
-        text = e.text or ""
-        if text.strip():
-            correction = make_paragraph(text)
-            text = ""
+        self._corrector.possible_misplaced_text(e.text or "")
         for s in e:
             if s.tag == 'p':
-                if correction:
-                    presection.append(correction)
-                    correction = None
-                text = s.tail or ""
+                self._corrector.possible_misplaced_text(s.tail or "")
                 s.tail = None
-                p_parser.parse_element(s)
-                if text.strip():
-                    correction = make_paragraph(text)
-                    text = ""
+                self.p_parser.parse_element(s)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
-                if not correction:
-                    correction = make_paragraph(text)
-                    text = ""
-                self.p_elements.parse_element(self.log, s, correction.content)
-        if correction:
-            presection.append(correction)
-            correction = None
+                self._corrector.unsupported_element(s)
+        self._corrector.handle_paragraph(None)
         return True
 
 
@@ -452,7 +465,7 @@ class ArticleParser(Parser):
                 pass
             else:
                 self.log(fc.UnsupportedElement.issue(s))
-        if self.dest.title.empty():
+        if self.dest.title.empty_or_ws():
             self.log_issue(fc.MissingContent('article-title', 'title-group'))
         if not len(self.dest.authors):
             self.log_issue(fc.MissingContent('contrib', 'contrib-group'))
