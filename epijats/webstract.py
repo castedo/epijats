@@ -89,7 +89,7 @@ class Webstract(dict[str, Any]):
         cached = cache_subdir / "webstract.xml"
         snapshot = cache_subdir / "snapshot"
         if cached.exists():
-            ret = Webstract.load_xml(cached)
+            ret = Webstract.load_json(cached)
             ret.source.path = snapshot
         else:
             from . import jats
@@ -104,7 +104,7 @@ class Webstract(dict[str, Any]):
                 edidata["newer_edid"] = str(latest.edid)
             ret['edition'] = edidata
             ret['date'] = ed.date
-            ret.dump_xml(cached)
+            ret.dump_json(cached)
         return ret
 
     @property
@@ -159,24 +159,6 @@ class Webstract(dict[str, Any]):
     def load_json(path: Path | str) -> Webstract:
         with open(path) as f:
             return Webstract(json.load(f))
-
-    def dump_xml(self, path: Path | str) -> None:
-        """Write XML to path."""
-
-        import jsoml
-
-        with open(path, "w") as file:
-            jsoml.dump(self, file)
-            file.write("\n")
-
-    @staticmethod
-    def load_xml(path: Path | str) -> Webstract:
-        import jsoml
-
-        data = jsoml.load(path)
-        if not isinstance(data, dict):
-            raise ValueError("JSOML webstract must be object/dictionary.")
-        return Webstract(data)
 
 
 def add_webstract_key_properties(cls: type) -> type:

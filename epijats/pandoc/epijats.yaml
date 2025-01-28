@@ -1,6 +1,5 @@
 from: jats
 to: html
-standalone: true
 citeproc: true
 metadata:
   link-citations: true

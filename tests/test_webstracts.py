@@ -55,13 +55,6 @@ def test_editions(case):
                 assert got == expect
 
 
-@pytest.mark.parametrize("case", WEBSTRACT_CASES + EDITION_CASES)
-def test_xml(case):
-    got = Webstract.load_xml(CASES_DIR / case / "output.xml")
-    expect = Webstract.load_json(CASES_DIR / case / "output.json")
-    assert got == expect
-
-
 def test_hash_file():
     got = util.swhid_from_files(CASES_DIR / "webstract/basic1/input/article.xml")
     assert got == "swh:1:cnt:2c0193c32db0f3d20f974b5f6f5e656e6898d56e"

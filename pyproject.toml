@@ -23,7 +23,6 @@ dependencies = [
   "dulwich",
   "hidos >= 2.0",
   "jinja2",
-  "jsoml",
   "lxml",
 ]
 
