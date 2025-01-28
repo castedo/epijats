@@ -54,9 +54,21 @@ class HtmlGenerator(ElementFormatter):
         ret.tail = src.tail
         return ret
 
-    def _proto_section_content(self, src: ProtoSection) -> list[str | HtmlElement]:
+    def _proto_section_content(
+        self, src: ProtoSection, title: MixedContent | None = None, xid: str | None = None
+    ) -> list[str | HtmlElement]:
         ret: list[str | HtmlElement] = []
+        if title:
+            h = E("h2", title.text)
+            if xid is not None:
+                h.attrib['id'] = xid
+            for s in title:
+                h.append(self._sub_element(s))
+            h.tail = "\n"
+            ret.append(h)
         for p in src.presection:
             ret.append(self._element(p))
             ret.append("\n")
+        for ss in src.subsections:
+            ret.extend(self._proto_section_content(ss, ss.title, ss.id))
         return ret

@@ -16,6 +16,7 @@ from .baseprint import (
     ListItem,
     Orcid,
     ProtoSection,
+    Section,
 )
 from .tree import Element, MarkupElement, MixedContent, StartTag, make_paragraph
 
@@ -411,17 +412,27 @@ class AutoCorrector(Validator):
 
 
 class ProtoSectionParser(Parser):
-    def __init__(self, log: IssueCallback, dest: ProtoSection, p_elements: Model):
+    def __init__(self,
+            log: IssueCallback,
+            dest: ProtoSection,
+            p_elements: Model,
+            dest_title: MixedContent | None = None,
+        ):
         super().__init__(log)
         self.dest = dest
         self._corrector = AutoCorrector(log, dest.presection.append, p_elements)
         p_level = TextElementModel({'p': 'p'}, p_elements)
         self.p_parser = p_level.parser(self.log, self._corrector.handle_paragraph)
+        self.title_parser = None
+        if dest_title is not None:
+            title_model = base_hypertext_model()
+            self.title_parser = MixedContentParser(log, dest_title, title_model)
+        self.section_parser = SectionParser(log, self.dest.subsections.append, p_elements)
 
     def parse_element(self, e: etree._Element) -> bool:
-        if e.tag not in ['abstract', 'body']:
+        if e.tag not in ['abstract', 'body', 'sec']:
             return False
-        self.check_no_attrib(e)
+        self.check_no_attrib(e, ['id'])
         if not self.dest.has_no_content():
             self.log(fc.ExcessElement.issue(e))
             return True
@@ -431,10 +442,36 @@ class ProtoSectionParser(Parser):
                 self._corrector.possible_misplaced_text(s.tail or "")
                 s.tail = None
                 self.p_parser.parse_element(s)
+            elif s.tag == 'sec':
+                self.section_parser.parse_element(s)
+            elif s.tag == 'title':
+                if self.title_parser:
+                    self._corrector.possible_misplaced_text(s.tail or "")
+                    s.tail = None
+                    self.title_parser.parse_content(s)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
                 self._corrector.unsupported_element(s)
         self._corrector.handle_paragraph(None)
+        return True
+
+
+class SectionParser(Parser):
+    def __init__(self,
+         log: IssueCallback, dest: Callable[[Section], None], p_elements: Model
+    ):
+        super().__init__(log)
+        self.dest = dest
+        self.p_elements = p_elements
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'sec':
+            return False
+        self.check_no_attrib(e, ['id'])
+        sec = Section([],[], e.attrib.get('id'), MixedContent())
+        sub_parser = ProtoSectionParser(self.log, sec, self.p_elements, sec.title)
+        sub_parser.parse_element(e)
+        self.dest(sec)
         return True
 
 

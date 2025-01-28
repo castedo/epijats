@@ -84,6 +84,7 @@ class ProtoSection:
 
 @dataclass
 class Section(ProtoSection):
+    id: str | None
     title: MixedContent
 
 

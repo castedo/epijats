@@ -12,7 +12,7 @@ class StartTag:
     def __init__(self, tag: str | StartTag, attrib: dict[str, str] = {}):
         if isinstance(tag, str):
             self.tag = tag
-            self.attrib = attrib
+            self.attrib = attrib.copy()
         else:
             self.tag = tag.tag
             self.attrib = tag.attrib | attrib
