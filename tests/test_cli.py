@@ -14,15 +14,11 @@ def _run(src, dest, args=""):
     __main__.main(args)
 
 
-@pytest.mark.parametrize("form", [
-    ["--to json", Webstract.load_json],
-    ["--to jsoml", Webstract.load_xml],
-])
-def test_jats_to(form, tmp_path):
+def test_jats_to_json(tmp_path):
     subcase_dir = CASES_DIR / "webstract/basic1"
     dest = tmp_path / "output_file"
-    _run(subcase_dir / "input", dest, form[0])
-    load_func = form[1]
+    _run(subcase_dir / "input", dest, "--to json")
+    load_func = Webstract.load_json
     expect = Webstract.load_json(subcase_dir / "output.json")
     assert load_func(dest) == expect
 
@@ -30,7 +26,6 @@ def test_jats_to(form, tmp_path):
 INVALID_ARGS = [
     "--from html --to jats",
     "--from html --to json",
-    "--from html --to jsoml",
 ]
 
 @pytest.mark.parametrize("case", INVALID_ARGS)

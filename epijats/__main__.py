@@ -36,14 +36,14 @@ class Main:
         self.parser.add_argument(
             "--from",
             dest="inform",
-            choices=["jats", "json", "jsoml", "html"],
+            choices=["jats", "json", "html"],
             default="jats",
             help="format of source",
         )
         self.parser.add_argument(
             "--to",
             dest="outform",
-            choices=["json", "jsoml", "html", "html+pdf", "pdf"],
+            choices=["json", "html", "html+pdf", "pdf"],
             default="pdf",
             help="format of target",
         )
@@ -75,7 +75,6 @@ class Main:
         format_stages = {
             'jats': 0,
             'json': 1,
-            'jsoml': 1,
             'html': 2,
             'html+pdf': 2,
             'pdf': 2,
@@ -84,13 +83,13 @@ class Main:
         target_stage = format_stages[self.outform]
         if source_stage > target_stage:
             msg = (
-                "Conversion direction must be jats -> (json|jsoml) -> (html|html+pdf|pdf)"
+                "Conversion direction must be jats -> json -> (html|html+pdf|pdf)"
             )
             self.parser.error(msg)
 
     def just_copy(self) -> bool:
         if self.inform == self.outform:
-            if self.inform not in ["json", "jsoml"]:
+            if self.inform != "json":
                 if self.inpath.is_dir():
                     copytree_nostat(self.inpath, self.outpath)
                 else:
@@ -113,17 +112,11 @@ class Main:
             return webstract_from_jats(self.inpath)
         elif self.inform == "json":
             return Webstract.load_json(self.inpath)
-        elif self.inform == "jsoml":
-            self.check_imports(["jsoml"], "read")
-            return Webstract.load_xml(self.inpath)
         return None
 
     def convert(self, webstract: Webstract) -> None:
         if self.outform == "json":
             webstract.dump_json(self.outpath)
-        elif self.outform == "jsoml":
-            self.check_imports(["jsoml"], "write")
-            webstract.dump_xml(self.outpath)
         else:
             assert self.outform in ["html", "html+pdf", "pdf"]
             with tempfile.TemporaryDirectory() as tempdir:

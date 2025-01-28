@@ -7,7 +7,7 @@ JATS XML to PDF in three independent stages:
 ```
           JATS
 Stage 1:   ▼
-          "webstract" interchange format (json or jsoml)
+          "webstract" interchange format (json)
 Stage 2:   ▼
           HTML
 Stage 3:   ▼
@@ -18,8 +18,8 @@ Using the `epijats` command line tool, you can start and stop at any stage with 
 `--from` and `--to` command line options. The output of `epijats --help` is:
 
 ```
-usage: __main__.py [-h] [--from {jats,json,jsoml,html}]
-                   [--to {json,jsoml,html,html+pdf,pdf}] [--no-web-fonts]
+usage: __main__.py [-h] [--from {jats,json,html}]
+                   [--to {jats,json,html,html+pdf,pdf}] [--no-web-fonts]
                    inpath outpath
 
 Eprint JATS
@@ -30,9 +30,9 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  --from {jats,json,jsoml,html}
+  --from {jats,json,html}
                         format of source
-  --to {json,jsoml,html,html+pdf,pdf}
+  --to {jats, json,html,html+pdf,pdf}
                         format of target
   --no-web-fonts        Do not use online web fonts
 ```
@@ -42,10 +42,9 @@ Installation
 ------------
 
 ```
-python3 -m pip install epijats[format1,format2,...]
+python3 -m pip install epijats[pdf]
 ```
-where each `formatN` etc.. is one of `jats`, `html`, `pdf`, or `jsoml`.
-Json support is automatic.
+with the `[pdf]` suffix optional and only needed of PDF generation.
 
 
 ### Non-Python requirements
