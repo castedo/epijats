@@ -44,7 +44,7 @@ class HtmlGenerator(ElementFormatter):
             raise NotImplementedError
         ret = E(src.html.tag, **src.html.attrib)
         if isinstance(src, MarkupElement):
-            self.markup_content(src.content, ret)
+            self.markup_content(src.content, ret, 0)
         else:
             self.data_content(src, ret, 0)
         return ret

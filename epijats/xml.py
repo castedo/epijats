@@ -15,27 +15,25 @@ class ElementFormatter(ABC):
     @abstractmethod
     def make_element(self, src: Element) -> _Element: ...
 
-    def markup_content(self, src: MixedContent, dest: _Element) -> None:
+    def markup_content(self, src: MixedContent, dest: _Element, level: int) -> None:
         dest.text = src.text
         for it in src:
             sub = self.make_element(it)
             if isinstance(it, MarkupElement):
-                self.markup_content(it.content, sub)
+                self.markup_content(it.content, sub, level)
             else:
-                self.data_content(it, sub, 0)
+                self.data_content(it, sub, level + 1)
             sub.tail = it.tail
             dest.append(sub)
 
     def data_content(self, src: Element, dest: _Element, level: int) -> None:
         dest.text = "\n" + "  " * level
-        presub = "\n"
-        if not src.has_block_level_markup():
-            presub += "  " * (level + 1)
+        presub = "\n" + ("  " * (level + 1))
         sub: _Element | None = None
         for it in src:
             sub = self.make_element(it)
             if isinstance(it, MarkupElement):
-                self.markup_content(it.content, sub)
+                self.markup_content(it.content, sub, level + 1)
             else:
                 self.data_content(it, sub, level + 1)
             sub.tail = presub
@@ -64,7 +62,7 @@ XML = XmlFormatter(
 
 def markup_element(src: MarkupElement) -> _Element:
     ret = XML.make_element(src)
-    XML.markup_content(src.content, ret)
+    XML.markup_content(src.content, ret, 0)
     return ret
 
 

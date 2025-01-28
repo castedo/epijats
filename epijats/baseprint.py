@@ -24,7 +24,6 @@ class List(DataElement):
         super().__init__('list')
         self.xml.attrib = {"list-type": "bullet"}
         self.html = StartTag('ul')
-        self.block_level = True
 
 
 @dataclass(frozen=True)

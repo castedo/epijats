@@ -46,8 +46,10 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     gen = HtmlGenerator()
     ret['title'] = gen.content_to_str(bp.title)
     ret['contributors'] = list()
-    if bp.abstract and "EPIJATS_NO_PANDOC" in os.environ:
-        ret['abstract'] = gen.proto_section_to_str(bp.abstract)
+    if "EPIJATS_NO_PANDOC" in os.environ:
+        if bp.abstract :
+            ret['abstract'] = gen.proto_section_to_str(bp.abstract)
+        ret['body'] = gen.proto_section_to_str(bp.body)
     for a in bp.authors:
         d: dict[str, Any] = {'surname': a.surname, 'type': 'author'}
         if a.given_names:

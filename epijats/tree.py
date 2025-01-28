@@ -23,19 +23,14 @@ class Element:
     xml: StartTag
     html: StartTag | None
     tail: str
-    block_level: bool
 
     def __init__(self, xml_tag: str | StartTag):
         self.xml = StartTag(xml_tag)
         self.html = None
         self.tail = ""
-        self.block_level = False
 
     def __iter__(self) -> Iterator[Element]:
         return iter(())
-
-    def has_block_level_markup(self) -> bool:
-        return any(c.block_level for c in self)
 
 
 @dataclass
@@ -106,5 +101,4 @@ class DataElement(Element):
 def make_paragraph(text: str) -> MarkupElement:
     ret = MarkupElement('p', text)
     ret.html = StartTag('p')
-    ret.block_level = True
     return ret

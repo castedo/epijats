@@ -202,8 +202,6 @@ class TextElementModel(ElementModel):
             check_no_attrib(log, e)
             html_tag = self.tagmap[e.tag]
             ret = MarkupElement(e.tag)
-            if e.tag == 'p':
-                ret.block_level = True
             ret.html = StartTag(html_tag)
             if self.content_model:
                 self.content_model.parse_content(log, e, ret.content)

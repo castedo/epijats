@@ -15,27 +15,27 @@
         </contrib>
       </contrib-group>
       <abstract>
-<p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
-<p><bold>OBJECTIVES:</bold></p>
-<p>
-<list list-type="bullet">
-  <list-item>
-<p>Define <italic>lineal admixture time</italic>.</p>
-  </list-item>
-  <list-item>
-<p>Invite discussion and feedback, especially regarding questions at the end of
-    this document.</p>
-  </list-item>
-  <list-item>
-<p>Facilitate the discovery of mathematical tools, using this definition, that
-    are useful to downstream empirical research.</p>
-  </list-item>
-</list>
-</p>
-<p><bold>SIGNIFICANCE:</bold>
+        <p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
+        <p><bold>OBJECTIVES:</bold></p>
+        <p>
+          <list list-type="bullet">
+            <list-item>
+              <p>Define <italic>lineal admixture time</italic>.</p>
+            </list-item>
+            <list-item>
+              <p>Invite discussion and feedback, especially regarding questions at the end of
+              this document.</p>
+            </list-item>
+            <list-item>
+              <p>Facilitate the discovery of mathematical tools, using this definition, that
+              are useful to downstream empirical research.</p>
+            </list-item>
+          </list>
+        </p>
+        <p><bold>SIGNIFICANCE:</bold>
 This definition is interpretable within empirical research without assuming
 particular mathematical models of demographic or genetic processes.</p>
-<p><bold>DOWNSTREAM RESEARCH:</bold>
+        <p><bold>DOWNSTREAM RESEARCH:</bold>
 The estimation of the timing and extent of interbreeding between previously
 separated populations.</p>
       </abstract>
@@ -43,17 +43,17 @@ separated populations.</p>
   </front>
   <body>
     <sec id="background">
-<title>Background</title>
-<p>The genealogies of a population reflect population events of the
-  past.</p>
+      <title>Background</title>
+      <p>The genealogies of a population reflect population events of the
+ past.</p>
     </sec>
     <sec id="definition-of-lineal-admixture-time">
-<title>Definition of lineal admixture time</title>
-<p>We define <italic>lineal admixture time</italic> per lineage. This measure in time duration
-  depends on two reference time points:</p>
-<p>Given a lineage, the <bold>lineal admixture time</bold> is defined as:</p>
-<p><italic>the amount of time since fertilization of the first admixed individual in the
-  lineage</italic>.</p>
+      <title>Definition of lineal admixture time</title>
+      <p>We define <italic>lineal admixture time</italic> per lineage. This measure in time duration
+   depends on two reference time points:</p>
+      <p>Given a lineage, the <bold>lineal admixture time</bold> is defined as:</p>
+      <p><italic>the amount of time since fertilization of the first admixed individual in the
+     lineage</italic>.</p>
     </sec>
   </body>
 </article>

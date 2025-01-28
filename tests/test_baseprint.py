@@ -49,13 +49,13 @@ def wrap_xml(content: str):
 
 def assert_bdom_roundtrip(expect: Baseprint):
     xe = xml_data_sub_element(restyle.article(expect), 0)
-    dump = etree.tostring(xe)
+    dump = etree.tostring(xe).decode()
     root = xml_fromstring(dump)
     assert _.parse_baseprint_root(root) == expect
 
 
 def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
-    issues = []
+    issues: list[fc.FormatIssue] = []
     ret = Abstract()
     parser = _.ProtoSectionParser(issues.append, ret, _.p_elements_model())
     parser.parse_element(e)
@@ -165,14 +165,14 @@ def test_list_rountrip():
     dump = wrap_xml("""
 <list list-type="bullet">
   <list-item>
-<p>Def <italic>time</italic>.</p>
+    <p>Def <italic>time</italic>.</p>
   </list-item>
   <list-item>
-<p>Foo
+    <p>Foo
 bar.</p>
   </list-item>
   <list-item>
-<p>Baz</p>
+    <p>Baz</p>
   </list-item>
 </list>
 """)
@@ -211,26 +211,26 @@ def test_abstract_restyle():
     bad_style = wrap_xml("""
 <abstract>
     <p>OK</p>
-    <list list-type="bullet">
+                <list list-type="bullet">
         <list-item>
             <p>Restyle!</p>
         </list-item>
     </list>
-    <p>OK</p>
+                <p>OK</p>
 </abstract>
 """)
     (bdom, _) = parse_abstract(wrap_to_xml(bad_style))
     restyled = wrap_xml("""
 <abstract>
-<p>OK</p>
-<p>
-    <list list-type="bullet">
-  <list-item>
-<p>Restyle!</p>
-  </list-item>
-</list>
-    </p>
-<p>OK</p>
+  <p>OK</p>
+  <p>
+                <list list-type="bullet">
+      <list-item>
+        <p>Restyle!</p>
+      </list-item>
+    </list>
+                </p>
+  <p>OK</p>
 </abstract>
 """)
     xe = xml_data_sub_element(restyle.abstract(bdom), 0)
@@ -243,12 +243,12 @@ def test_abstract_restyle():
 
     expect_html = """<p>OK</p>
 <p>
-    <ul>
-  <li>
-<p>Restyle!</p>
-  </li>
-</ul>
-    </p>
+                <ul>
+    <li>
+      <p>Restyle!</p>
+    </li>
+  </ul>
+                </p>
 <p>OK</p>
 """
     assert HTML.proto_section_to_str(bdom) == expect_html
