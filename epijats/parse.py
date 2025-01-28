@@ -83,10 +83,11 @@ class ArrayParser(Parser):
         if e.text and e.text.strip():
             self.log(fc.IgnoredText.issue(e))
         for s in e:
-            if not self.parse_element(s):
-                self.log(fc.UnsupportedElement.issue(s))
             if s.tail and s.tail.strip():
                 self.log(fc.IgnoredText.issue(e))
+            s.tail = None
+            if not self.parse_element(s):
+                self.log(fc.UnsupportedElement.issue(s))
 
 
 class MixedContentParser(Parser):
@@ -202,7 +203,6 @@ class TextElementModel(ElementModel):
             ret = MarkupElement(e.tag)
             if e.tag == 'p':
                 ret.block_level = True
-            ret.tail = e.tail or ""
             ret.html = StartTag(html_tag)
             if self.content_model:
                 self.content_model.parse_content(log, e, ret.content)
@@ -227,7 +227,7 @@ class ExtLinkModel(ElementModel):
             log(fc.MissingAttribute.issue(e, k_href))
             return None
         else:
-            ret = Hyperlink(href, e.tail or "")
+            ret = Hyperlink(href)
             self.content_model.parse_content(log, e, ret.content)
             return ret
 
@@ -250,8 +250,8 @@ class ListModel(ElementModel):
         for s in e:
             if s.tag == 'list-item':
                 item = ListItem()
-                self.content_model.parse_array(log, s, item.array.append)
-                ret.array.append(item)
+                self.content_model.parse_array(log, s, item.append)
+                ret.append(item)
             else:
                 log(fc.UnsupportedElement.issue(s))
             if s.tail and s.tail.strip():

@@ -21,10 +21,9 @@ class ElementFormatter(ABC):
             sub = self.make_element(it)
             if isinstance(it, MarkupElement):
                 self.markup_content(it.content, sub)
-                sub.tail = it.tail
             else:
                 self.data_content(it, sub, 0)
-                sub.tail = "\n"
+            sub.tail = it.tail
             dest.append(sub)
 
     def data_content(self, src: Element, dest: _Element, level: int) -> None:

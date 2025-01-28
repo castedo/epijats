@@ -1,5 +1,6 @@
 import os, pytest
 from pathlib import Path
+from typing import Tuple
 
 from lxml import etree
 
@@ -31,7 +32,7 @@ def assert_eq_if_exists(got: str, expect: Path):
             assert got == f.read()
 
 
-def data_sub_element(src, level: int) -> etree._Element:
+def xml_data_sub_element(src, level: int) -> etree._Element:
     ret = data_element(src, level)
     ret.tail = "\n"
     return ret
@@ -47,10 +48,18 @@ def wrap_xml(content: str):
 
 
 def assert_bdom_roundtrip(expect: Baseprint):
-    xe = data_sub_element(restyle.article(expect), 0)
+    xe = xml_data_sub_element(restyle.article(expect), 0)
     dump = etree.tostring(xe)
     root = xml_fromstring(dump)
     assert _.parse_baseprint_root(root) == expect
+
+
+def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
+    issues = []
+    ret = Abstract()
+    parser = _.ProtoSectionParser(issues.append, ret, _.p_elements_model())
+    parser.parse_element(e)
+    return (ret, issues)
 
 
 def test_minimalish():
@@ -72,7 +81,7 @@ def test_roundtrip(case):
     issues = []
     bp = _.BaseprintParser(issues.append).parse(xml_path)
     assert bp is not None, issues
-    xe = data_sub_element(restyle.article(bp), 0)
+    xe = xml_data_sub_element(restyle.article(bp), 0)
     assert etree.tostring(xe).decode() == expect
     assert not issues
 
@@ -172,7 +181,7 @@ bar.</p>
     subel = model.parse(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(list(subel)) == 3
-    xe = data_sub_element(subel, 0)
+    xe = xml_data_sub_element(subel, 0)
     assert xml_to_root_str(xe) == dump
 
 
@@ -194,48 +203,55 @@ def test_author_restyle():
     assert parser.parse_element(wrap_to_xml(dump))
     assert parser.out is not None
     assert len(issues) == 0
-    x = data_sub_element(restyle.contrib_group(parser.out), 0)
+    x = xml_data_sub_element(restyle.contrib_group(parser.out), 0)
     assert xml_to_root_str(x) == dump
 
 
 def test_abstract_restyle():
-    dump = wrap_xml("""
+    bad_style = wrap_xml("""
 <abstract>
-<p>OK</p>
-<list list-type="bullet"><list-item><p>Restyle!</p></list-item></list>
-<p>OK</p>
+    <p>OK</p>
+    <list list-type="bullet">
+        <list-item>
+            <p>Restyle!</p>
+        </list-item>
+    </list>
+    <p>OK</p>
 </abstract>
 """)
-    issues = []
-    dest = Abstract()
-    parser = _.ProtoSectionParser(issues.append, dest, _.p_elements_model())
-    parser.parse_element(wrap_to_xml(dump))
+    (bdom, _) = parse_abstract(wrap_to_xml(bad_style))
     restyled = wrap_xml("""
 <abstract>
 <p>OK</p>
 <p>
-<list list-type="bullet">
+    <list list-type="bullet">
   <list-item>
 <p>Restyle!</p>
   </list-item>
 </list>
-</p>
+    </p>
 <p>OK</p>
 </abstract>
 """)
-    xe = data_sub_element(restyle.abstract(dest), 0)
+    xe = xml_data_sub_element(restyle.abstract(bdom), 0)
     assert xml_to_root_str(xe) == restyled
-    expect = """<p>OK</p>
+
+    issues = []
+    (roundtrip, issues) = parse_abstract(xe)
+    assert not issues
+    assert roundtrip == bdom
+
+    expect_html = """<p>OK</p>
 <p>
-<ul>
+    <ul>
   <li>
 <p>Restyle!</p>
   </li>
 </ul>
-</p>
+    </p>
 <p>OK</p>
 """
-    assert HTML.proto_section_to_str(dest) == expect
+    assert HTML.proto_section_to_str(bdom) == expect_html
 
 
 def test_minimal_with_issues():
@@ -267,5 +283,5 @@ def test_minimal_with_issues():
   </body>
 </article>
 """
-    xe = data_sub_element(restyle.article(bp), 0)
+    xe = xml_data_sub_element(restyle.article(bp), 0)
     assert etree.tostring(xe).decode() == expect

@@ -40,8 +40,7 @@ def proto_section(
 ) -> DataElement:
     ret = DataElement(tag)
     if title is not None:
-        t = MarkupElement('title')
-        t.content = title
+        t = MarkupElement('title', title)
         ret.append(t)
     for e in src.presection:
         ret.append(e)

@@ -7,11 +7,10 @@ from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
 
 @dataclass
 class Hyperlink(MarkupElement):
-    def __init__(self, href: str, tail: str):
+    def __init__(self, href: str):
         super().__init__('ext-link')
         self.xml.attrib = {"{http://www.w3.org/1999/xlink}href": href}
         self.html = StartTag('a', {'href': href})
-        self.tail = tail
 
 
 class ListItem(DataElement):

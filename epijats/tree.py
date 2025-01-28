@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, TYPE_CHECKING, TypeAlias
+from typing import Iterator
 
 
 @dataclass
@@ -38,19 +38,19 @@ class Element:
         return any(c.block_level for c in self)
 
 
-if TYPE_CHECKING:
-    ArrayContent: TypeAlias = list[Element]
-
-
 @dataclass
 class MixedContent:
     text: str
-    _children: ArrayContent
+    _children: list[Element]
 
-    def __init__(self, text: str = ""):
+    def __init__(self, content: str | MixedContent = ""):
         super().__init__()
-        self.text = text
-        self._children = []
+        if isinstance(content, str):
+            self.text = content
+            self._children = []
+        else:
+            self.text = content.text
+            self._children = list(content)
 
     def __iter__(self) -> Iterator[Element]:
         return iter(self._children)
@@ -74,16 +74,19 @@ class MixedContent:
 
 @dataclass
 class MarkupElement(Element):
-    content: MixedContent
+    _content: MixedContent
 
-    def __init__(self, xml_tag: str | StartTag, text: str = ""):
+    def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
         super().__init__(xml_tag)
-        self.content = MixedContent(text)
+        self._content = MixedContent(content)
 
+    @property
+    def content(self) -> MixedContent:
+        return self._content
 
 @dataclass
 class DataElement(Element):
-    array: list[Element]
+    _array: list[Element]
 
     def __init__(
         self,
@@ -91,13 +94,13 @@ class DataElement(Element):
         array: list[Element] = [],
     ):
         super().__init__(xml_tag)
-        self.array = list(array)
+        self._array = list(array)
 
     def __iter__(self) -> Iterator[Element]:
-        return iter(self.array)
+        return iter(self._array)
 
     def append(self, e: Element) -> None:
-        self.array.append(e)
+        self._array.append(e)
 
 
 def make_paragraph(text: str) -> MarkupElement:
