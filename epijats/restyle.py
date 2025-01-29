@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
+from lxml import etree
+
 from . import baseprint
 from .tree import DataElement, MarkupElement, MixedContent, StartTag
+from .xml import data_element
 
 
 def title_group(src: MixedContent) -> DataElement:
@@ -70,3 +76,11 @@ def article(src: baseprint.Baseprint) -> DataElement:
         proto_section('body', src.body),
     ])
     return ret
+
+
+def write_baseprint(src: baseprint.Baseprint, dest: Path) -> None:
+    root = data_element(article(src), 0)
+    root.tail = "\n"
+    os.makedirs(dest, exist_ok=True)
+    with open(dest / "article.xml", "wb") as f:
+        etree.ElementTree(root).write(f)

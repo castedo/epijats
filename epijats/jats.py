@@ -6,6 +6,7 @@ from typing import Any, Iterable
 from .parse import parse_baseprint
 from .html import HtmlGenerator
 from .webstract import Webstract, Source
+from .condition import FormatIssue
 
 
 def run_pandoc(args: Iterable[Any], echo: bool = True) -> str:
@@ -28,7 +29,8 @@ def pandoc_jats_to_webstract(jats_src: Path | str) -> str:
 def webstract_from_jats(src: Path | str) -> Webstract:
     src = Path(src)
     jats_src = src / "article.xml" if src.is_dir() else src
-    bp = parse_baseprint(jats_src)
+    issues: list[FormatIssue] = []
+    bp = parse_baseprint(jats_src, issues.append)
     if bp is None:
         raise ValueError()
     gen = HtmlGenerator()
@@ -51,5 +53,5 @@ def webstract_from_jats(src: Path | str) -> Webstract:
         if a.orcid:
             d['orcid'] = a.orcid.as_19chars()
         ret['contributors'].append(d)
-
+    ret['issues'] = [i.as_pod() for i in issues]
     return ret

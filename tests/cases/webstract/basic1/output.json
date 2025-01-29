@@ -13,5 +13,12 @@
         }
     ],
     "source": "swh:1:dir:7a05d41c586ea4cbfa5a5e0021bc2a00ac8998ba",
-    "title": "On testing"
+    "title": "On testing",
+    "issues": [
+        {"condition": "DoctypeDeclaration"},
+        { "condition": ["UnsupportedAttribute", "article", "dtd-version"], "sourceline": 3},
+        { "condition": ["UnsupportedAttribute", "article", "article-type"], "sourceline": 3},
+        { "condition": ["UnsupportedElement", "journal-meta", "front"], "sourceline": 5},
+        {"condition": ["UnsupportedElement", "pub-date", "article-meta"], "sourceline": 27}
+   ]
 }

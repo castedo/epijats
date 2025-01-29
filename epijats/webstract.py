@@ -70,6 +70,7 @@ class Webstract(dict[str, Any]):
         "contributors",
         "date",
         "edition",
+        "issues",
         "source",
         "title",
     ]

@@ -1,9 +1,12 @@
 import argparse, importlib, logging, shutil, tempfile
 from pathlib import Path
-from typing import Any, Iterable
+from sys import stderr
+from typing import Any
 
-from epijats import Eprint, EprinterConfig, Webstract
-from epijats.util import copytree_nostat
+from . import Eprint, EprinterConfig, Webstract
+from . import restyle
+from .parse import parse_baseprint
+from .util import copytree_nostat
 
 
 def enable_weasyprint_logging() -> None:
@@ -43,7 +46,7 @@ class Main:
         self.parser.add_argument(
             "--to",
             dest="outform",
-            choices=["json", "html", "html+pdf", "pdf"],
+            choices=["jats", "json", "html", "html+pdf", "pdf"],
             default="pdf",
             help="format of target",
         )
@@ -59,10 +62,16 @@ class Main:
         self.config.embed_web_fonts = not self.no_web_fonts
 
     def run(self) -> int:
-        self.check_conversion_order()
+        self.check_conversion()
         if self.just_copy():
             return 0
-
+        if self.inform == "jats" and self.outform == "jats":
+            bdom = parse_baseprint(self.inpath)
+            if bdom is None:
+                print(f"Invalid XML file {self.inpath}", file=stderr)
+                return 1
+            restyle.write_baseprint(bdom, self.outpath)
+            return 0
         webstract = self.load_webstract()
         if webstract is None:
             assert self.inform == "html" and self.outform == "pdf"
@@ -71,7 +80,7 @@ class Main:
         self.convert(webstract)
         return 0
 
-    def check_conversion_order(self) -> None:
+    def check_conversion(self) -> None:
         format_stages = {
             'jats': 0,
             'json': 1,
@@ -86,10 +95,12 @@ class Main:
                 "Conversion direction must be jats -> json -> (html|html+pdf|pdf)"
             )
             self.parser.error(msg)
+        if self.inpath == self.outpath:
+            self.parser.error(f"Output path must not equal input path: {self.inpath}")
 
     def just_copy(self) -> bool:
         if self.inform == self.outform:
-            if self.inform != "json":
+            if self.inform not in ["jats", "json"]:
                 if self.inpath.is_dir():
                     copytree_nostat(self.inpath, self.outpath)
                 else:
@@ -97,14 +108,11 @@ class Main:
                 return True
         return False
 
-    def check_imports(self, import_names: Iterable[str], act: str) -> None:
-        form = self.inform if act == "read" else self.outform
-        for name in import_names:
-            try:
-                importlib.import_module(name)
-            except ImportError as e:
-                msg = f"{e.name} must be installed to {act} {form}"
-                self.parser.error(msg)
+    def check_weasyprint(self) -> None:
+        try:
+            importlib.import_module("weasyprint")
+        except ImportError:
+            self.parser.error("weasyprint must be installed to write pdf")
 
     def load_webstract(self) -> Webstract | None:
         if self.inform == "jats":
@@ -126,7 +134,7 @@ class Main:
                 if self.outform == "html":
                     eprint.make_html_dir(self.outpath)
                 else:
-                    self.check_imports(["weasyprint"], "write")
+                    self.check_weasyprint()
                     enable_weasyprint_logging()
                     if self.outform == "html+pdf":
                         eprint.make_html_and_pdf(

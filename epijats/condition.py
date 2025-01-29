@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, TypeAlias
 
 from lxml import etree
 from lxml.etree import QName
+
+if TYPE_CHECKING:
+    JSONType: TypeAlias = None | str | int | float | list['JSONType'] | dict[str, 'JSONType']
 
 
 @dataclass(frozen=True)
 class FormatCondition:
     def __str__(self) -> str:
         return self.__doc__ or type(self).__name__
+
+    def as_pod(self) -> JSONType:
+        return type(self).__name__
 
 
 @dataclass(frozen=True)
@@ -25,6 +32,15 @@ class FormatIssue:
         if self.info:
             msg += f": {self.info}"
         return msg
+
+    def as_pod(self) -> dict[str, JSONType]:
+        ret: dict[str, JSONType] = {}
+        ret['condition'] = self.condition.as_pod()
+        if self.sourceline is not None:
+            ret['sourceline'] = self.sourceline
+        if self.info:
+            ret['info'] = self.info
+        return ret
 
 
 class XMLSyntaxError(FormatCondition):
@@ -69,6 +85,9 @@ class ElementFormatCondition(FormatCondition):
         ptag = None if parent is None else parent.tag
         return FormatIssue(klas(e.tag, ptag), e.sourceline)
 
+    def as_pod(self) -> JSONType:
+        return [type(self).__name__, str(self.tag), str(self.parent)]
+
 
 @dataclass(frozen=True)
 class UnsupportedElement(ElementFormatCondition):
@@ -111,6 +130,9 @@ class UnsupportedAttribute(FormatCondition):
     @staticmethod
     def issue(e: etree._Element, key: str) -> FormatIssue:
         return FormatIssue(UnsupportedAttribute(e.tag, key), e.sourceline)
+
+    def as_pod(self) -> JSONType:
+        return [type(self).__name__, str(self.tag), str(self.attribute)]
 
 
 @dataclass(frozen=True)

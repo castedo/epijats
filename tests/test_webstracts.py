@@ -33,6 +33,8 @@ if not ARCHIVE_DIR.exists():
 def test_webstracts(case):
     got = webstract_from_jats(CASES_DIR / case / "input")
     expect = Webstract.load_json(CASES_DIR / case / "output.json")
+    if 'issues' not in expect:
+        del got['issues']
     assert got == expect
 
 
@@ -52,6 +54,8 @@ def test_editions(case):
                 expect = Webstract.load_json(edition_path / "output.json")
                 if not hasattr(edition, 'date'):
                     got['date'] = expect['date']  # don't test date with hidos 1.x
+                if 'issues' not in expect:
+                    del got['issues']
                 assert got == expect
 
 
