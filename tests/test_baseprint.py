@@ -66,7 +66,7 @@ def test_minimalish():
     issues = []
     got = _.BaseprintParser(issues.append).parse(SNAPSHOT_CASE / "baseprint")
     assert not issues
-    assert got.authors == [_.Author("Wang")]
+    assert got.authors == [_.Author(_.PersonName("Wang"))]
     expect = Abstract()
     expect.presection.append(make_paragraph('A simple test.'))
     assert got.abstract == expect

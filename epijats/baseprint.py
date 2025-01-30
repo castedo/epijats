@@ -70,15 +70,20 @@ class Orcid:
 
 
 @dataclass
-class Author:
+class PersonName:
     surname: str | None
     given_names: str | None = None
-    email: str | None = None
-    orcid: Orcid | None = None
 
     def __post_init__(self) -> None:
         if not self.surname and not self.given_names:
             raise ValueError()
+
+
+@dataclass
+class Author:
+    name: PersonName
+    email: str | None = None
+    orcid: Orcid | None = None
 
 
 @dataclass

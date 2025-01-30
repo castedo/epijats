@@ -17,18 +17,22 @@ def title_group(src: MixedContent) -> DataElement:
     return DataElement('title-group', [title])
 
 
+def person_name(src: baseprint.PersonName) -> DataElement:
+    ret = DataElement('name')
+    if src.surname:
+        ret.append(MarkupElement('surname', src.surname))
+    if src.given_names:
+        ret.append(MarkupElement('given-names', src.given_names))
+    return ret
+
+
 def contrib(src: baseprint.Author) -> DataElement:
     ret = DataElement(StartTag('contrib', {'contrib-type': 'author'}))
     if src.orcid:
         url = str(src.orcid)
         xml_stag = StartTag('contrib-id', {'contrib-id-type': 'orcid'})
         ret.append(MarkupElement(xml_stag, url))
-    name = DataElement('name')
-    if src.surname:
-        name.append(MarkupElement('surname', src.surname))
-    if src.given_names:
-        name.append(MarkupElement('given-names', src.given_names))
-    ret.append(name)
+    ret.append(person_name(src.name))
     if src.email:
         ret.append(MarkupElement('email', src.email))
     return ret

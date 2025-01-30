@@ -45,9 +45,9 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     if bp.abstract :
         ret['abstract'] = gen.proto_section_to_str(bp.abstract)
     for a in bp.authors:
-        d: dict[str, Any] = {'surname': a.surname, 'type': 'author'}
-        if a.given_names:
-            d['given-names'] = a.given_names
+        d: dict[str, Any] = {'surname': a.name.surname, 'type': 'author'}
+        if a.name.given_names:
+            d['given-names'] = a.name.given_names
         if a.email:
             d['email'] = [a.email]
         if a.orcid:

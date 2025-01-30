@@ -16,6 +16,7 @@ from .baseprint import (
     List,
     ListItem,
     Orcid,
+    PersonName,
     ProtoSection,
     Section,
 )
@@ -350,10 +351,34 @@ class AuthorGroupParser(Parser):
         return True
 
 
+class PersonNameParser(Parser):
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+        self.out: PersonName | None = None
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'name':
+            return False
+        self.check_no_attrib(e)
+        surname = None
+        given_names = None
+        for s in e:
+            if s.tag == 'surname':
+                surname = parse_string(self.log, s)
+            elif s.tag == 'given-names':
+                given_names = parse_string(self.log, s)
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
+        if surname or given_names:
+            self.out = PersonName(surname, given_names)
+        return True
+
+
 class AuthorParser(Parser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
         self.out: Author | None = None
+        self.name_parser = PersonNameParser(self.log)
         self.orcid_parser = ContribIdParser(self.log)
 
     def parse_element(self, e: etree._Element) -> bool:
@@ -369,37 +394,21 @@ class AuthorParser(Parser):
             else:
                 self.log(fc.UnsupportedAttribute.issue(e, k))
         self.check_no_attrib(e, ['contrib-type'])
-        surname = None
-        given_names = None
         email = None
         for s in e:
-            if s.tag == 'name':
-                (surname, given_names) = self._name(s)
+            if self.name_parser.parse_element(s):
+                pass
             elif s.tag == 'email':
                 email = parse_string(self.log, s)
             elif self.orcid_parser.parse(s):
                 pass
             else:
                 self.log(fc.UnsupportedElement.issue(s))
-        if surname or given_names:
-            self.out = Author(surname, given_names, email, self.orcid_parser.out)
-            return True
+        if self.name_parser.out is not None:
+            self.out = Author(self.name_parser.out, email, self.orcid_parser.out)
         else:
             self.log_issue(fc.MissingName(), s.sourceline)
-            return True
-
-    def _name(self, e: etree._Element) -> Tuple[str | None, str | None]:
-        self.check_no_attrib(e)
-        surname = None
-        given_names = None
-        for s in e:
-            if s.tag == 'surname':
-                surname = parse_string(self.log, s)
-            elif s.tag == 'given-names':
-                given_names = parse_string(self.log, s)
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
-        return (surname, given_names)
+        return True
 
 
 class AutoCorrector(Validator):
