@@ -11,6 +11,7 @@ from . import condition as fc
 from .baseprint import (
     Author,
     Baseprint,
+    CrossReference,
     Hyperlink,
     List,
     ListItem,
@@ -229,6 +230,27 @@ class ExtLinkModel(ElementModel):
             ret = Hyperlink(href)
             self.content_model.parse_content(log, e, ret.content)
             return ret
+
+
+@dataclass
+class CrossReferenceModel(ElementModel):
+    content_model: Model
+
+    def parse(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        if e.tag != 'xref':
+            return None
+        check_no_attrib(log, e, ["rid", "ref-type"])
+        rid = e.attrib.get("rid")
+        if rid is None:
+            log(fc.MissingAttribute.issue(e, "rid"))
+            return None
+        ref_type = e.attrib.get("ref-type")
+        if ref_type and ref_type != "bibr":
+            log(fc.UnsupportedAttributeValue.issue(e, "ref-type", ref_type))
+            return None
+        ret = CrossReference(rid, ref_type)
+        self.content_model.parse_content(log, e, ret.content)
+        return ret
 
 
 @dataclass
@@ -586,6 +608,7 @@ def base_hypertext_model() -> Model:
     """Base hypertext model"""
     hypertext = UnionModel()
     hypertext |= ExtLinkModel(formatted_text_model())
+    hypertext |= CrossReferenceModel(formatted_text_model())
     hypertext |= formatted_text_model(hypertext)
     return hypertext
 

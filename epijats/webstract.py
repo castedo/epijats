@@ -87,7 +87,7 @@ class Webstract(dict[str, Any]):
     @staticmethod
     def from_edition(ed: Edition, cache_subdir: Path) -> Webstract:
         cache_subdir = Path(cache_subdir)
-        cached = cache_subdir / "webstract.xml"
+        cached = cache_subdir / "webstract.json"
         snapshot = cache_subdir / "snapshot"
         if cached.exists():
             ret = Webstract.load_json(cached)

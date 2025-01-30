@@ -9,8 +9,21 @@ from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
 class Hyperlink(MarkupElement):
     def __init__(self, href: str):
         super().__init__('ext-link')
-        self.xml.attrib = {"{http://www.w3.org/1999/xlink}href": href}
+        self.xml.attrib = {
+            "ext-link-type": "uri",
+            "{http://www.w3.org/1999/xlink}href": href,
+        }
         self.html = StartTag('a', {'href': href})
+
+
+@dataclass
+class CrossReference(MarkupElement):
+    def __init__(self, name: str, ref_type: str | None):
+        super().__init__('xref')
+        self.xml.attrib = {"rid": name}
+        if ref_type:
+            self.xml.attrib['ref-type'] = ref_type    
+        self.html = StartTag('a', {'href': "#" + name})
 
 
 class ListItem(DataElement):
