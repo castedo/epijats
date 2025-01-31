@@ -91,6 +91,7 @@ def test_html(case):
     case_path = ROUNDTRIP_CASE / case
     issues = []
     bp = parse_baseprint(case_path / "article.xml", issues.append)
+    assert bp
     title = HTML.content_to_str(bp.title)
     assert_eq_if_exists(title, case_path / "title.html")
     abstract = HTML.proto_section_to_str(bp.abstract)
@@ -116,8 +117,7 @@ def xml2html(xml):
     issues = []
     model = _.base_hypertext_model()
     out = _.MixedContent()
-    parser = _.MixedContentParser(issues.append, out, model)
-    parser.parse_content(et)
+    model.parse_content(issues.append, et, out)
     return (HTML.content_to_str(out), len(issues))
 
 
@@ -223,13 +223,11 @@ def test_abstract_restyle():
     restyled = wrap_xml("""
 <abstract>
   <p>OK</p>
-  <p>
-                <list list-type="bullet">
+  <p><list list-type="bullet">
       <list-item>
         <p>Restyle!</p>
       </list-item>
-    </list>
-                </p>
+    </list></p>
   <p>OK</p>
 </abstract>
 """)
@@ -242,13 +240,11 @@ def test_abstract_restyle():
     assert roundtrip == bdom
 
     expect_html = """<p>OK</p>
-<p>
-                <ul>
+<p><ul>
     <li>
       <p>Restyle!</p>
     </li>
-  </ul>
-                </p>
+  </ul></p>
 <p>OK</p>
 """
     assert HTML.proto_section_to_str(bdom) == expect_html

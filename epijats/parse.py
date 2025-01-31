@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, TYPE_CHECKING, Tuple, TypeAlias
+from typing import Callable, Iterable, TYPE_CHECKING, TypeAlias
 
 from lxml import etree
 
@@ -94,21 +94,21 @@ class ArrayParser(Parser):
 
 
 class MixedContentParser(Parser):
-    def __init__(self, log: IssueCallback, dest: MixedContent, model: Model):
+    def __init__(self, log: IssueCallback, dest: MixedContent, model: Model, tag: str):
         super().__init__(log)
-        self._parser = model.parser(log, dest.append)
         self.dest = dest
+        self.model = model
+        self.tag = tag
 
     def parse_element(self, e: etree._Element) -> bool:
-        return self._parser.parse_element(e)
-
-    def parse_content(self, e: etree._Element) -> None:
-        self.dest.append_text(e.text)
-        for s in e:
-            if not self.parse_element(s):
-                self.log(fc.UnsupportedElement.issue(s))
-                self.parse_content(s)
-                self.dest.append_text(s.tail)
+        if e.tag != self.tag:
+            return False
+        self.check_no_attrib(e)
+        if self.dest.empty_or_ws():
+            self.model.parse_content(self.log, e, self.dest)
+        else:
+            self.log(fc.ExcessElement.issue(e))
+        return True
 
 
 class Model(ABC):
@@ -118,7 +118,7 @@ class Model(ABC):
     def parse_element(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
     ) -> bool:
-        return MixedContentParser(log, dest, self).parse_element(e)
+        return self.parser(log, dest.append).parse_element(e)
 
     def parse_array(
         self, log: IssueCallback, e: etree._Element, dest: ElementHandler
@@ -129,7 +129,13 @@ class Model(ABC):
     def parse_content(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
     ) -> None:
-        return MixedContentParser(log, dest, self).parse_content(e)
+        parser = self.parser(log, dest.append)
+        dest.append_text(e.text)
+        for s in e:
+            if not parser.parse_element(s):
+                log(fc.UnsupportedElement.issue(s))
+                self.parse_content(log, s, dest)
+                dest.append_text(s.tail)
 
     def __or__(self, other: Model) -> Model:
         union = self._models.copy() if isinstance(self, UnionModel) else [self]
@@ -286,20 +292,14 @@ class TitleGroupParser(Parser):
         super().__init__(log)
         self.dest = dest
         model = base_hypertext_model()
-        self._parser = MixedContentParser(log, self.dest, model)
+        self._title_parser = MixedContentParser(log, dest, model, 'article-title')
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'title-group':
             return False
         self.check_no_attrib(e)
         for s in e:
-            if s.tag == 'article-title':
-                self.check_no_attrib(s)
-                if self.dest.empty_or_ws():
-                    self._parser.parse_content(s)
-                else:
-                    self.log(fc.ExcessElement.issue(s))
-            else:
+            if not self._title_parser.parse_element(s):
                 self.log(fc.UnsupportedElement.issue(s))
         return True
 
@@ -411,33 +411,17 @@ class AuthorParser(Parser):
         return True
 
 
-class AutoCorrector(Validator):
+class AutoCorrector(Parser):
     def __init__(self, log: IssueCallback, dest: ElementHandler, p_elements: Model):
         super().__init__(log)
         self.dest = dest
         self.p_elements = p_elements
-        self.text = ""
-        self.correction: MarkupElement | None  = None
 
-    def possible_misplaced_text(self, text: str) -> None:
-        if text.strip():
-            self.correction = make_paragraph(text)
-            self.text = ""
-        else:
-            self.text = text
-
-    def unsupported_element(self, e: etree._Element) -> None:
-        if not self.correction:
-            self.correction = make_paragraph(self.text)
-            self.text = ""
-        self.p_elements.parse_element(self.log, e, self.correction.content)
-
-    def handle_paragraph(self, e: Element | None) -> None:
-        if self.correction:
-            self.dest(self.correction)
-            self.correction = None
-        if e is not None:
-            self.dest(e)
+    def parse_element(self, e: etree._Element) -> bool:
+        correction = make_paragraph("")
+        self.p_elements.parse_element(self.log, e, correction.content)
+        self.dest(correction)
+        return True
 
 
 class ProtoSectionParser(Parser):
@@ -451,11 +435,10 @@ class ProtoSectionParser(Parser):
         self.dest = dest
         self._corrector = AutoCorrector(log, dest.presection.append, p_elements)
         p_level = TextElementModel({'p': 'p'}, p_elements)
-        self.p_parser = p_level.parser(self.log, self._corrector.handle_paragraph)
-        self.title_parser = None
-        if dest_title is not None:
-            title_model = base_hypertext_model()
-            self.title_parser = MixedContentParser(log, dest_title, title_model)
+        self.p_parser = p_level.parser(self.log, dest.presection.append)
+        dest_title = dest_title or MixedContent()
+        title_model = base_hypertext_model()
+        self.title_parser = MixedContentParser(log, dest_title, title_model, 'title')
         self.section_parser = SectionParser(log, self.dest.subsections.append, p_elements)
 
     def parse_element(self, e: etree._Element) -> bool:
@@ -465,23 +448,21 @@ class ProtoSectionParser(Parser):
         if not self.dest.has_no_content():
             self.log(fc.ExcessElement.issue(e))
             return True
-        self._corrector.possible_misplaced_text(e.text or "")
+        if e.text and e.text.strip():
+            self.log(fc.IgnoredText.issue(e))
         for s in e:
+            if s.tail and s.tail.strip():
+                self.log(fc.IgnoredText.issue(e))
+            s.tail = None
             if s.tag == 'p':
-                self._corrector.possible_misplaced_text(s.tail or "")
-                s.tail = None
                 self.p_parser.parse_element(s)
             elif s.tag == 'sec':
                 self.section_parser.parse_element(s)
             elif s.tag == 'title':
-                if self.title_parser:
-                    self._corrector.possible_misplaced_text(s.tail or "")
-                    s.tail = None
-                    self.title_parser.parse_content(s)
+                self.title_parser.parse_element(s)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
-                self._corrector.unsupported_element(s)
-        self._corrector.handle_paragraph(None)
+                self._corrector.parse_element(s)
         return True
 
 

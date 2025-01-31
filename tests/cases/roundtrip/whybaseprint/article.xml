@@ -1,0 +1,100 @@
+<article xmlns:ali="http://www.niso.org/schemas/ali/1.0" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Why Publish Baseprint Document Successions</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
+          <name>
+            <surname>Ellerman</surname>
+            <given-names>E. Castedo</given-names>
+          </name>
+          <email>castedo@castedo.com</email>
+        </contrib>
+      </contrib-group>
+      <abstract>
+        <p>Baseprint document successions offer benefits beyond preprints.
+This allows the research community to cite specific fixed versions
+while also having the option to discover newer versions.</p>
+        <p><bold>STAGE</bold>: Updated future edition planned. Feedback welcome.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <sec id="summary">
+      <title>Summary</title>
+      <p>Baseprint document successions are preserved in
+  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/wiki/Git">Git</ext-link>-compatible <xref rid="ref-enwikiU003Agit" ref-type="bibr">1</xref> repositories and archives.
+  Three such examples are the <ext-link ext-link-type="uri" xlink:href="https://softwareheritage.org/">Software Heritage Archive</ext-link>,
+  <ext-link ext-link-type="uri" xlink:href="https://github.com">GitHub</ext-link>, and <ext-link ext-link-type="uri" xlink:href="https://gitlab.org">GitLab</ext-link>.
+  See the <xref rid="relationship-to-git">Relationship to Git</xref> section for more details.
+  The data archived is the machine-readable content of a document, separated from
+  how it is visually presented.
+  The benefits of this separation are discussed in the <xref rid="diversity-of-reading-venues">Diversity of Reading Venues</xref> section.
+  A key component to making this separation possible is discussed in the
+  <xref rid="document-succession-identifiers">Document Succession Identifiers</xref> section.
+  These identifiers can be used for bibliographic references similar to a
+  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>.
+  This extends one of the great features of traditional academic publishing,
+  namely, the ability of researchers to reference
+  a static archived document long into the future.</p>
+    </sec>
+    <sec id="document-succession-identifiers">
+      <title>Document Succession Identifiers</title>
+      <p>A Document Succession Identifier (DSI) <xref rid="ref-DSI_spec" ref-type="bibr">4</xref>
+  is an <ext-link ext-link-type="uri" xlink:href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</ext-link> <xref rid="ref-intrinsic_extrinsic_identifiers" ref-type="bibr">5</xref> of a Baseprint document succession.
+  It is a textual identifier similar to a
+  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>
+  or a web address URL.
+  This document itself is archived as a Baseprint document succession with DSI:</p>
+      <p>
+  <preformat>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc</preformat>
+  </p>
+      <p>This is a <italic>base DSI</italic>, which identifies all snapshots within a Baseprint document succession,
+  both current and future.
+  Similar to textbooks and preprints,
+  Baseprint document successions contain multiple editions (or versions) of a Baseprint document,
+  each encoded as a
+  <ext-link ext-link-type="uri" xlink:href="https://baseprints.singlesource.pub">Baseprint document snapshot</ext-link> <xref rid="ref-what_is_baseprint" ref-type="bibr">6</xref>.
+  A base DSI identifies all the editions of a document added to a Baseprint succession.
+  Usually, readers are interested in the latest edition in the Baseprint succession.</p>
+      <p>An edition number can follow a <italic>base DSI</italic> to identify a specific static edition.
+  For instance:</p>
+      <p>
+  <preformat>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc/1.1</preformat>
+  </p>
+    </sec>
+    <sec id="conclusion">
+      <title>Conclusion</title>
+      <p>As of late 2023, Baseprint successions have been
+  implemented and used by the author for over a year.
+  Authors interested in publishing Baseprint successions can visit
+  <ext-link ext-link-type="uri" xlink:href="https://try.perm.pub/">try.perm.pub</ext-link> to get started.</p>
+      <p>For technical details on how DSIs are implemented, see the <ext-link ext-link-type="uri" xlink:href="https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo">Document Succession
+  Identifier Specification</ext-link> <xref rid="ref-DSI_spec" ref-type="bibr">4</xref>
+  or the software library at
+  <ext-link ext-link-type="uri" xlink:href="https://gitlab.com/perm.pub/hidos">gitlab.com/perm.pub/hidos</ext-link>.</p>
+    </sec>
+    <sec id="acknowledgments">
+      <title>Acknowledgments</title>
+      <p>This document was copyedited using
+  <ext-link ext-link-type="uri" xlink:href="https://copyaid.it">CopyAid.it</ext-link>, which uses OpenAI GPT-4.</p>
+    </sec>
+    <sec id="changes">
+      <title>Changes</title>
+      <sec id="from-edition-1.1-to-2.1">
+        <title>From Edition 1.1 to 2.1</title>
+        <p>
+    <list list-type="bullet">
+            <list-item>
+              <p>The &#8220;digital succession&#8221; terminology has been update to &#8220;Baseprint document succession&#8221;
+        terminology.</p>
+            </list-item>
+          </list>
+  </p>
+      </sec>
+    </sec>
+  </body>
+</article>
