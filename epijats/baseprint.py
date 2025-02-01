@@ -110,14 +110,45 @@ class Abstract(ProtoSection):
 
 
 @dataclass
+class CitationAuthor:
+    name: PersonName | None
+    string_name: str | None
+
+
+@dataclass
+class BibliographicReference:
+    article_title: MixedContent
+    authors: list[CitationAuthor]
+    fpage: int | None
+    lpage: int | None
+    issue: int | None
+    source: str | None
+    uri: str | None
+    volume: int | None
+    year: int | None
+
+
+@dataclass
+class RefList:
+    title: MixedContent | None
+    references: list[BibliographicReference]
+
+    def __init__(self, title: MixedContent | None = None) -> None:
+        self.title = None
+        self.references = []
+
+
+@dataclass
 class Baseprint:
     title: MixedContent
     authors: list[Author]
     abstract: Abstract
     body: ProtoSection
+    ref_list: RefList | None
 
     def __init__(self) -> None:
         self.title = MixedContent()
         self.authors = []
         self.abstract = Abstract()
         self.body = ProtoSection()
+        self.ref_list = None

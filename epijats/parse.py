@@ -18,6 +18,7 @@ from .baseprint import (
     Orcid,
     PersonName,
     ProtoSection,
+    RefList,
     Section,
 )
 from .tree import Element, MarkupElement, MixedContent, StartTag, make_paragraph
@@ -48,6 +49,10 @@ def parse_string(log: IssueCallback, e: etree._Element) -> str:
     return "".join(frags)
 
 
+if TYPE_CHECKING:
+    ParseFunc: TypeAlias = Callable[[etree._Element], bool]
+
+
 class Validator(ABC):
     def __init__(self, log: IssueCallback):
         self._log = log
@@ -67,6 +72,22 @@ class Validator(ABC):
     def check_no_attrib(self, e: etree._Element, ignore: list[str] = []) -> None:
         check_no_attrib(self.log, e, ignore)
 
+    def prep_array_elements(self, e: etree._Element) -> None:
+        if e.text and e.text.strip():
+            self.log(fc.IgnoredText.issue(e))
+        for s in e:
+            if s.tail and s.tail.strip():
+                self.log(fc.IgnoredText.issue(e))
+            s.tail = None
+
+    def parse_array_content(
+        self, e: etree._Element, parse_funcs: list[ParseFunc]
+    ) -> None:
+        self.prep_array_elements(e)
+        for s in e:
+            if not any(pf(s) for pf in parse_funcs):
+                self.log(fc.UnsupportedElement.issue(s))
+
 
 class Parser(Validator):
     @abstractmethod
@@ -77,25 +98,9 @@ if TYPE_CHECKING:
     ElementHandler: TypeAlias = Callable[[Element], None]
 
 
-class ArrayParser(Parser):
-    def __init__(self, log: IssueCallback, dest: ElementHandler):
-        super().__init__(log)
-        self.dest = dest
-
-    def parse_array(self, e: etree._Element) -> None:
-        if e.text and e.text.strip():
-            self.log(fc.IgnoredText.issue(e))
-        for s in e:
-            if s.tail and s.tail.strip():
-                self.log(fc.IgnoredText.issue(e))
-            s.tail = None
-            if not self.parse_element(s):
-                self.log(fc.UnsupportedElement.issue(s))
-
-
 class Model(ABC):
     @abstractmethod
-    def parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser: ...
+    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser: ...
 
     def parse_element(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
@@ -105,8 +110,8 @@ class Model(ABC):
     def parse_array(
         self, log: IssueCallback, e: etree._Element, dest: ElementHandler
     ) -> None:
-        pass
-        self.parser(log, dest).parse_array(e)
+        sub_parser = self.parser(log, dest)
+        sub_parser.parse_array_content(e, [sub_parser.parse_element])
 
     def parse_content(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
@@ -134,7 +139,7 @@ class UnionModel(Model):
     def __init__(self, models: Iterable[Model] | None = None):
         self._models = list(models) if models else []
 
-    def parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
+    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser:
         return UnionParser(log, dest, self._models)
 
     def __ior__(self, other: Model) -> UnionModel:
@@ -147,11 +152,12 @@ class UnionModel(Model):
         return self
 
 
-class UnionParser(ArrayParser):
+class UnionParser(Parser):
     def __init__(
         self, log: IssueCallback, dest: ElementHandler, models: Iterable[Model]
     ):
-        super().__init__(log, dest)
+        super().__init__(log)
+        self.dest = dest
         self._parsers = list(m.parser(log, dest) for m in models)
 
     def parse_element(self, e: etree._Element) -> bool:
@@ -162,13 +168,14 @@ class ElementModel(Model):
     @abstractmethod
     def parse(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
 
-    def parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser:
+    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser:
         return ElementParser(log, dest, self)
 
 
-class ElementParser(ArrayParser):
+class ElementParser(Parser):
     def __init__(self, log: IssueCallback, dest: ElementHandler, model: ElementModel):
-        super().__init__(log, dest)
+        super().__init__(log)
+        self.dest = dest
         self.model = model
 
     def parse_element(self, e: etree._Element) -> bool:
@@ -443,14 +450,7 @@ class SectionContentParser(Validator):
         self.parsers.append(title_parser)
 
     def parse_content(self, e: etree._Element) -> None:
-        if e.text and e.text.strip():
-            self.log(fc.IgnoredText.issue(e))
-        for s in e:
-            if s.tail and s.tail.strip():
-                self.log(fc.IgnoredText.issue(e))
-            s.tail = None
-            if not any(p.parse_element(s) for p in self.parsers):
-                self.log(fc.UnsupportedElement.issue(s))
+        self.parse_array_content(e, [p.parse_element for p in self.parsers])
 
 
 class ProtoSectionParser(Parser):
@@ -495,6 +495,24 @@ class SubSectionParser(Parser):
         return True
 
 
+class RefListParser(Parser):
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+        self.out = RefList()
+        self._title = MixedContent()
+        title_model = base_hypertext_model()
+        self._title_parser = MixedContentParser(self.log, self._title, title_model, 'title')
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'ref-list':
+            return False
+        self.check_no_attrib(e)
+        self.parse_array_content(e, [self._title_parser.parse_element])
+        if not self._title.empty_or_ws():
+            self.out.title = self._title
+        return True
+
+
 class ArticleParser(Parser):
     def __init__(self, log: IssueCallback, dest: Baseprint):
         super().__init__(log)
@@ -504,6 +522,7 @@ class ArticleParser(Parser):
         self.authors = AuthorGroupParser(log)
         self.abstract = ProtoSectionParser(log, dest.abstract, p_elements, 'abstract')
         self.body = ProtoSectionParser(log, dest.body, p_elements, 'body')
+        self.ref_list = RefListParser(log)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'article':
@@ -514,15 +533,7 @@ class ArticleParser(Parser):
                     self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
             else:
                 self.log(fc.UnsupportedAttribute.issue(e, k))
-        for s in e:
-            if s.tag == "front":
-                self._front(s)
-            elif s.tag == "body":
-                self.body.parse_element(s)
-            elif s.tag == "back":
-                pass
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
+        self.parse_array_content(e, [self._front, self.body.parse_element, self._back])
         if self.dest.title.empty_or_ws():
             self.log_issue(fc.MissingContent('article-title', 'title-group'))
         if not len(self.dest.authors):
@@ -533,28 +544,43 @@ class ArticleParser(Parser):
             self.log_issue(fc.MissingContent('body', 'article'))
         return True
 
-    def _front(self, e: etree._Element) -> None:
+    def _front(self, e: etree._Element) -> bool:
+        if e.tag != 'front':
+            return False
         self.check_no_attrib(e)
-        for s in e:
-            if s.tag == 'article-meta':
-                self._article_meta(s)
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
+        self.parse_array_content(e, [self._article_meta])
+        return True
 
-    def _article_meta(self, e: etree._Element) -> None:
+    def _article_meta(self, e: etree._Element) -> bool:
+        if e.tag != 'article-meta':
+            return False
         self.check_no_attrib(e)
+        parsers = [self.abstract, self.title]
+        self.prep_array_elements(e)
         for s in e:
-            if s.tag == 'abstract':
-                self.abstract.parse_element(s)
-            elif self.authors.parse_element(s):
+            if self.authors.parse_element(s):
                 if self.authors.out is not None:
                     self.dest.authors = self.authors.out
             elif s.tag == 'permissions':
                 pass
-            elif s.tag == 'title-group':
-                self.title.parse_element(s)
+            elif not any(p.parse_element(s) for p in parsers):
+                self.log(fc.UnsupportedElement.issue(s))
+        return True
+
+    def _back(self, e: etree._Element) -> bool:
+        if e.tag != 'back':
+            return False
+        self.check_no_attrib(e)
+        self.prep_array_elements(e)
+        for s in e:
+            if self.ref_list.parse_element(s):
+                if self.dest.ref_list is None:
+                    self.dest.ref_list = self.ref_list.out
+                else:
+                    self.log(fc.ExcessElement.issue(e))
             else:
                 self.log(fc.UnsupportedElement.issue(s))
+        return True
 
 
 class BaseprintParser(Validator):
@@ -582,13 +608,12 @@ class BaseprintParser(Validator):
         return self.parse_from_root(et.getroot())
 
     def parse_from_root(self, root: etree._Element) -> Baseprint | None:
-        if root.tag != 'article':
-            self.log(fc.UnsupportedElement.issue(root))
-            return None
         for pi in root.xpath("//processing-instruction()"):
             self.log(fc.ProcessingInstruction.issue(pi))
             etree.strip_elements(root, pi.tag, with_tail=False)
-        self.article.parse_element(root)
+        if not self.article.parse_element(root):
+            self.log(fc.UnsupportedElement.issue(root))
+            return None
         return self._out
 
 

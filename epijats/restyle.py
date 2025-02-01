@@ -68,6 +68,13 @@ def abstract(src: baseprint.Abstract) -> DataElement:
     return proto_section('abstract', src)
 
 
+def ref_list(src: baseprint.RefList) -> DataElement:
+    ret = DataElement('ref-list', [])
+    if src.title is not None:
+        ret.append(MarkupElement('title', src.title))
+    return ret
+
+
 def article(src: baseprint.Baseprint) -> DataElement:
     ret = DataElement('article', [
         DataElement('front', [
@@ -79,6 +86,8 @@ def article(src: baseprint.Baseprint) -> DataElement:
         ]),
         proto_section('body', src.body),
     ])
+    if src.ref_list is not None:
+        ret.append(DataElement('back', [ref_list(src.ref_list)]))
     return ret
 
 
