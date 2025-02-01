@@ -93,24 +93,6 @@ class ArrayParser(Parser):
                 self.log(fc.UnsupportedElement.issue(s))
 
 
-class MixedContentParser(Parser):
-    def __init__(self, log: IssueCallback, dest: MixedContent, model: Model, tag: str):
-        super().__init__(log)
-        self.dest = dest
-        self.model = model
-        self.tag = tag
-
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != self.tag:
-            return False
-        self.check_no_attrib(e)
-        if self.dest.empty_or_ws():
-            self.model.parse_content(self.log, e, self.dest)
-        else:
-            self.log(fc.ExcessElement.issue(e))
-        return True
-
-
 class Model(ABC):
     @abstractmethod
     def parser(self, log: IssueCallback, dest: ElementHandler) -> ArrayParser: ...
@@ -287,6 +269,24 @@ class ListModel(ElementModel):
         return ret
 
 
+class MixedContentParser(Parser):
+    def __init__(self, log: IssueCallback, dest: MixedContent, model: Model, tag: str):
+        super().__init__(log)
+        self.dest = dest
+        self.model = model
+        self.tag = tag
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != self.tag:
+            return False
+        self.check_no_attrib(e)
+        if self.dest.empty_or_ws():
+            self.model.parse_content(self.log, e, self.dest)
+        else:
+            self.log(fc.ExcessElement.issue(e))
+        return True
+
+
 class TitleGroupParser(Parser):
     def __init__(self, log: IssueCallback, dest: MixedContent):
         super().__init__(log)
@@ -419,54 +419,62 @@ class AutoCorrector(Parser):
 
     def parse_element(self, e: etree._Element) -> bool:
         correction = make_paragraph("")
-        self.p_elements.parse_element(self.log, e, correction.content)
+        if not self.p_elements.parse_element(self.log, e, correction.content):
+            return False
         self.dest(correction)
+        self.log(fc.UnsupportedElement.issue(e))
         return True
 
 
-class ProtoSectionParser(Parser):
+class SectionContentParser(Validator):
     def __init__(self,
-            log: IssueCallback,
-            dest: ProtoSection,
-            p_elements: Model,
-            dest_title: MixedContent | None = None,
-        ):
+        log: IssueCallback, dest: ProtoSection, p_elements: Model, p_level: Model
+    ):
         super().__init__(log)
-        self.dest = dest
-        self._corrector = AutoCorrector(log, dest.presection.append, p_elements)
-        p_level = TextElementModel({'p': 'p'}, p_elements)
-        self.p_parser = p_level.parser(self.log, dest.presection.append)
-        dest_title = dest_title or MixedContent()
-        title_model = base_hypertext_model()
-        self.title_parser = MixedContentParser(log, dest_title, title_model, 'title')
-        self.section_parser = SectionParser(log, self.dest.subsections.append, p_elements)
+        self.parsers = [
+            p_level.parser(log, dest.presection.append),
+            AutoCorrector(log, dest.presection.append, p_elements),
+            SubSectionParser(log, dest.subsections.append, p_elements),
+        ]
 
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag not in ['abstract', 'body', 'sec']:
-            return False
-        self.check_no_attrib(e, ['id'])
-        if not self.dest.has_no_content():
-            self.log(fc.ExcessElement.issue(e))
-            return True
+    def add_title(self, dest_title: MixedContent) -> None:
+        title_model = base_hypertext_model()
+        title_parser = MixedContentParser(self.log, dest_title, title_model, 'title')
+        self.parsers.append(title_parser)
+
+    def parse_content(self, e: etree._Element) -> None:
         if e.text and e.text.strip():
             self.log(fc.IgnoredText.issue(e))
         for s in e:
             if s.tail and s.tail.strip():
                 self.log(fc.IgnoredText.issue(e))
             s.tail = None
-            if s.tag == 'p':
-                self.p_parser.parse_element(s)
-            elif s.tag == 'sec':
-                self.section_parser.parse_element(s)
-            elif s.tag == 'title':
-                self.title_parser.parse_element(s)
-            else:
+            if not any(p.parse_element(s) for p in self.parsers):
                 self.log(fc.UnsupportedElement.issue(s))
-                self._corrector.parse_element(s)
+
+
+class ProtoSectionParser(Parser):
+    def __init__(self,
+        log: IssueCallback, dest: ProtoSection, p_elements: Model, tag: str
+    ):
+        super().__init__(log)
+        self.dest = dest
+        self.tag = tag
+        p_level = TextElementModel({'p': 'p'}, p_elements)
+        self._content = SectionContentParser(log, dest, p_elements, p_level)
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != self.tag:
+            return False
+        self.check_no_attrib(e)
+        if not self.dest.has_no_content():
+            self.log(fc.ExcessElement.issue(e))
+            return True
+        self._content.parse_content(e)
         return True
 
 
-class SectionParser(Parser):
+class SubSectionParser(Parser):
     def __init__(self,
          log: IssueCallback, dest: Callable[[Section], None], p_elements: Model
     ):
@@ -479,8 +487,10 @@ class SectionParser(Parser):
             return False
         self.check_no_attrib(e, ['id'])
         sec = Section([],[], e.attrib.get('id'), MixedContent())
-        sub_parser = ProtoSectionParser(self.log, sec, self.p_elements, sec.title)
-        sub_parser.parse_element(e)
+        p_level = p_level_model(self.p_elements)
+        content = SectionContentParser(self.log, sec, self.p_elements, p_level)
+        content.add_title(sec.title)
+        content.parse_content(e)
         self.dest(sec)
         return True
 
@@ -492,8 +502,8 @@ class ArticleParser(Parser):
         p_elements = p_elements_model()
         self.title = TitleGroupParser(log, dest.title)
         self.authors = AuthorGroupParser(log)
-        self.abstract = ProtoSectionParser(log, dest.abstract, p_elements)
-        self.body = ProtoSectionParser(log, dest.body, p_elements)
+        self.abstract = ProtoSectionParser(log, dest.abstract, p_elements, 'abstract')
+        self.body = ProtoSectionParser(log, dest.body, p_elements, 'body')
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'article':
@@ -603,29 +613,38 @@ def base_hypertext_model() -> Model:
     return hypertext
 
 
-def p_elements_model() -> Model:
-    """Paragraph Elements
-
-    Similar to JATS def, but using more restrictive base hypertext model.
-    """
-    p_elements = UnionModel()
-
+def list_model(p_elements: Model) -> Model:
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
     # %list-item-model
     list_item_content = UnionModel()
     list_item_content |= TextElementModel({'p': 'p'}, p_elements)
     list_item_content |= ListModel(list_item_content)
+    return ListModel(list_item_content)
 
+
+def p_elements_model() -> Model:
+    """Paragraph Elements
+
+    Similar to JATS def, but using more restrictive base hypertext model.
+    """
     hypertext = base_hypertext_model()  # TODO: add xref as hyperlink element
     # NOTE: open issue whether xref should be allowed in preformatted
     preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
 
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     # %p-elements
+    p_elements = UnionModel()
     p_elements |= hypertext
     p_elements |= preformatted
-    p_elements |= ListModel(list_item_content)
+    p_elements |= list_model(p_elements)
     return p_elements
+
+
+def p_level_model(p_elements: Model) -> Model:
+    p = TextElementModel({'p': 'p'}, p_elements)
+    hypertext = base_hypertext_model()
+    preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
+    return p | preformatted | list_model(p_elements)
 
 
 def ignore_issue(issue: fc.FormatIssue) -> None:

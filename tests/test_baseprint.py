@@ -57,7 +57,7 @@ def assert_bdom_roundtrip(expect: Baseprint):
 def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
     issues: list[fc.FormatIssue] = []
     ret = Abstract()
-    parser = _.ProtoSectionParser(issues.append, ret, _.p_elements_model())
+    parser = _.ProtoSectionParser(issues.append, ret, _.p_elements_model(), 'abstract')
     parser.parse_element(e)
     return (ret, issues)
 
