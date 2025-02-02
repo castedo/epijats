@@ -117,15 +117,16 @@ class CitationAuthor:
 
 @dataclass
 class BibliographicReference:
-    article_title: MixedContent
+    article_title: MixedContent | None
     authors: list[CitationAuthor]
-    fpage: int | None
-    lpage: int | None
-    issue: int | None
-    source: str | None
-    uri: str | None
-    volume: int | None
-    year: int | None
+    fpage: int | None = None
+    id: str = ""
+    issue: int | None = None
+    lpage: int | None = None
+    source: str | None = None
+    uri: str | None = None
+    volume: int | None = None
+    year: int | None = None
 
 
 @dataclass

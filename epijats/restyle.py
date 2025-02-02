@@ -68,10 +68,18 @@ def abstract(src: baseprint.Abstract) -> DataElement:
     return proto_section('abstract', src)
 
 
+def biblio_ref(src: baseprint.BibliographicReference) -> DataElement:
+    ret = DataElement('ref', [])
+    ret.xml.attrib['id'] = src.id
+    return ret
+
+
 def ref_list(src: baseprint.RefList) -> DataElement:
     ret = DataElement('ref-list', [])
     if src.title is not None:
         ret.append(MarkupElement('title', src.title))
+    for ref in src.references:
+        ret.append(biblio_ref(ref))
     return ret
 
 

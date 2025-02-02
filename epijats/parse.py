@@ -8,6 +8,7 @@ from typing import Callable, Iterable, TYPE_CHECKING, TypeAlias
 from lxml import etree
 
 from . import condition as fc
+from . import baseprint
 from .baseprint import (
     Author,
     Baseprint,
@@ -81,7 +82,7 @@ class Validator(ABC):
             s.tail = None
 
     def parse_array_content(
-        self, e: etree._Element, parse_funcs: list[ParseFunc]
+        self, e: etree._Element, parse_funcs: Iterable[ParseFunc]
     ) -> None:
         self.prep_array_elements(e)
         for s in e:
@@ -92,6 +93,9 @@ class Validator(ABC):
 class Parser(Validator):
     @abstractmethod
     def parse_element(self, e: etree._Element) -> bool: ...
+
+    def __call__(self, e: etree._Element) -> bool:
+        return self.parse_element(e)
 
 
 if TYPE_CHECKING:
@@ -111,7 +115,7 @@ class Model(ABC):
         self, log: IssueCallback, e: etree._Element, dest: ElementHandler
     ) -> None:
         sub_parser = self.parser(log, dest)
-        sub_parser.parse_array_content(e, [sub_parser.parse_element])
+        sub_parser.parse_array_content(e, [sub_parser])
 
     def parse_content(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
@@ -450,7 +454,7 @@ class SectionContentParser(Validator):
         self.parsers.append(title_parser)
 
     def parse_content(self, e: etree._Element) -> None:
-        self.parse_array_content(e, [p.parse_element for p in self.parsers])
+        self.parse_array_content(e, self.parsers)
 
 
 class ProtoSectionParser(Parser):
@@ -495,19 +499,39 @@ class SubSectionParser(Parser):
         return True
 
 
+class BibliographicRef(Parser):
+    def __init__(
+        self, log: IssueCallback, dest: list[baseprint.BibliographicReference]
+    ):
+        super().__init__(log)
+        self.dest = dest
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != 'ref':
+            return False
+        self.check_no_attrib(e, ['id'])
+        br = baseprint.BibliographicReference(None, [])
+        br.id = e.attrib.get('id', "")
+        self.prep_array_elements(e)
+        self.dest.append(br)
+        return True
+
+
 class RefListParser(Parser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
         self.out = RefList()
         self._title = MixedContent()
         title_model = base_hypertext_model()
-        self._title_parser = MixedContentParser(self.log, self._title, title_model, 'title')
+        title_parser = MixedContentParser(self.log, self._title, title_model, 'title')
+        ref_parser = BibliographicRef(log, self.out.references)
+        self._parsers = [title_parser, ref_parser]
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'ref-list':
             return False
         self.check_no_attrib(e)
-        self.parse_array_content(e, [self._title_parser.parse_element])
+        self.parse_array_content(e, self._parsers)
         if not self._title.empty_or_ws():
             self.out.title = self._title
         return True
@@ -533,7 +557,7 @@ class ArticleParser(Parser):
                     self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
             else:
                 self.log(fc.UnsupportedAttribute.issue(e, k))
-        self.parse_array_content(e, [self._front, self.body.parse_element, self._back])
+        self.parse_array_content(e, [self._front, self.body, self._back])
         if self.dest.title.empty_or_ws():
             self.log_issue(fc.MissingContent('article-title', 'title-group'))
         if not len(self.dest.authors):
