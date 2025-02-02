@@ -110,15 +110,9 @@ class Abstract(ProtoSection):
 
 
 @dataclass
-class CitationAuthor:
-    name: PersonName | None
-    string_name: str | None
-
-
-@dataclass
 class BibliographicReference:
     article_title: MixedContent | None
-    authors: list[CitationAuthor]
+    authors: list[PersonName | str]
     fpage: int | None = None
     id: str = ""
     issue: int | None = None

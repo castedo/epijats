@@ -10,10 +10,15 @@ from .tree import DataElement, MarkupElement, MixedContent, StartTag
 from .xml import data_element
 
 
-def title_group(src: MixedContent) -> DataElement:
-    title = MarkupElement('article-title', src.text)
+def markup_element(tag: str, src: MixedContent) -> MarkupElement:
+    ret = MarkupElement(tag, src.text)
     for it in src:
-        title.content.append(it)
+        ret.content.append(it)
+    return ret
+
+
+def title_group(src: MixedContent) -> DataElement:
+    title = markup_element('article-title', src)
     return DataElement('title-group', [title])
 
 
@@ -69,7 +74,12 @@ def abstract(src: baseprint.Abstract) -> DataElement:
 
 
 def biblio_ref(src: baseprint.BibliographicReference) -> DataElement:
-    ret = DataElement('ref', [])
+    ec = DataElement('element-citation')
+    if src.article_title:
+        ec.append(markup_element('article-title', src.article_title))
+    if src.uri:
+        ec.append(MarkupElement('uri', src.uri))
+    ret = DataElement('ref', [ec])
     ret.xml.attrib['id'] = src.id
     return ret
 

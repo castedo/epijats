@@ -506,14 +506,38 @@ class BibliographicRef(Parser):
         super().__init__(log)
         self.dest = dest
 
+    def _element_citation(self, e: etree._Element, xid: str) -> None:
+        br = baseprint.BibliographicReference(None, [])
+        br.id = xid
+
+        title = MixedContent()
+        title_model = base_hypertext_model()
+        title_parser = MixedContentParser(self.log, title, title_model, 'article-title')
+
+        self.prep_array_elements(e)
+        for s in e:
+            if s.tag == "uri":
+                br.uri = parse_string(self.log, s)
+            elif title_parser.parse_element(s): 
+                if br.article_title is None:
+                    br.article_title = title
+                else:
+                    self.log(fc.ExcessElement.issue(s))
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
+        self.dest.append(br)
+
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'ref':
             return False
         self.check_no_attrib(e, ['id'])
-        br = baseprint.BibliographicReference(None, [])
-        br.id = e.attrib.get('id', "")
+        xid = e.attrib.get('id', "")
         self.prep_array_elements(e)
-        self.dest.append(br)
+        for s in e:
+            if s.tag == 'element-citation':
+                self._element_citation(s, xid)
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
         return True
 
 
