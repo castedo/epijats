@@ -104,29 +104,32 @@ ParsedT = TypeVar('ParsedT')
 
 class TParser(Validator, Generic[ParsedT]):
     @abstractmethod
+    def match(self, e: etree._Element) -> bool: ...
+
+    @abstractmethod
     def parse(self, e: etree._Element) -> ParsedT | None: ...
 
-    def __call__(self, e: etree._Element) -> ParsedT | None:
-        return self.parse(e)
 
-
-class StringTParser(TParser[str]):
-    def __init__(self, log: IssueCallback):
+class StringParser(TParser[str]):
+    def __init__(self, log: IssueCallback, tag: str):
         super().__init__(log)
+        self.tag = tag
+
+    def match(self, e: etree._Element) -> bool:
+        return e.tag == self.tag
 
     def parse(self, e: etree._Element) -> str | None:
         return parse_string(self.log, e)
 
 
 class FirstParser(Parser, Generic[ParsedT]):
-    def __init__(self, tag: str, tparser: TParser[ParsedT]):
+    def __init__(self, tparser: TParser[ParsedT]):
         super().__init__(tparser.log)
-        self.tag = tag
         self.tparser = tparser
         self.out: ParsedT | None = None
 
     def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != self.tag:
+        if not self.tparser.match(e):
             return False
         if self.out is not None:
             self.log(fc.ExcessElement.issue(e))
@@ -352,28 +355,20 @@ class TitleGroupParser(Parser):
         return True
 
 
-class ContribIdParser(Parser):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
-        self.out: Orcid | None = None
+class OrcidParser(TParser[Orcid]):
+    def match(self, e: etree._Element) -> bool:
+        return e.tag == 'contrib-id' and e.attrib.get('contrib-id-type') == 'orcid'
 
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'contrib-id':
-            return False
-        k = 'contrib-id-type'
-        if e.attrib.get(k) == 'orcid':
-            del e.attrib[k]
-            url = parse_string(self.log, e)
-            try:
-                self.out = Orcid.from_url(url)
-            except ValueError:
-                self.log_issue(fc.InvalidOrcid(), e.sourceline, url)
-        elif k in e.attrib:
-            v = e.attrib[k]
-            self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
-        else:
-            self.log(fc.UnsupportedElement.issue(e))
-        return True
+    def parse(self, e: etree._Element) -> Orcid | None:
+        self.check_no_attrib(e, ['contrib-id-type'])
+        for s in e:
+            self.log(fc.UnsupportedElement.issue(s))
+        try:
+            url = e.text or ""
+            return Orcid.from_url(url)
+        except ValueError:
+            self.log_issue(fc.InvalidOrcid(), e.sourceline, url)
+            return None
 
 
 class AuthorGroupParser(Parser):
@@ -399,40 +394,25 @@ class AuthorGroupParser(Parser):
         return True
 
 
-class PersonNameParser(Parser):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
-        self.out: PersonName | None = None
+class PersonNameParser(TParser[PersonName]):
+    def match(self, e: etree._Element) -> bool:
+        return e.tag == "name"
 
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'name':
-            return False
+    def parse(self, e: etree._Element) -> PersonName | None:
         self.check_no_attrib(e)
-        self.prep_array_elements(e)
-        surname = None
-        given_names = None
-        for s in e:
-            if s.tag == 'surname':
-                surname = parse_string(self.log, s)
-            elif s.tag == 'given-names':
-                given_names = parse_string(self.log, s)
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
-        if surname or given_names:
-            self.out = PersonName(surname, given_names)
-        else:
+        surname = FirstParser(StringParser(self.log, 'surname'))
+        given_names = FirstParser(StringParser(self.log, 'given-names'))
+        self.parse_array_content(e, [surname, given_names])
+        if not surname.out and not given_names.out:
             self.log(fc.MissingContent.issue(e))
-        return True
+            return None
+        return PersonName(surname.out, given_names.out)
 
 
 class AuthorParser(Parser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
         self.out: Author | None = None
-        self.name_parser = PersonNameParser(self.log)
-        self.email_parser = FirstParser('email', StringTParser(self.log))
-        self.orcid_parser = ContribIdParser(self.log)
-        self._parsers = (self.name_parser, self.email_parser, self.orcid_parser)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'contrib':
@@ -447,13 +427,12 @@ class AuthorParser(Parser):
             else:
                 self.log(fc.UnsupportedAttribute.issue(e, k))
         self.check_no_attrib(e, ['contrib-type'])
-        self.parse_array_content(e, self._parsers)
-        if self.name_parser.out is not None:
-            self.out = Author(
-                self.name_parser.out,
-                self.email_parser.out,
-                self.orcid_parser.out,
-            )
+        name = FirstParser(PersonNameParser(self.log))
+        email = FirstParser(StringParser(self.log, 'email'))
+        orcid = FirstParser(OrcidParser(self.log))
+        self.parse_array_content(e, [name, email, orcid])
+        if name.out is not None:
+            self.out = Author(name.out, email.out, orcid.out)
         else:
             self.log_issue(fc.MissingName(), e.sourceline)
         return True
