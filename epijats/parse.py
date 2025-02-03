@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, TYPE_CHECKING, TypeAlias
+from typing import Callable, Generic, TYPE_CHECKING, TypeAlias, TypeVar
 
 from lxml import etree
 
@@ -98,6 +99,44 @@ class Parser(Validator):
         return self.parse_element(e)
 
 
+ParsedT = TypeVar('ParsedT')
+
+
+class TParser(Validator, Generic[ParsedT]):
+    @abstractmethod
+    def parse(self, e: etree._Element) -> ParsedT | None: ...
+
+    def __call__(self, e: etree._Element) -> ParsedT | None:
+        return self.parse(e)
+
+
+class StringTParser(TParser[str]):
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+
+    def parse(self, e: etree._Element) -> str | None:
+        return parse_string(self.log, e)
+
+
+class FirstParser(Parser, Generic[ParsedT]):
+    def __init__(self, tag: str, tparser: TParser[ParsedT]):
+        super().__init__(tparser.log)
+        self.tag = tag
+        self.tparser = tparser
+        self.out: ParsedT | None = None
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != self.tag:
+            return False
+        if self.out is not None:
+            self.log(fc.ExcessElement.issue(e))
+            return True
+        result = self.tparser.parse(e)
+        if result is not None:
+            self.out = result
+        return True
+
+
 if TYPE_CHECKING:
     ElementHandler: TypeAlias = Callable[[Element], None]
 
@@ -144,7 +183,8 @@ class UnionModel(Model):
         self._models = list(models) if models else []
 
     def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser:
-        return UnionParser(log, dest, self._models)
+        funcs = [m.parser(log, dest) for m in self._models]
+        return UnionParser(log, funcs)
 
     def __ior__(self, other: Model) -> UnionModel:
         if isinstance(other, UnionModel):
@@ -157,15 +197,12 @@ class UnionModel(Model):
 
 
 class UnionParser(Parser):
-    def __init__(
-        self, log: IssueCallback, dest: ElementHandler, models: Iterable[Model]
-    ):
+    def __init__(self, log: IssueCallback, parsers: Iterable[ParseFunc]):
         super().__init__(log)
-        self.dest = dest
-        self._parsers = list(m.parser(log, dest) for m in models)
+        self._parsers = parsers
 
     def parse_element(self, e: etree._Element) -> bool:
-        return any(p.parse_element(e) for p in self._parsers)
+        return any(pf(e) for pf in self._parsers)
 
 
 class ElementModel(Model):
@@ -315,12 +352,12 @@ class TitleGroupParser(Parser):
         return True
 
 
-class ContribIdParser(Validator):
+class ContribIdParser(Parser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
         self.out: Orcid | None = None
 
-    def parse(self, e: etree._Element) -> bool:
+    def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'contrib-id':
             return False
         k = 'contrib-id-type'
@@ -371,6 +408,7 @@ class PersonNameParser(Parser):
         if e.tag != 'name':
             return False
         self.check_no_attrib(e)
+        self.prep_array_elements(e)
         surname = None
         given_names = None
         for s in e:
@@ -382,6 +420,8 @@ class PersonNameParser(Parser):
                 self.log(fc.UnsupportedElement.issue(s))
         if surname or given_names:
             self.out = PersonName(surname, given_names)
+        else:
+            self.log(fc.MissingContent.issue(e))
         return True
 
 
@@ -390,7 +430,9 @@ class AuthorParser(Parser):
         super().__init__(log)
         self.out: Author | None = None
         self.name_parser = PersonNameParser(self.log)
+        self.email_parser = FirstParser('email', StringTParser(self.log))
         self.orcid_parser = ContribIdParser(self.log)
+        self._parsers = (self.name_parser, self.email_parser, self.orcid_parser)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'contrib':
@@ -405,20 +447,15 @@ class AuthorParser(Parser):
             else:
                 self.log(fc.UnsupportedAttribute.issue(e, k))
         self.check_no_attrib(e, ['contrib-type'])
-        email = None
-        for s in e:
-            if self.name_parser.parse_element(s):
-                pass
-            elif s.tag == 'email':
-                email = parse_string(self.log, s)
-            elif self.orcid_parser.parse(s):
-                pass
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
+        self.parse_array_content(e, self._parsers)
         if self.name_parser.out is not None:
-            self.out = Author(self.name_parser.out, email, self.orcid_parser.out)
+            self.out = Author(
+                self.name_parser.out,
+                self.email_parser.out,
+                self.orcid_parser.out,
+            )
         else:
-            self.log_issue(fc.MissingName(), s.sourceline)
+            self.log_issue(fc.MissingName(), e.sourceline)
         return True
 
 
