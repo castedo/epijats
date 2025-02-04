@@ -51,6 +51,19 @@ def parse_string(log: IssueCallback, e: etree._Element) -> str:
     return "".join(frags)
 
 
+def parse_int(log: IssueCallback, e: etree._Element) -> int | None:
+    for s in e:
+        log(fc.UnsupportedElement.issue(s))
+        if s.tail and s.tail.strip():
+            log(fc.IgnoredText.issue(e))
+    try:
+        text = e.text or ""
+        return int(text)
+    except ValueError:
+        log(fc.InvalidInteger.issue(e, text))
+        return None
+
+
 if TYPE_CHECKING:
     ParseFunc: TypeAlias = Callable[[etree._Element], bool]
 
@@ -110,7 +123,7 @@ class TParser(Validator, Generic[ParsedT]):
     def parse(self, e: etree._Element) -> ParsedT | None: ...
 
 
-class StringParser(TParser[str]):
+class TaggedParser(TParser[ParsedT]):
     def __init__(self, log: IssueCallback, tag: str):
         super().__init__(log)
         self.tag = tag
@@ -118,8 +131,21 @@ class StringParser(TParser[str]):
     def match(self, e: etree._Element) -> bool:
         return e.tag == self.tag
 
+
+class StringParser(TaggedParser[str]):
     def parse(self, e: etree._Element) -> str | None:
+        self.check_no_attrib(e)
         return parse_string(self.log, e)
+
+
+class YearParser(TaggedParser[int]):
+    def parse(self, e: etree._Element) -> int | None:
+        self.check_no_attrib(e, ['iso-8601-date'])
+        expect = (e.text or "").strip()
+        got = e.attrib.get('iso-8601-date', '').strip()
+        if got and expect != got:
+            self.log(fc.UnsupportedAttributeValue.issue(e, 'iso-8601-date', got))
+        return parse_int(self.log, e)
 
 
 class FirstParser(Parser, Generic[ParsedT]):
@@ -338,6 +364,18 @@ class MixedContentParser(Parser):
         return True
 
 
+class MixedContentTParser(TaggedParser[MixedContent]):
+    def __init__(self, log: IssueCallback, tag: str, model: Model):
+        super().__init__(log, tag)
+        self.model = model
+
+    def parse(self, e: etree._Element) -> MixedContent | None:
+        self.check_no_attrib(e)
+        ret = MixedContent()
+        self.model.parse_content(self.log, e, ret)
+        return ret
+
+
 class TitleGroupParser(Parser):
     def __init__(self, log: IssueCallback, dest: MixedContent):
         super().__init__(log)
@@ -367,7 +405,7 @@ class OrcidParser(TParser[Orcid]):
             url = e.text or ""
             return Orcid.from_url(url)
         except ValueError:
-            self.log_issue(fc.InvalidOrcid(), e.sourceline, url)
+            self.log(fc.InvalidOrcid.issue(e, url))
             return None
 
 
@@ -515,33 +553,42 @@ class SubSectionParser(Parser):
         return True
 
 
-class BibliographicRef(Parser):
+class RefAuthorListParser(TParser[list[PersonName | str]]):
+    def __init__(self, log: IssueCallback):
+        super().__init__(log)
+        self.pname_parser = PersonNameParser(log)
+        self.sname_parser = StringParser(log, 'string-name')
+
+    def match(self, e: etree._Element) -> bool:
+        return e.tag == 'person-group'
+
+    def parse(self, e: etree._Element) -> list[PersonName | str] | None:
+        ret: list[PersonName | str] = []
+        k = 'person-group-type'
+        self.check_no_attrib(e, [k])
+        v = e.attrib.get(k, "")
+        if v != 'author':
+            self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
+            return None
+        self.prep_array_elements(e)
+        for s in e:
+            if self.pname_parser.match(s):
+                if pname := self.pname_parser.parse(s):
+                    ret.append(pname)
+            elif self.sname_parser.match(s):
+                if sname := self.sname_parser.parse(s):
+                    ret.append(sname)
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
+        return ret
+
+
+class BibliographicRefParser(Parser):
     def __init__(
         self, log: IssueCallback, dest: list[baseprint.BibliographicReference]
     ):
         super().__init__(log)
         self.dest = dest
-
-    def _element_citation(self, e: etree._Element, xid: str) -> None:
-        br = baseprint.BibliographicReference(None, [])
-        br.id = xid
-
-        title = MixedContent()
-        title_model = base_hypertext_model()
-        title_parser = MixedContentParser(self.log, title, title_model, 'article-title')
-
-        self.prep_array_elements(e)
-        for s in e:
-            if s.tag == "uri":
-                br.uri = parse_string(self.log, s)
-            elif title_parser.parse_element(s): 
-                if br.article_title is None:
-                    br.article_title = title
-                else:
-                    self.log(fc.ExcessElement.issue(s))
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
-        self.dest.append(br)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'ref':
@@ -556,6 +603,22 @@ class BibliographicRef(Parser):
                 self.log(fc.UnsupportedElement.issue(s))
         return True
 
+    def _element_citation(self, e: etree._Element, xid: str) -> None:
+        title_model = base_hypertext_model()
+        title = FirstParser(MixedContentTParser(self.log, 'article-title', title_model))
+        authors = FirstParser(RefAuthorListParser(self.log))
+        year = FirstParser(YearParser(self.log, 'year'))
+        uri = FirstParser(StringParser(self.log, 'uri'))
+        self.parse_array_content(e, [authors, year, title, uri])
+        br = baseprint.BibliographicReference()
+        br.id = xid
+        br.article_title = title.out
+        if authors.out:
+            br.authors = authors.out
+        br.year = year.out
+        br.uri = uri.out
+        self.dest.append(br)
+
 
 class RefListParser(Parser):
     def __init__(self, log: IssueCallback):
@@ -564,7 +627,7 @@ class RefListParser(Parser):
         self._title = MixedContent()
         title_model = base_hypertext_model()
         title_parser = MixedContentParser(self.log, self._title, title_model, 'title')
-        ref_parser = BibliographicRef(log, self.out.references)
+        ref_parser = BibliographicRefParser(log, self.out.references)
         self._parsers = [title_parser, ref_parser]
 
     def parse_element(self, e: etree._Element) -> bool:

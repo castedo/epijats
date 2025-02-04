@@ -75,6 +75,17 @@ def abstract(src: baseprint.Abstract) -> DataElement:
 
 def biblio_ref(src: baseprint.BibliographicReference) -> DataElement:
     ec = DataElement('element-citation')
+    if src.authors:
+        pg = DataElement(StartTag('person-group', {'person-group-type': 'author'}))
+        for a in src.authors:
+            if isinstance(a, baseprint.PersonName):
+                pg.append(person_name(a))
+            else:
+                pg.append(MarkupElement('string-name', a))
+        ec.append(pg)
+    if src.year is not None:
+        y = str(src.year)
+        ec.append(MarkupElement(StartTag('year', {'iso-8601-date': y}), y))
     if src.article_title:
         ec.append(markup_element('article-title', src.article_title))
     if src.uri:

@@ -111,16 +111,18 @@ class Abstract(ProtoSection):
 
 @dataclass
 class BibliographicReference:
-    article_title: MixedContent | None
+    id: str
     authors: list[PersonName | str]
-    fpage: int | None = None
-    id: str = ""
-    issue: int | None = None
-    lpage: int | None = None
-    source: str | None = None
-    uri: str | None = None
-    volume: int | None = None
-    year: int | None = None
+    year: int | None
+    article_title: MixedContent | None
+    uri: str | None
+
+    def __init__(self) -> None:
+        self.id = ""
+        self.authors = []
+        self.year = None
+        self.article_title = None
+        self.uri = None
 
 
 @dataclass

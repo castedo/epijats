@@ -80,10 +80,10 @@ class ElementFormatCondition(FormatCondition):
         return "{} {}/{!r}".format(self.__doc__, parent, self.tag)
 
     @classmethod
-    def issue(klas, e: etree._Element) -> FormatIssue:
+    def issue(klas, e: etree._Element, info: str | None = None) -> FormatIssue:
         parent = e.getparent()
         ptag = None if parent is None else parent.tag
-        return FormatIssue(klas(e.tag, ptag), e.sourceline)
+        return FormatIssue(klas(e.tag, ptag), e.sourceline, info)
 
     def as_pod(self) -> JSONType:
         return [type(self).__name__, str(self.tag), str(self.parent)]
@@ -109,8 +109,12 @@ class IgnoredText(ElementFormatCondition):
     """Unexpected text ignored within XML element"""
 
 
-class InvalidOrcid(FormatCondition):
+class InvalidOrcid(ElementFormatCondition):
     """Invalid ORCID"""
+
+
+class InvalidInteger(ElementFormatCondition):
+    """Invalid integer"""
 
 
 class MissingName(FormatCondition):
