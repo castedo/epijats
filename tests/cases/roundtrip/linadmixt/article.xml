@@ -51,6 +51,15 @@ separated populations.</p>
       <title>Definition of lineal admixture time</title>
       <p>We define <italic>lineal admixture time</italic> per lineage. This measure in time duration
    depends on two reference time points:</p>
+      <list list-type="order">
+        <list-item>
+          <p>a past time horizon when all ancestors are members of separate non-admixed
+          subpopulations, and</p>
+        </list-item>
+        <list-item>
+          <p>an observation time, such as the present.</p>
+        </list-item>
+      </list>
       <p>Given a lineage, the <bold>lineal admixture time</bold> is defined as:</p>
       <p><italic>the amount of time since fertilization of the first admixed individual in the
      lineage</italic>.</p>

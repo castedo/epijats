@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
 
@@ -34,10 +34,18 @@ class ListItem(DataElement):
 
 
 class List(DataElement):
-    def __init__(self) -> None:
+    list_type: Literal['bullet', 'order'] | None
+
+    def __init__(self, list_type: str | None) -> None:
         super().__init__('list')
-        self.xml.attrib = {"list-type": "bullet"}
-        self.html = StartTag('ul')
+        if list_type == 'bullet':
+            self.list_type = 'bullet'
+        elif list_type == 'order':
+            self.list_type = 'order'
+        else:
+            self.list_type = None
+        if self.list_type is not None:
+            self.xml.attrib = {'list-type': self.list_type}
 
 
 @dataclass(frozen=True)

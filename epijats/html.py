@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
-from .baseprint import ProtoSection
+from .baseprint import ProtoSection, List
 from .tree import Element, MixedContent, MarkupElement
 from .xml import ElementFormatter
 
@@ -23,6 +23,8 @@ class HtmlGenerator(ElementFormatter):
         return self.make_html_element(src)
 
     def make_html_element(self, src: Element) -> HtmlElement:
+        if isinstance(src, List):
+            return E('ol') if src.list_type == 'order' else E('ul')
         if src.html is None:
             raise ValueError
         return E(src.html.tag, **src.html.attrib)
@@ -40,9 +42,7 @@ class HtmlGenerator(ElementFormatter):
         return ret
 
     def _element(self, src: Element) -> HtmlElement:
-        if src.html is None:
-            raise NotImplementedError
-        ret = E(src.html.tag, **src.html.attrib)
+        ret = self.make_html_element(src)
         if isinstance(src, MarkupElement):
             self.markup_content(src.content, ret, 0)
         else:

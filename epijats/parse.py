@@ -327,13 +327,12 @@ class ListModel(ElementModel):
         if e.tag != 'list':
             return None
         list_type = e.attrib.get("list-type")
-        if list_type and list_type != "bullet":
+        if list_type and list_type not in ["bullet", "order"]:
             log(fc.UnsupportedAttributeValue.issue(e, "list-type", list_type))
-            return None
         check_no_attrib(log, e, ['list-type'])
         if e.text and e.text.strip():
             log(fc.IgnoredText.issue(e))
-        ret = List()
+        ret = List(list_type)
         for s in e:
             if s.tag == 'list-item':
                 item = ListItem()
