@@ -74,7 +74,8 @@ def abstract(src: baseprint.Abstract) -> DataElement:
 
 
 def biblio_ref(src: baseprint.BibliographicReference) -> DataElement:
-    ec = DataElement('element-citation')
+    stag = StartTag('element-citation', {'publication-type': src.publication_type})
+    ec = DataElement(stag)
     if src.authors:
         pg = DataElement(StartTag('person-group', {'person-group-type': 'author'}))
         for a in src.authors:
@@ -88,8 +89,8 @@ def biblio_ref(src: baseprint.BibliographicReference) -> DataElement:
         ec.append(MarkupElement(StartTag('year', {'iso-8601-date': y}), y))
     if src.article_title:
         ec.append(markup_element('article-title', src.article_title))
-    if src.uri:
-        ec.append(MarkupElement('uri', src.uri))
+    for key, value in src.biblio_fields.items():
+        ec.append(MarkupElement(key, value))
     ret = DataElement('ref', [ec])
     ret.xml.attrib['id'] = src.id
     return ret

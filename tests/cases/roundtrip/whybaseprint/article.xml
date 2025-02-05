@@ -101,7 +101,7 @@ while also having the option to discover newer versions.</p>
     <ref-list>
       <title>References</title>
       <ref id="ref-enwikiU003Ajats">
-        <element-citation>
+        <element-citation publication-type="webpage">
           <person-group person-group-type="author">
             <string-name>Wikipedia contributors</string-name>
           </person-group>
@@ -111,7 +111,7 @@ while also having the option to discover newer versions.</p>
         </element-citation>
       </ref>
       <ref id="ref-DSI_spec">
-        <element-citation>
+        <element-citation publication-type="webpage">
           <person-group person-group-type="author">
             <name>
               <surname>Ellerman</surname>

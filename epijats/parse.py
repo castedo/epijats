@@ -604,19 +604,40 @@ class BibliographicRefParser(Parser):
         return True
 
     def _element_citation(self, e: etree._Element, xid: str) -> None:
+        self.check_no_attrib(e, ['publication-type'])
         title_model = base_hypertext_model()
         title = FirstParser(MixedContentTParser(self.log, 'article-title', title_model))
         authors = FirstParser(RefAuthorListParser(self.log))
         year = FirstParser(YearParser(self.log, 'year'))
-        uri = FirstParser(StringParser(self.log, 'uri'))
-        self.parse_array_content(e, [authors, year, title, uri])
+        fields = {}
+        for key in baseprint.BibliographicReference.BIBLIO_FIELD_KEYS:
+            fields[key] = FirstParser(StringParser(self.log, key))
+        funcs: list[ParseFunc] = [authors, year, title]
+        funcs += fields.values()
+        self.parse_array_content(e, funcs)
         br = baseprint.BibliographicReference()
         br.id = xid
+        br.publication_type = e.get('publication-type', '')
+        if br.publication_type not in [
+            'book',
+            'confproc',
+            'journal',
+            'other',
+            'patent',
+            'webpage',
+        ]:
+            self.log(
+                fc.UnsupportedAttributeValue.issue(
+                     e, 'publication-type', br.publication_type
+                )
+            )
         br.article_title = title.out
         if authors.out:
             br.authors = authors.out
         br.year = year.out
-        br.uri = uri.out
+        for key, parser in fields.items():
+            if parser.out:
+                br.biblio_fields[key] = parser.out
         self.dest.append(br)
 
 

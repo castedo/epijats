@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
 
@@ -112,17 +113,29 @@ class Abstract(ProtoSection):
 @dataclass
 class BibliographicReference:
     id: str
+    publication_type: str
     authors: list[PersonName | str]
     year: int | None
     article_title: MixedContent | None
-    uri: str | None
+    biblio_fields: dict[str, str]
+
+    BIBLIO_FIELD_KEYS: ClassVar[list[str]] = [
+        'edition',
+        'fpage',
+        'isbn',
+        'issn',
+        'lpage',
+        'source',
+        'uri',
+        'volume',
+    ]
 
     def __init__(self) -> None:
         self.id = ""
         self.authors = []
         self.year = None
         self.article_title = None
-        self.uri = None
+        self.biblio_fields = {}
 
 
 @dataclass
