@@ -11,7 +11,7 @@ test: && test-runtime
     cd tests && mypy --ignore-missing-imports .  # cd for separate mypy cache+config
 
 test-runtime:
-    python3 -m pytest -v tests
+    python3 -m pytest -vv tests
 
 dist:
     python3 -m build

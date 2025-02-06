@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Generic, TYPE_CHECKING, TypeAlias, TypeVar
+from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
 from lxml import etree
 
 from . import condition as fc
-from . import baseprint
+from . import baseprint as bp
 from .baseprint import (
     Author,
     Baseprint,
@@ -38,34 +38,26 @@ def check_no_attrib(
             log(fc.UnsupportedAttribute.issue(e, k))
 
 
-def parse_string(log: IssueCallback, e: etree._Element) -> str:
-    check_no_attrib(log, e)
-    frags = []
-    if e.text:
-        frags.append(e.text)
+def prep_array_elements(log: IssueCallback, e: etree._Element) -> None:
+    if e.text and e.text.strip():
+        log(fc.IgnoredText.issue(e))
     for s in e:
-        log(fc.UnsupportedElement.issue(s))
-        frags += parse_string(log, s)
-        if s.tail:
-            frags.append(s.tail)
-    return "".join(frags)
-
-
-def parse_int(log: IssueCallback, e: etree._Element) -> int | None:
-    for s in e:
-        log(fc.UnsupportedElement.issue(s))
         if s.tail and s.tail.strip():
             log(fc.IgnoredText.issue(e))
-    try:
-        text = e.text or ""
-        return int(text)
-    except ValueError:
-        log(fc.InvalidInteger.issue(e, text))
-        return None
+        s.tail = None
 
 
 if TYPE_CHECKING:
     ParseFunc: TypeAlias = Callable[[etree._Element], bool]
+
+
+def parse_array_content(
+    log: IssueCallback, e: etree._Element, parse_funcs: Iterable[ParseFunc]
+) -> None:
+    prep_array_elements(log, e)
+    for s in e:
+        if not any(pf(s) for pf in parse_funcs):
+            log(fc.UnsupportedElement.issue(s))
 
 
 class Validator(ABC):
@@ -88,20 +80,12 @@ class Validator(ABC):
         check_no_attrib(self.log, e, ignore)
 
     def prep_array_elements(self, e: etree._Element) -> None:
-        if e.text and e.text.strip():
-            self.log(fc.IgnoredText.issue(e))
-        for s in e:
-            if s.tail and s.tail.strip():
-                self.log(fc.IgnoredText.issue(e))
-            s.tail = None
+        prep_array_elements(self.log, e)
 
     def parse_array_content(
         self, e: etree._Element, parse_funcs: Iterable[ParseFunc]
     ) -> None:
-        self.prep_array_elements(e)
-        for s in e:
-            if not any(pf(s) for pf in parse_funcs):
-                self.log(fc.UnsupportedElement.issue(s))
+        parse_array_content(self.log, e, parse_funcs)
 
 
 class Parser(Validator):
@@ -113,56 +97,100 @@ class Parser(Validator):
 
 
 ParsedT = TypeVar('ParsedT')
+ParsedCovT = TypeVar('ParsedCovT', covariant=True)
 
 
-class TParser(Validator, Generic[ParsedT]):
-    @abstractmethod
-    def match(self, e: etree._Element) -> bool: ...
-
-    @abstractmethod
-    def parse(self, e: etree._Element) -> ParsedT | None: ...
+class Reader(Protocol, Generic[ParsedCovT]):
+    def __call__(self, log: IssueCallback, e: etree._Element) -> ParsedCovT | None: ...
 
 
-class TaggedParser(TParser[ParsedT]):
-    def __init__(self, log: IssueCallback, tag: str):
+def read_string(log: IssueCallback, e: etree._Element) -> str:
+    check_no_attrib(log, e)
+    frags = []
+    if e.text:
+        frags.append(e.text)
+    for s in e:
+        log(fc.UnsupportedElement.issue(s))
+        frags += read_string(log, s)
+        if s.tail:
+            frags.append(s.tail)
+    return "".join(frags)
+
+
+def read_int(log: IssueCallback, e: etree._Element) -> int | None:
+    for s in e:
+        log(fc.UnsupportedElement.issue(s))
+        if s.tail and s.tail.strip():
+            log(fc.IgnoredText.issue(e))
+    try:
+        text = e.text or ""
+        return int(text)
+    except ValueError:
+        log(fc.InvalidInteger.issue(e, text))
+        return None
+
+
+def read_year(log: IssueCallback, e: etree._Element) -> int | None:
+    check_no_attrib(log, e, ['iso-8601-date'])
+    expect = (e.text or "").strip()
+    got = e.attrib.get('iso-8601-date', '').strip()
+    if got and expect != got:
+        log(fc.UnsupportedAttributeValue.issue(e, 'iso-8601-date', got))
+    return read_int(log, e)
+
+
+@dataclass
+class Result(Generic[ParsedT]):
+    out: ParsedT | None = None
+
+
+class FirstReadParser(Parser, Generic[ParsedT]):
+    def __init__(
+        self,
+        log: IssueCallback,
+        tag: str,
+        result: Result[ParsedT],
+        reader: Reader[ParsedT],
+    ):
         super().__init__(log)
         self.tag = tag
-
-    def match(self, e: etree._Element) -> bool:
-        return e.tag == self.tag
-
-
-class StringParser(TaggedParser[str]):
-    def parse(self, e: etree._Element) -> str | None:
-        self.check_no_attrib(e)
-        return parse_string(self.log, e)
-
-
-class YearParser(TaggedParser[int]):
-    def parse(self, e: etree._Element) -> int | None:
-        self.check_no_attrib(e, ['iso-8601-date'])
-        expect = (e.text or "").strip()
-        got = e.attrib.get('iso-8601-date', '').strip()
-        if got and expect != got:
-            self.log(fc.UnsupportedAttributeValue.issue(e, 'iso-8601-date', got))
-        return parse_int(self.log, e)
-
-
-class FirstParser(Parser, Generic[ParsedT]):
-    def __init__(self, tparser: TParser[ParsedT]):
-        super().__init__(tparser.log)
-        self.tparser = tparser
-        self.out: ParsedT | None = None
+        self.result = result
+        self.reader = reader
 
     def parse_element(self, e: etree._Element) -> bool:
-        if not self.tparser.match(e):
+        if e.tag != self.tag:
             return False
-        if self.out is not None:
+        if self.result.out is None:
+            self.result.out = self.reader(self.log, e)
+        else:
             self.log(fc.ExcessElement.issue(e))
-            return True
-        result = self.tparser.parse(e)
-        if result is not None:
-            self.out = result
+        return True
+
+
+class TModel(Generic[ParsedT]):
+    def __init__(self, tag: str, reader: Reader[ParsedT]):
+        self.tag = tag
+        self.reader = reader
+
+    def parser(self, log: IssueCallback, dest: Result[ParsedT]) -> Parser:
+        return FirstReadParser(log, self.tag, dest, self.reader)
+
+
+class ObjectParser(Parser):
+    def __init__(self, log: IssueCallback, tag: str | None):
+        super().__init__(log)
+        self.tag = tag
+        self._parsers: list[ParseFunc] = []
+
+    def first(self, model: TModel[ParsedT]) -> Result[ParsedT]:
+        ret = Result[ParsedT]()
+        self._parsers.append(model.parser(self.log, ret))
+        return ret
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if self.tag and e.tag != self.tag:
+            return False
+        parse_array_content(self.log, e, self._parsers)
         return True
 
 
@@ -363,16 +391,19 @@ class MixedContentParser(Parser):
         return True
 
 
-class MixedContentTParser(TaggedParser[MixedContent]):
-    def __init__(self, log: IssueCallback, tag: str, model: Model):
-        super().__init__(log, tag)
+class MixedContentReader(Reader[MixedContent]):
+    def __init__(self, model: Model):
         self.model = model
 
-    def parse(self, e: etree._Element) -> MixedContent | None:
-        self.check_no_attrib(e)
+    def __call__(self, log: IssueCallback, e: etree._Element) -> MixedContent | None:
+        check_no_attrib(log, e)
         ret = MixedContent()
-        self.model.parse_content(self.log, e, ret)
+        self.model.parse_content(log, e, ret)
         return ret
+
+
+def title_model(tag: str) -> TModel[MixedContent]:
+    return TModel(tag, MixedContentReader(base_hypertext_model()))
 
 
 class TitleGroupParser(Parser):
@@ -392,20 +423,22 @@ class TitleGroupParser(Parser):
         return True
 
 
-class OrcidParser(TParser[Orcid]):
-    def match(self, e: etree._Element) -> bool:
-        return e.tag == 'contrib-id' and e.attrib.get('contrib-id-type') == 'orcid'
+def orcid_model() -> TModel[Orcid]:
+    return TModel('contrib-id', read_orcid)
 
-    def parse(self, e: etree._Element) -> Orcid | None:
-        self.check_no_attrib(e, ['contrib-id-type'])
-        for s in e:
-            self.log(fc.UnsupportedElement.issue(s))
-        try:
-            url = e.text or ""
-            return Orcid.from_url(url)
-        except ValueError:
-            self.log(fc.InvalidOrcid.issue(e, url))
-            return None
+
+def read_orcid(log: IssueCallback, e: etree._Element) -> Orcid | None:
+    if e.tag != 'contrib-id' or e.attrib.get('contrib-id-type') != 'orcid':
+        return None
+    check_no_attrib(log, e, ['contrib-id-type'])
+    for s in e:
+        log(fc.UnsupportedElement.issue(s))
+    try:
+        url = e.text or ""
+        return Orcid.from_url(url)
+    except ValueError:
+        log(fc.InvalidOrcid.issue(e, url))
+        return None
 
 
 class AuthorGroupParser(Parser):
@@ -431,19 +464,21 @@ class AuthorGroupParser(Parser):
         return True
 
 
-class PersonNameParser(TParser[PersonName]):
-    def match(self, e: etree._Element) -> bool:
-        return e.tag == "name"
+def person_name_model() -> TModel[PersonName]:
+    return TModel('name', read_person_name)
 
-    def parse(self, e: etree._Element) -> PersonName | None:
-        self.check_no_attrib(e)
-        surname = FirstParser(StringParser(self.log, 'surname'))
-        given_names = FirstParser(StringParser(self.log, 'given-names'))
-        self.parse_array_content(e, [surname, given_names])
-        if not surname.out and not given_names.out:
-            self.log(fc.MissingContent.issue(e))
-            return None
-        return PersonName(surname.out, given_names.out)
+
+def read_person_name(log: IssueCallback, e: etree._Element) -> PersonName | None:
+    check_no_attrib(log, e)
+    p = ObjectParser(log, 'name')
+    surname = p.first(TModel('surname', read_string))
+    given_names = p.first(TModel('given-names', read_string))
+    if not p.parse_element(e):
+        raise ValueError(e)
+    if not surname.out and not given_names.out:
+        log(fc.MissingContent.issue(e))
+        return None
+    return PersonName(surname.out, given_names.out)
 
 
 class AuthorParser(Parser):
@@ -464,10 +499,12 @@ class AuthorParser(Parser):
             else:
                 self.log(fc.UnsupportedAttribute.issue(e, k))
         self.check_no_attrib(e, ['contrib-type'])
-        name = FirstParser(PersonNameParser(self.log))
-        email = FirstParser(StringParser(self.log, 'email'))
-        orcid = FirstParser(OrcidParser(self.log))
-        self.parse_array_content(e, [name, email, orcid])
+        p = ObjectParser(self.log, 'contrib')
+        name = p.first(person_name_model())
+        email = p.first(TModel('email', read_string))
+        orcid = p.first(orcid_model())
+        if not p.parse_element(e):
+            raise ValueError(e)
         if name.out is not None:
             self.out = Author(name.out, email.out, orcid.out)
         else:
@@ -552,39 +589,36 @@ class SubSectionParser(Parser):
         return True
 
 
-class RefAuthorListParser(TParser[list[PersonName | str]]):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
-        self.pname_parser = PersonNameParser(log)
-        self.sname_parser = StringParser(log, 'string-name')
+def ref_authors_model() -> TModel[list[PersonName | str]]:
+    return TModel('person-group', read_ref_authors)
 
-    def match(self, e: etree._Element) -> bool:
-        return e.tag == 'person-group'
 
-    def parse(self, e: etree._Element) -> list[PersonName | str] | None:
-        ret: list[PersonName | str] = []
-        k = 'person-group-type'
-        self.check_no_attrib(e, [k])
-        v = e.attrib.get(k, "")
-        if v != 'author':
-            self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
-            return None
-        self.prep_array_elements(e)
-        for s in e:
-            if self.pname_parser.match(s):
-                if pname := self.pname_parser.parse(s):
-                    ret.append(pname)
-            elif self.sname_parser.match(s):
-                if sname := self.sname_parser.parse(s):
-                    ret.append(sname)
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
-        return ret
+def read_ref_authors(
+    log: IssueCallback, e: etree._Element
+) -> list[PersonName | str] | None:
+    ret: list[PersonName | str] = []
+    k = 'person-group-type'
+    check_no_attrib(log, e, [k])
+    v = e.attrib.get(k, "")
+    if v != 'author':
+        log(fc.UnsupportedAttributeValue.issue(e, k, v))
+        return None
+    prep_array_elements(log, e)
+    for s in e:
+        if s.tag == 'name':
+            if pname := read_person_name(log, s):
+                ret.append(pname)
+        elif s.tag == 'string-name':
+            if sname := read_string(log, s):
+                ret.append(sname)
+        else:
+            log(fc.UnsupportedElement.issue(s))
+    return ret
 
 
 class BibliographicRefParser(Parser):
     def __init__(
-        self, log: IssueCallback, dest: list[baseprint.BibliographicReference]
+        self, log: IssueCallback, dest: list[bp.BibliographicReference]
     ):
         super().__init__(log)
         self.dest = dest
@@ -604,17 +638,16 @@ class BibliographicRefParser(Parser):
 
     def _element_citation(self, e: etree._Element, xid: str) -> None:
         self.check_no_attrib(e, ['publication-type'])
-        title_model = base_hypertext_model()
-        title = FirstParser(MixedContentTParser(self.log, 'article-title', title_model))
-        authors = FirstParser(RefAuthorListParser(self.log))
-        year = FirstParser(YearParser(self.log, 'year'))
+        p = ObjectParser(self.log, 'element-citation')
+        title = p.first(title_model('article-title'))
+        authors = p.first(ref_authors_model())
+        year = p.first(TModel('year', read_year))
         fields = {}
-        for key in baseprint.BibliographicReference.BIBLIO_FIELD_KEYS:
-            fields[key] = FirstParser(StringParser(self.log, key))
-        funcs: list[ParseFunc] = [authors, year, title]
-        funcs += fields.values()
-        self.parse_array_content(e, funcs)
-        br = baseprint.BibliographicReference()
+        for key in bp.BibliographicReference.BIBLIO_FIELD_KEYS:
+            fields[key] = p.first(TModel(key, read_string))
+        if not p.parse_element(e):
+            raise ValueError
+        br = bp.BibliographicReference()
         br.id = xid
         br.publication_type = e.get('publication-type', '')
         if br.publication_type not in [
