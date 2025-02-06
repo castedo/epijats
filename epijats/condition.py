@@ -117,10 +117,6 @@ class InvalidInteger(ElementFormatCondition):
     """Invalid integer"""
 
 
-class MissingName(FormatCondition):
-    """Missing name"""
-
-
 @dataclass(frozen=True)
 class UnsupportedAttribute(FormatCondition):
     """Unsupported XML attribute"""
@@ -145,14 +141,14 @@ class UnsupportedAttributeValue(FormatCondition):
 
     tag: str | bytes | bytearray | QName
     attribute: str
-    value: str
+    value: str | None
 
     def __str__(self) -> str:
         msg = "{} {!r}@{!r} = {!r}"
         return msg.format(self.__doc__, self.tag, self.attribute, self.value)
 
     @staticmethod
-    def issue(e: etree._Element, key: str, value: str) -> FormatIssue:
+    def issue(e: etree._Element, key: str, value: str | None) -> FormatIssue:
         return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), e.sourceline)
 
 

@@ -30,12 +30,32 @@ if TYPE_CHECKING:
     IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
 
 
+def issue(
+    log: IssueCallback,
+    condition: fc.FormatCondition,
+    sourceline: int | None = None,
+    info: str | None = None,
+) -> None:
+    return log(fc.FormatIssue(condition, sourceline, info))
+
+
 def check_no_attrib(
     log: IssueCallback, e: etree._Element, ignore: list[str] = []
 ) -> None:
     for k in e.attrib.keys():
         if k not in ignore:
             log(fc.UnsupportedAttribute.issue(e, k))
+
+
+def confirm_attrib_value(
+    log: IssueCallback, e: etree._Element, key: str, value: str
+) -> bool:
+    got = e.attrib.get(key)
+    if got == value:
+        return True
+    else:
+        log(fc.UnsupportedAttributeValue.issue(e, key, got))
+        return False
 
 
 def prep_array_elements(log: IssueCallback, e: etree._Element) -> None:
@@ -74,7 +94,7 @@ class Validator(ABC):
         sourceline: int | None = None,
         info: str | None = None,
     ) -> None:
-        return self._log(fc.FormatIssue(condition, sourceline, info))
+        return issue(self._log, condition, sourceline, info)
 
     def check_no_attrib(self, e: etree._Element, ignore: list[str] = []) -> None:
         check_no_attrib(self.log, e, ignore)
@@ -260,15 +280,6 @@ class UnionModel(EModel):
         else:
             raise TypeError()
         return self
-
-
-class UnionParser(Parser):
-    def __init__(self, log: IssueCallback, parsers: Iterable[ParseFunc]):
-        super().__init__(log)
-        self._parsers = parsers
-
-    def parse_element(self, e: etree._Element) -> bool:
-        return any(pf(e) for pf in self._parsers)
 
 
 class ElementModel(EModel):
@@ -468,7 +479,6 @@ class AuthorGroupParser(Parser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
         self.out: list[Author] | None = None
-        self.author_parser = AuthorParser(log)
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'contrib-group':
@@ -479,9 +489,9 @@ class AuthorGroupParser(Parser):
             return True
         self.out = []
         for s in e:
-            if self.author_parser.parse_element(s):
-                if self.author_parser.out:
-                    self.out.append(self.author_parser.out)
+            author = read_author(self.log, s)
+            if author is not None:
+                self.out.append(author)
             else:
                 self.log(fc.UnsupportedElement.issue(s))
         return True
@@ -504,35 +514,22 @@ def read_person_name(log: IssueCallback, e: etree._Element) -> PersonName | None
     return PersonName(surname.out, given_names.out)
 
 
-class AuthorParser(Parser):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
-        self.out: Author | None = None
-
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'contrib':
-            return False
-        for k, v in e.attrib.items():
-            if k == 'contrib-type':
-                if v != "author":
-                    self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
-                    return False
-            elif k == 'id':
-                pass
-            else:
-                self.log(fc.UnsupportedAttribute.issue(e, k))
-        self.check_no_attrib(e, ['contrib-type'])
-        p = ObjectParser(self.log, 'contrib')
-        name = p.first(person_name_model())
-        email = p.first(TModel('email', read_string))
-        orcid = p.first(orcid_model())
-        if not p.parse_element(e):
-            raise ValueError(e)
-        if name.out is not None:
-            self.out = Author(name.out, email.out, orcid.out)
-        else:
-            self.log_issue(fc.MissingName(), e.sourceline)
-        return True
+def read_author(log: IssueCallback, e: etree._Element) -> Author | None:
+    if e.tag != 'contrib':
+        return None
+    if not confirm_attrib_value(log, e, 'contrib-type', 'author'):
+        return None
+    check_no_attrib(log, e, ['contrib-type', 'id'])
+    p = ObjectParser(log, 'contrib')
+    name = p.first(person_name_model())
+    email = p.first(TModel('email', read_string))
+    orcid = p.first(orcid_model())
+    if not p.parse_element(e):
+        raise ValueError(e)
+    if name.out is None:
+        log(fc.MissingContent.issue(e, "Missing name"))
+        return None
+    return Author(name.out, email.out, orcid.out)
 
 
 class AutoCorrector(Parser):
@@ -786,40 +783,6 @@ class ArticleParser(Parser):
         return True
 
 
-class BaseprintParser(Validator):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
-        self._out = Baseprint()
-        self.article = ArticleParser(log, self._out)
-
-    def parse(self, path: Path) -> Baseprint | None:
-        path = Path(path)
-        if path.is_dir():
-            xml_path = path / "article.xml"
-        else:
-            xml_path = path
-        xml_parser = etree.XMLParser(remove_comments=True, load_dtd=False)
-        try:
-            et = etree.parse(xml_path, parser=xml_parser)
-        except etree.XMLSyntaxError as ex:
-            self.log_issue(fc.XMLSyntaxError(), ex.lineno, ex.msg)
-            return None
-        if bool(et.docinfo.doctype):
-            self.log_issue(fc.DoctypeDeclaration())
-        if et.docinfo.encoding.lower() != "utf-8":
-            self.log_issue(fc.EncodingNotUtf8(et.docinfo.encoding))
-        return self.parse_from_root(et.getroot())
-
-    def parse_from_root(self, root: etree._Element) -> Baseprint | None:
-        for pi in root.xpath("//processing-instruction()"):
-            self.log(fc.ProcessingInstruction.issue(pi))
-            etree.strip_elements(root, pi.tag, with_tail=False)
-        if not self.article.parse_element(root):
-            self.log(fc.UnsupportedElement.issue(root))
-            return None
-        return self._out
-
-
 def formatted_text_model(sub_model: EModel | None = None) -> EModel:
     formatted_text_tags = {
         'bold': 'strong',
@@ -879,11 +842,34 @@ def ignore_issue(issue: fc.FormatIssue) -> None:
     pass
 
 
-def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint | None:
-    return BaseprintParser(log).parse(src)
-
-
 def parse_baseprint_root(
     root: etree._Element, log: IssueCallback = ignore_issue
 ) -> Baseprint | None:
-    return BaseprintParser(log).parse_from_root(root)
+    ret = Baseprint()
+    article = ArticleParser(log, ret)
+    for pi in root.xpath("//processing-instruction()"):
+        log(fc.ProcessingInstruction.issue(pi))
+        etree.strip_elements(root, pi.tag, with_tail=False)
+    if not article.parse_element(root):
+        log(fc.UnsupportedElement.issue(root))
+        return None
+    return ret
+
+
+def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint | None:
+    path = Path(src)
+    if path.is_dir():
+        xml_path = path / "article.xml"
+    else:
+        xml_path = path
+    xml_parser = etree.XMLParser(remove_comments=True, load_dtd=False)
+    try:
+        et = etree.parse(xml_path, parser=xml_parser)
+    except etree.XMLSyntaxError as ex:
+        issue(log, fc.XMLSyntaxError(), ex.lineno, ex.msg)
+        return None
+    if bool(et.docinfo.doctype):
+        issue(log, fc.DoctypeDeclaration())
+    if et.docinfo.encoding.lower() != "utf-8":
+        issue(log, fc.EncodingNotUtf8(et.docinfo.encoding))
+    return parse_baseprint_root(et.getroot(), log)

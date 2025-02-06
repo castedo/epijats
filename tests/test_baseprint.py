@@ -64,7 +64,7 @@ def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
 
 def test_minimalish():
     issues = []
-    got = _.BaseprintParser(issues.append).parse(SNAPSHOT_CASE / "baseprint")
+    got = _.parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
     assert got.authors == [_.Author(_.PersonName("Wang"))]
     expect = Abstract()
@@ -79,7 +79,7 @@ def test_roundtrip(case):
     with open(xml_path, "r") as f:
         expect = f.read()
     issues = []
-    bp = _.BaseprintParser(issues.append).parse(xml_path)
+    bp = _.parse_baseprint(xml_path, issues.append)
     assert bp is not None, issues
     xe = xml_data_sub_element(restyle.article(bp), 0)
     assert etree.tostring(xe).decode() == expect
