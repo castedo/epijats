@@ -139,6 +139,20 @@ def read_year(log: IssueCallback, e: etree._Element) -> int | None:
     return read_int(log, e)
 
 
+class Model(ABC, Generic[ParsedT]):
+    @abstractmethod
+    def reader(self, tag: str) -> Reader[ParsedT] | None: ...
+
+
+class TModel(Model[ParsedT]):
+    def __init__(self, tag: str, reader: Reader[ParsedT]):
+        self._tag = tag
+        self._reader = reader
+
+    def reader(self, tag: str) -> Reader[ParsedT] | None:
+        return None if tag != self._tag else self._reader
+
+
 @dataclass
 class Result(Generic[ParsedT]):
     out: ParsedT | None = None
@@ -148,32 +162,24 @@ class FirstReadParser(Parser, Generic[ParsedT]):
     def __init__(
         self,
         log: IssueCallback,
-        tag: str,
         result: Result[ParsedT],
-        reader: Reader[ParsedT],
+        model: Model[ParsedT],
     ):
         super().__init__(log)
-        self.tag = tag
         self.result = result
-        self.reader = reader
+        self._model = model
 
     def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != self.tag:
+        if not isinstance(e.tag, str):
+            return False
+        reader = self._model.reader(e.tag)
+        if reader is None:
             return False
         if self.result.out is None:
-            self.result.out = self.reader(self.log, e)
+            self.result.out = reader(self.log, e)
         else:
             self.log(fc.ExcessElement.issue(e))
         return True
-
-
-class TModel(Generic[ParsedT]):
-    def __init__(self, tag: str, reader: Reader[ParsedT]):
-        self.tag = tag
-        self.reader = reader
-
-    def parser(self, log: IssueCallback, dest: Result[ParsedT]) -> Parser:
-        return FirstReadParser(log, self.tag, dest, self.reader)
 
 
 class ObjectParser(Parser):
@@ -182,9 +188,9 @@ class ObjectParser(Parser):
         self.tag = tag
         self._parsers: list[ParseFunc] = []
 
-    def first(self, model: TModel[ParsedT]) -> Result[ParsedT]:
+    def first(self, model: Model[ParsedT]) -> Result[ParsedT]:
         ret = Result[ParsedT]()
-        self._parsers.append(model.parser(self.log, ret))
+        self._parsers.append(FirstReadParser(self.log, ret, model))
         return ret
 
     def parse_element(self, e: etree._Element) -> bool:
@@ -198,9 +204,9 @@ if TYPE_CHECKING:
     ElementHandler: TypeAlias = Callable[[Element], None]
 
 
-class Model(ABC):
-    @abstractmethod
-    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser: ...
+class EModel(Model[Element]):
+    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser:
+        return ElementParser(log, dest, self)
 
     def parse_element(
         self, log: IssueCallback, e: etree._Element, dest: MixedContent
@@ -224,29 +230,32 @@ class Model(ABC):
                 self.parse_content(log, s, dest)
                 dest.append_text(s.tail)
 
-    def __or__(self, other: Model) -> Model:
+    def __or__(self, other: EModel) -> EModel:
         union = self._models.copy() if isinstance(self, UnionModel) else [self]
         if isinstance(other, UnionModel):
             union.extend(other._models)
-        elif isinstance(other, Model):
+        elif isinstance(other, EModel):
             union.append(other)
         else:
             raise TypeError()
         return UnionModel(union)
 
 
-class UnionModel(Model):
-    def __init__(self, models: Iterable[Model] | None = None):
+class UnionModel(EModel):
+    def __init__(self, models: Iterable[EModel] | None = None):
         self._models = list(models) if models else []
 
-    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser:
-        funcs = [m.parser(log, dest) for m in self._models]
-        return UnionParser(log, funcs)
+    def reader(self, tag: str) -> Reader[Element] | None:
+        for m in self._models:
+            ret = m.reader(tag)
+            if ret is not None:
+                return ret
+        return None
 
-    def __ior__(self, other: Model) -> UnionModel:
+    def __ior__(self, other: EModel) -> UnionModel:
         if isinstance(other, UnionModel):
             self._models.extend(other._models)
-        elif isinstance(other, Model):
+        elif isinstance(other, EModel):
             self._models.append(other)
         else:
             raise TypeError()
@@ -262,22 +271,31 @@ class UnionParser(Parser):
         return any(pf(e) for pf in self._parsers)
 
 
-class ElementModel(Model):
+class ElementModel(EModel):
+    def __init__(self, tags: Iterable[str]):
+        self._tags = tags
+
     @abstractmethod
     def parse(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
 
-    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser:
-        return ElementParser(log, dest, self)
+    def reader(self, tag: str) -> Reader[Element] | None:
+        return self.parse if tag in self._tags else None
 
 
 class ElementParser(Parser):
-    def __init__(self, log: IssueCallback, dest: ElementHandler, model: ElementModel):
+    def __init__(self, log: IssueCallback, dest: ElementHandler, model: EModel):
         super().__init__(log)
         self.dest = dest
         self.model = model
 
     def parse_element(self, e: etree._Element) -> bool:
-        if out := self.model.parse(self.log, e):
+        if not isinstance(e.tag, str):
+            return False
+        reader = self.model.reader(e.tag)
+        if reader is None:
+            return False
+        out = reader(self.log, e)
+        if out is not None:
             if e.tail:
                 out.tail = e.tail
             self.dest(out)
@@ -285,9 +303,10 @@ class ElementParser(Parser):
 
 
 class TextElementModel(ElementModel):
-    def __init__(self, tagmap: dict[str, str], content_model: Model | bool = True):
+    def __init__(self, tagmap: dict[str, str], content_model: EModel | bool = True):
+        super().__init__(tagmap.keys())
         self.tagmap = tagmap
-        self.content_model: Model | None = None
+        self.content_model: EModel | None = None
         if content_model:
             self.content_model = self if content_model == True else content_model
 
@@ -303,9 +322,10 @@ class TextElementModel(ElementModel):
         return ret
 
 
-@dataclass
 class ExtLinkModel(ElementModel):
-    content_model: Model
+    def __init__(self, content_model: EModel):
+        super().__init__(['ext-link'])
+        self.content_model = content_model
 
     def parse(self, log: IssueCallback, e: etree._Element) -> Element | None:
         if e.tag != 'ext-link':
@@ -326,9 +346,10 @@ class ExtLinkModel(ElementModel):
             return ret
 
 
-@dataclass
 class CrossReferenceModel(ElementModel):
-    content_model: Model
+    def __init__(self, content_model: EModel):
+        super().__init__(['xref'])
+        self.content_model = content_model
 
     def parse(self, log: IssueCallback, e: etree._Element) -> Element | None:
         if e.tag != 'xref':
@@ -349,7 +370,9 @@ class CrossReferenceModel(ElementModel):
 
 @dataclass
 class ListModel(ElementModel):
-    content_model: Model
+    def __init__(self, content_model: EModel):
+        super().__init__(['list'])
+        self.content_model = content_model
 
     def parse(self, log: IssueCallback, e: etree._Element) -> Element | None:
         if e.tag != 'list':
@@ -374,7 +397,7 @@ class ListModel(ElementModel):
 
 
 class MixedContentParser(Parser):
-    def __init__(self, log: IssueCallback, dest: MixedContent, model: Model, tag: str):
+    def __init__(self, log: IssueCallback, dest: MixedContent, model: EModel, tag: str):
         super().__init__(log)
         self.dest = dest
         self.model = model
@@ -392,7 +415,7 @@ class MixedContentParser(Parser):
 
 
 class MixedContentReader(Reader[MixedContent]):
-    def __init__(self, model: Model):
+    def __init__(self, model: EModel):
         self.model = model
 
     def __call__(self, log: IssueCallback, e: etree._Element) -> MixedContent | None:
@@ -402,7 +425,7 @@ class MixedContentReader(Reader[MixedContent]):
         return ret
 
 
-def title_model(tag: str) -> TModel[MixedContent]:
+def title_model(tag: str) -> Model[MixedContent]:
     return TModel(tag, MixedContentReader(base_hypertext_model()))
 
 
@@ -423,7 +446,7 @@ class TitleGroupParser(Parser):
         return True
 
 
-def orcid_model() -> TModel[Orcid]:
+def orcid_model() -> Model[Orcid]:
     return TModel('contrib-id', read_orcid)
 
 
@@ -464,7 +487,7 @@ class AuthorGroupParser(Parser):
         return True
 
 
-def person_name_model() -> TModel[PersonName]:
+def person_name_model() -> Model[PersonName]:
     return TModel('name', read_person_name)
 
 
@@ -513,7 +536,7 @@ class AuthorParser(Parser):
 
 
 class AutoCorrector(Parser):
-    def __init__(self, log: IssueCallback, dest: ElementHandler, p_elements: Model):
+    def __init__(self, log: IssueCallback, dest: ElementHandler, p_elements: EModel):
         super().__init__(log)
         self.dest = dest
         self.p_elements = p_elements
@@ -529,7 +552,7 @@ class AutoCorrector(Parser):
 
 class SectionContentParser(Validator):
     def __init__(self,
-        log: IssueCallback, dest: ProtoSection, p_elements: Model, p_level: Model
+        log: IssueCallback, dest: ProtoSection, p_elements: EModel, p_level: EModel
     ):
         super().__init__(log)
         self.parsers = [
@@ -549,7 +572,7 @@ class SectionContentParser(Validator):
 
 class ProtoSectionParser(Parser):
     def __init__(self,
-        log: IssueCallback, dest: ProtoSection, p_elements: Model, tag: str
+        log: IssueCallback, dest: ProtoSection, p_elements: EModel, tag: str
     ):
         super().__init__(log)
         self.dest = dest
@@ -570,7 +593,7 @@ class ProtoSectionParser(Parser):
 
 class SubSectionParser(Parser):
     def __init__(self,
-         log: IssueCallback, dest: Callable[[Section], None], p_elements: Model
+         log: IssueCallback, dest: Callable[[Section], None], p_elements: EModel
     ):
         super().__init__(log)
         self.dest = dest
@@ -589,7 +612,7 @@ class SubSectionParser(Parser):
         return True
 
 
-def ref_authors_model() -> TModel[list[PersonName | str]]:
+def ref_authors_model() -> Model[list[PersonName | str]]:
     return TModel('person-group', read_ref_authors)
 
 
@@ -797,7 +820,7 @@ class BaseprintParser(Validator):
         return self._out
 
 
-def formatted_text_model(sub_model: Model | None = None) -> Model:
+def formatted_text_model(sub_model: EModel | None = None) -> EModel:
     formatted_text_tags = {
         'bold': 'strong',
         'italic': 'em',
@@ -809,7 +832,7 @@ def formatted_text_model(sub_model: Model | None = None) -> Model:
     return TextElementModel(formatted_text_tags, content_model)
 
 
-def base_hypertext_model() -> Model:
+def base_hypertext_model() -> EModel:
     """Base hypertext model"""
     hypertext = UnionModel()
     hypertext |= ExtLinkModel(formatted_text_model())
@@ -818,7 +841,7 @@ def base_hypertext_model() -> Model:
     return hypertext
 
 
-def list_model(p_elements: Model) -> Model:
+def list_model(p_elements: EModel) -> EModel:
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
     # %list-item-model
     list_item_content = UnionModel()
@@ -827,7 +850,7 @@ def list_model(p_elements: Model) -> Model:
     return ListModel(list_item_content)
 
 
-def p_elements_model() -> Model:
+def p_elements_model() -> EModel:
     """Paragraph Elements
 
     Similar to JATS def, but using more restrictive base hypertext model.
@@ -845,7 +868,7 @@ def p_elements_model() -> Model:
     return p_elements
 
 
-def p_level_model(p_elements: Model) -> Model:
+def p_level_model(p_elements: EModel) -> EModel:
     p = TextElementModel({'p': 'p'}, p_elements)
     hypertext = base_hypertext_model()
     preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
