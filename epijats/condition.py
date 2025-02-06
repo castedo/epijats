@@ -132,7 +132,7 @@ class UnsupportedAttribute(FormatCondition):
         return FormatIssue(UnsupportedAttribute(e.tag, key), e.sourceline)
 
     def as_pod(self) -> JSONType:
-        return [type(self).__name__, str(self.tag), str(self.attribute)]
+        return [type(self).__name__, str(self.tag), self.attribute]
 
 
 @dataclass(frozen=True)
@@ -150,6 +150,9 @@ class UnsupportedAttributeValue(FormatCondition):
     @staticmethod
     def issue(e: etree._Element, key: str, value: str | None) -> FormatIssue:
         return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), e.sourceline)
+
+    def as_pod(self) -> JSONType:
+        return [type(self).__name__, str(self.tag), self.attribute, self.value]
 
 
 @dataclass(frozen=True)

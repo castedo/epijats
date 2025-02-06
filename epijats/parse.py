@@ -20,7 +20,6 @@ from .baseprint import (
     Orcid,
     PersonName,
     ProtoSection,
-    RefList,
     Section,
 )
 from .tree import Element, MarkupElement, MixedContent, StartTag, make_paragraph
@@ -48,10 +47,10 @@ def check_no_attrib(
 
 
 def confirm_attrib_value(
-    log: IssueCallback, e: etree._Element, key: str, value: str
+    log: IssueCallback, e: etree._Element, key: str, ok: Iterable[str | None]
 ) -> bool:
     got = e.attrib.get(key)
-    if got == value:
+    if got in ok:
         return True
     else:
         log(fc.UnsupportedAttributeValue.issue(e, key, got))
@@ -202,7 +201,7 @@ class FirstReadParser(Parser, Generic[ParsedT]):
         return True
 
 
-class ObjectParser(Parser):
+class ArrayParser(Parser):
     def __init__(self, log: IssueCallback, tag: str | None):
         super().__init__(log)
         self.tag = tag
@@ -212,6 +211,9 @@ class ObjectParser(Parser):
         ret = Result[ParsedT]()
         self._parsers.append(FirstReadParser(self.log, ret, model))
         return ret
+
+    def add(self, parser: ParseFunc) -> None:
+        self._parsers.append(parser)
 
     def parse_element(self, e: etree._Element) -> bool:
         if self.tag and e.tag != self.tag:
@@ -503,7 +505,7 @@ def person_name_model() -> Model[PersonName]:
 
 def read_person_name(log: IssueCallback, e: etree._Element) -> PersonName | None:
     check_no_attrib(log, e)
-    p = ObjectParser(log, 'name')
+    p = ArrayParser(log, 'name')
     surname = p.first(TModel('surname', read_string))
     given_names = p.first(TModel('given-names', read_string))
     if not p.parse_element(e):
@@ -517,10 +519,10 @@ def read_person_name(log: IssueCallback, e: etree._Element) -> PersonName | None
 def read_author(log: IssueCallback, e: etree._Element) -> Author | None:
     if e.tag != 'contrib':
         return None
-    if not confirm_attrib_value(log, e, 'contrib-type', 'author'):
+    if not confirm_attrib_value(log, e, 'contrib-type', ['author']):
         return None
     check_no_attrib(log, e, ['contrib-type', 'id'])
-    p = ObjectParser(log, 'contrib')
+    p = ArrayParser(log, 'contrib')
     name = p.first(person_name_model())
     email = p.first(TModel('email', read_string))
     orcid = p.first(orcid_model())
@@ -658,7 +660,7 @@ class BibliographicRefParser(Parser):
 
     def _element_citation(self, e: etree._Element, xid: str) -> None:
         self.check_no_attrib(e, ['publication-type'])
-        p = ObjectParser(self.log, 'element-citation')
+        p = ArrayParser(self.log, 'element-citation')
         title = p.first(title_model('article-title'))
         authors = p.first(ref_authors_model())
         year = p.first(TModel('year', read_year))
@@ -693,27 +695,7 @@ class BibliographicRefParser(Parser):
         self.dest.append(br)
 
 
-class RefListParser(Parser):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
-        self.out = RefList()
-        self._title = MixedContent()
-        title_model = base_hypertext_model()
-        title_parser = MixedContentParser(self.log, self._title, title_model, 'title')
-        ref_parser = BibliographicRefParser(log, self.out.references)
-        self._parsers = [title_parser, ref_parser]
-
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'ref-list':
-            return False
-        self.check_no_attrib(e)
-        self.parse_array_content(e, self._parsers)
-        if not self._title.empty_or_ws():
-            self.out.title = self._title
-        return True
-
-
-class ArticleParser(Parser):
+class ArticleFrontParser(Parser):
     def __init__(self, log: IssueCallback, dest: Baseprint):
         super().__init__(log)
         self.dest = dest
@@ -721,30 +703,8 @@ class ArticleParser(Parser):
         self.title = TitleGroupParser(log, dest.title)
         self.authors = AuthorGroupParser(log)
         self.abstract = ProtoSectionParser(log, dest.abstract, p_elements, 'abstract')
-        self.body = ProtoSectionParser(log, dest.body, p_elements, 'body')
-        self.ref_list = RefListParser(log)
 
     def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'article':
-            return False
-        for k, v in e.attrib.items():
-            if k == '{http://www.w3.org/XML/1998/namespace}lang':
-                if v != "en":
-                    self.log(fc.UnsupportedAttributeValue.issue(e, k, v))
-            else:
-                self.log(fc.UnsupportedAttribute.issue(e, k))
-        self.parse_array_content(e, [self._front, self.body, self._back])
-        if self.dest.title.empty_or_ws():
-            self.log_issue(fc.MissingContent('article-title', 'title-group'))
-        if not len(self.dest.authors):
-            self.log_issue(fc.MissingContent('contrib', 'contrib-group'))
-        if self.dest.abstract.has_no_content():
-            self.log_issue(fc.MissingContent('abstract', 'article-meta'))
-        if self.dest.body.has_no_content():
-            self.log_issue(fc.MissingContent('body', 'article'))
-        return True
-
-    def _front(self, e: etree._Element) -> bool:
         if e.tag != 'front':
             return False
         self.check_no_attrib(e)
@@ -764,21 +724,6 @@ class ArticleParser(Parser):
             elif s.tag == 'permissions':
                 pass
             elif not any(p.parse_element(s) for p in parsers):
-                self.log(fc.UnsupportedElement.issue(s))
-        return True
-
-    def _back(self, e: etree._Element) -> bool:
-        if e.tag != 'back':
-            return False
-        self.check_no_attrib(e)
-        self.prep_array_elements(e)
-        for s in e:
-            if self.ref_list.parse_element(s):
-                if self.dest.ref_list is None:
-                    self.dest.ref_list = self.ref_list.out
-                else:
-                    self.log(fc.ExcessElement.issue(e))
-            else:
                 self.log(fc.UnsupportedElement.issue(s))
         return True
 
@@ -838,6 +783,49 @@ def p_level_model(p_elements: EModel) -> EModel:
     return p | preformatted | list_model(p_elements)
 
 
+def read_ref_list(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
+    check_no_attrib(log, e)
+    p = ArrayParser(log, 'ref-list')
+    title = p.first(title_model('title'))
+    ret = bp.RefList()
+    p.add(BibliographicRefParser(log, ret.references))
+    p.parse_element(e)
+    ret.title = title.out
+    return ret
+
+
+def read_article_back(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
+    check_no_attrib(log, e)
+    p = ArrayParser(log, 'back')
+    ref_list = p.first(TModel('ref-list', read_ref_list))
+    p.parse_element(e)
+    return ref_list.out
+
+
+def read_article(log: IssueCallback , e: etree._Element) -> Baseprint | None:
+    lang = '{http://www.w3.org/XML/1998/namespace}lang'
+    confirm_attrib_value(log, e, lang, ['en', None])
+    check_no_attrib(log, e, [lang])
+    ret = bp.Baseprint()
+    back = e.find("back")
+    if back is not None:
+        ret.ref_list = read_article_back(log, back)
+        e.remove(back)
+    parse_array_content(log, e, [
+        ArticleFrontParser(log, ret),
+        ProtoSectionParser(log, ret.body, p_elements_model(), 'body'),
+    ])
+    if ret.title.empty_or_ws():
+        issue(log, fc.MissingContent('article-title', 'title-group'))
+    if not len(ret.authors):
+        issue(log, fc.MissingContent('contrib', 'contrib-group'))
+    if ret.abstract.has_no_content():
+        issue(log, fc.MissingContent('abstract', 'article-meta'))
+    if ret.body.has_no_content():
+        issue(log, fc.MissingContent('body', 'article'))
+    return ret
+
+
 def ignore_issue(issue: fc.FormatIssue) -> None:
     pass
 
@@ -845,15 +833,13 @@ def ignore_issue(issue: fc.FormatIssue) -> None:
 def parse_baseprint_root(
     root: etree._Element, log: IssueCallback = ignore_issue
 ) -> Baseprint | None:
-    ret = Baseprint()
-    article = ArticleParser(log, ret)
     for pi in root.xpath("//processing-instruction()"):
         log(fc.ProcessingInstruction.issue(pi))
         etree.strip_elements(root, pi.tag, with_tail=False)
-    if not article.parse_element(root):
+    if root.tag != 'article':
         log(fc.UnsupportedElement.issue(root))
         return None
-    return ret
+    return read_article(log, root)
 
 
 def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint | None:
