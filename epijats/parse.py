@@ -296,6 +296,17 @@ class DataElementModel(ElementModel):
         return ret
 
 
+class HtmlDataElementModel(DataElementModel):
+    def __init__(self, tag: str, content_model: EModel):
+        super().__init__(tag, content_model)
+
+    def read(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        ret = super().read(log, e)
+        if ret:
+            ret.html = StartTag(ret.xml.tag)
+        return ret
+
+
 class DestParser(Parser, Generic[ParsedT]):
     def __init__(self, log: IssueCallback, dest: Sink[ParsedT], model: Model[ParsedT]):
         super().__init__(log)
@@ -423,6 +434,24 @@ class ListModel(ElementModel):
     def read_item(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = bp.ListItem()
         sink_array_content(log, e, self.content_model, ret.append)
+        return ret
+
+
+class TableCellModel(ElementModel):
+    def __init__(self, content_model: EModel, *, header: bool):
+        super().__init__('th' if header else 'td')
+        self.content_model = content_model
+
+    def read(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        check_no_attrib(log, e, ['align'])
+        align: bp.AlignCode | None = None
+        got = e.attrib.get('align')
+        if got and got in bp.AlignCode:
+            align = bp.AlignCode(got)
+        else:
+            log(fc.UnsupportedAttributeValue.issue(e, 'align', got)) 
+        ret = bp.TableCell(self.tag == 'th', align)
+        parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
 
@@ -738,12 +767,12 @@ def p_elements_model() -> EModel:
 
 
 def table_wrap_model(p_elements: EModel) -> EModel:
-    th = TextElementModel({'th': 'th'}, p_elements)
-    td = TextElementModel({'td': 'td'}, p_elements)
-    tr = DataElementModel('tr', th | td)
-    thead = DataElementModel('thead', tr)
-    tbody = DataElementModel('tbody', tr)
-    table = DataElementModel('table', thead | tbody)
+    th = TableCellModel(p_elements, header=True)
+    td = TableCellModel(p_elements, header=False)
+    tr = HtmlDataElementModel('tr', th | td)
+    thead = HtmlDataElementModel('thead', tr)
+    tbody = HtmlDataElementModel('tbody', tr)
+    table = HtmlDataElementModel('table', thead | tbody)
     table_wrap = DataElementModel('table-wrap', table)
     return table_wrap
 

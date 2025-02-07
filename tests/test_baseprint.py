@@ -12,7 +12,7 @@ from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint
 from epijats.tree import make_paragraph
-from epijats.xml import data_element
+from epijats.xml import xml_element
 
 
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
@@ -33,8 +33,8 @@ def assert_eq_if_exists(got: str, expect: Path):
             assert got == f.read()
 
 
-def xml_data_sub_element(src, level: int) -> etree._Element:
-    ret = data_element(src, level)
+def xml_sub_element(src) -> etree._Element:
+    ret = xml_element(src)
     ret.tail = "\n"
     return ret
 
@@ -49,7 +49,7 @@ def wrap_xml(content: str):
 
 
 def assert_bdom_roundtrip(expect: Baseprint):
-    xe = xml_data_sub_element(restyle.article(expect), 0)
+    xe = xml_sub_element(restyle.article(expect))
     dump = etree.tostring(xe).decode()
     root = xml_fromstring(dump)
     assert _.parse_baseprint_root(root) == expect
@@ -82,7 +82,7 @@ def test_roundtrip(case):
     issues = []
     bp = _.parse_baseprint(xml_path, issues.append)
     assert bp is not None, issues
-    xe = xml_data_sub_element(restyle.article(bp), 0)
+    xe = xml_sub_element(restyle.article(bp))
     assert etree.tostring(xe).decode() == expect
     assert not issues
 
@@ -182,7 +182,7 @@ bar.</p>
     subel = model.read(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(list(subel)) == 3
-    xe = xml_data_sub_element(subel, 0)
+    xe = xml_sub_element(subel)
     assert xml_to_root_str(xe) == dump
 
 
@@ -204,7 +204,7 @@ def test_author_restyle():
     assert parser.parse_element(wrap_to_xml(dump))
     assert parser.out is not None
     assert len(issues) == 0
-    x = xml_data_sub_element(restyle.contrib_group(parser.out), 0)
+    x = xml_sub_element(restyle.contrib_group(parser.out))
     assert xml_to_root_str(x) == dump
 
 
@@ -232,7 +232,7 @@ def test_abstract_restyle():
   <p>OK</p>
 </abstract>
 """)
-    xe = xml_data_sub_element(restyle.abstract(bdom), 0)
+    xe = xml_sub_element(restyle.abstract(bdom))
     assert xml_to_root_str(xe) == restyled
 
     issues = []
@@ -280,5 +280,5 @@ def test_minimal_with_issues():
   </body>
 </article>
 """
-    xe = xml_data_sub_element(restyle.article(bp), 0)
+    xe = xml_sub_element(restyle.article(bp))
     assert etree.tostring(xe).decode() == expect

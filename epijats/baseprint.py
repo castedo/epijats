@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import ClassVar, Literal
 
 from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
@@ -40,12 +41,32 @@ class List(DataElement):
         super().__init__('list')
         if list_type == 'bullet':
             self.list_type = 'bullet'
+            self.html = StartTag('ul')
         elif list_type == 'order':
             self.list_type = 'order'
+            self.html = StartTag('ol')
         else:
             self.list_type = None
         if self.list_type is not None:
             self.xml.attrib = {'list-type': self.list_type}
+
+
+class AlignCode(StrEnum):
+    LEFT = 'left'
+    CENTER = 'center'
+    RIGHT = 'right'
+
+
+class TableCell(MarkupElement):
+    def __init__(
+        self,
+        header: bool,
+        align: AlignCode | None
+    ):
+        super().__init__('th' if header else 'td')
+        if align:
+            self.xml.attrib['align'] = align
+        self.html = StartTag(self.xml.tag)
 
 
 @dataclass(frozen=True)

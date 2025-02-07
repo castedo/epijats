@@ -7,7 +7,7 @@ from lxml import etree
 
 from . import baseprint
 from .tree import DataElement, MarkupElement, MixedContent, StartTag
-from .xml import data_element
+from .xml import xml_element
 
 
 def markup_element(tag: str, src: MixedContent) -> MarkupElement:
@@ -122,7 +122,7 @@ def article(src: baseprint.Baseprint) -> DataElement:
 
 
 def write_baseprint(src: baseprint.Baseprint, dest: Path) -> None:
-    root = data_element(article(src), 0)
+    root = xml_element(article(src))
     root.tail = "\n"
     os.makedirs(dest, exist_ok=True)
     with open(dest / "article.xml", "wb") as f:

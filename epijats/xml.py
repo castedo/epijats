@@ -8,34 +8,35 @@ from lxml.builder import ElementMaker
 if TYPE_CHECKING:
     from lxml.etree import _Element
 
-from .tree import DataElement, Element, MarkupElement, MixedContent
+from .tree import Element, MarkupElement, MixedContent
 
 
 class ElementFormatter(ABC):
     @abstractmethod
-    def make_element(self, src: Element) -> _Element: ...
+    def start_element(self, src: Element) -> _Element: ...
 
-    def markup_content(self, src: MixedContent, dest: _Element, level: int) -> None:
+    def copy_content(self, src: Element, dest: _Element, level: int) -> None:
+        if isinstance(src, MarkupElement):
+            self._markup_content(src.content, dest, level)
+        else:
+            self._data_content(src, dest, level)
+
+    def _markup_content(self, src: MixedContent, dest: _Element, level: int) -> None:
         dest.text = src.text
         for it in src:
-            sub = self.make_element(it)
-            if isinstance(it, MarkupElement):
-                self.markup_content(it.content, sub, level)
-            else:
-                self.data_content(it, sub, level + 1)
+            sub = self.start_element(it)
+            sublevel = level if isinstance(it, MarkupElement) else level + 1
+            self.copy_content(it, sub, sublevel)
             sub.tail = it.tail
             dest.append(sub)
 
-    def data_content(self, src: Element, dest: _Element, level: int) -> None:
+    def _data_content(self, src: Element, dest: _Element, level: int) -> None:
         dest.text = "\n" + "  " * level
         presub = "\n" + ("  " * (level + 1))
         sub: _Element | None = None
         for it in src:
-            sub = self.make_element(it)
-            if isinstance(it, MarkupElement):
-                self.markup_content(it.content, sub, level + 1)
-            else:
-                self.data_content(it, sub, level + 1)
+            sub = self.start_element(it)
+            self.copy_content(it, sub, level + 1)
             sub.tail = presub
             dest.append(sub)
         if sub is not None:
@@ -47,7 +48,7 @@ class XmlFormatter(ElementFormatter):
     def __init__(self, *, nsmap: dict[str, str]):
         self.EM = ElementMaker(nsmap=nsmap)
 
-    def make_element(self, src: Element) -> _Element:
+    def start_element(self, src: Element) -> _Element:
         return self.EM(src.xml.tag, **src.xml.attrib)
 
 
@@ -60,13 +61,7 @@ XML = XmlFormatter(
 )
 
 
-def markup_element(src: MarkupElement) -> _Element:
-    ret = XML.make_element(src)
-    XML.markup_content(src.content, ret, 0)
-    return ret
-
-
-def data_element(src: DataElement, level: int) -> _Element:
-    ret = XML.make_element(src)
-    XML.data_content(src, ret, level)
+def xml_element(src: Element) -> _Element:
+    ret = XML.start_element(src)
+    XML.copy_content(src, ret, 0)
     return ret
