@@ -299,11 +299,12 @@ class DataElementModel(ElementModel):
 class HtmlDataElementModel(DataElementModel):
     def __init__(self, tag: str, content_model: EModel):
         super().__init__(tag, content_model)
+        self.html = StartTag(tag)
 
     def read(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = super().read(log, e)
         if ret:
-            ret.html = StartTag(ret.xml.tag)
+            ret.html = self.html
         return ret
 
 
@@ -773,15 +774,25 @@ def table_wrap_model(p_elements: EModel) -> EModel:
     thead = HtmlDataElementModel('thead', tr)
     tbody = HtmlDataElementModel('tbody', tr)
     table = HtmlDataElementModel('table', thead | tbody)
-    table_wrap = DataElementModel('table-wrap', table)
-    return table_wrap
+    return DataElementModel('table-wrap', table)
+
+
+def disp_quote_model(p_elements: EModel) -> EModel:
+    p = TextElementModel({'p': 'p'}, p_elements)
+    ret =  HtmlDataElementModel('disp-quote', p)
+    ret.html = StartTag('blockquote')
+    return ret
 
 
 def p_level_model(p_elements: EModel) -> EModel:
-    p = TextElementModel({'p': 'p'}, p_elements)
     hypertext = base_hypertext_model()
-    preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
-    return p | preformatted | list_model(p_elements) | table_wrap_model(p_elements)
+    p_level = UnionModel()
+    p_level |= TextElementModel({'p': 'p'}, p_elements)
+    p_level |= TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
+    p_level |= list_model(p_elements)
+    p_level |= table_wrap_model(p_elements)
+    p_level |= disp_quote_model(p_elements)
+    return p_level
 
 
 def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioReference:
