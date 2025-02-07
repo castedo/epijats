@@ -227,31 +227,6 @@ if TYPE_CHECKING:
 
 
 class EModel(Model[Element]):
-    def parser(self, log: IssueCallback, dest: ElementHandler) -> Parser:
-        return ElementParser(log, dest, self)
-
-    def parse_element(
-        self, log: IssueCallback, e: etree._Element, dest: MixedContent
-    ) -> bool:
-        return self.parser(log, dest.append).parse_element(e)
-
-    def parse_array(
-        self, log: IssueCallback, e: etree._Element, dest: ElementHandler
-    ) -> None:
-        sub_parser = self.parser(log, dest)
-        sub_parser.parse_array_content(e, [sub_parser])
-
-    def parse_content(
-        self, log: IssueCallback, e: etree._Element, dest: MixedContent
-    ) -> None:
-        parser = self.parser(log, dest.append)
-        dest.append_text(e.text)
-        for s in e:
-            if not parser.parse_element(s):
-                log(fc.UnsupportedElement.issue(s))
-                self.parse_content(log, s, dest)
-                dest.append_text(s.tail)
-
     def __or__(self, other: EModel) -> EModel:
         union = self._models.copy() if isinstance(self, UnionModel) else [self]
         if isinstance(other, UnionModel):
@@ -261,6 +236,18 @@ class EModel(Model[Element]):
         else:
             raise TypeError()
         return UnionModel(union)
+
+
+def parse_mixed_content(
+    log: IssueCallback, e: etree._Element, emodel: EModel, dest: MixedContent
+) -> None:
+    eparser = ElementParser(log, dest.append, emodel)
+    dest.append_text(e.text)
+    for s in e:
+        if not eparser.parse_element(s):
+            log(fc.UnsupportedElement.issue(s))
+            parse_mixed_content(log, s, emodel, dest)
+            dest.append_text(s.tail)
 
 
 class UnionModel(EModel):
@@ -327,16 +314,22 @@ class DestParser(Parser, Generic[ParsedT]):
         return result is not None
 
 
+def sink_array_content(
+    log: IssueCallback, e: etree._Element, model: Model[ParsedT], dest: Sink[ParsedT]
+) -> None:
+    parse_array_content(log, e, [DestParser(log, dest, model)])
+
+
 class ElementParser(Parser):
-    def __init__(self, log: IssueCallback, dest: ElementHandler, model: EModel):
+    def __init__(self, log: IssueCallback, dest: ElementHandler, emodel: EModel):
         super().__init__(log)
         self.dest = dest
-        self.model = model
+        self.emodel = emodel
 
     def parse_element(self, e: etree._Element) -> bool:
         if not isinstance(e.tag, str):
             return False
-        reader = self.model.reader(e.tag)
+        reader = self.emodel.reader(e.tag)
         if reader is None:
             return False
         out = reader(self.log, e)
@@ -365,7 +358,7 @@ class TextElementModel(EModel):
             ret = MarkupElement(e.tag)
             ret.html = StartTag(html_tag)
             if self.content_model:
-                self.content_model.parse_content(log, e, ret.content)
+                parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
 
@@ -387,7 +380,7 @@ class ExtLinkModel(ElementModel):
             return None
         else:
             ret = Hyperlink(href)
-            self.content_model.parse_content(log, e, ret.content)
+            parse_mixed_content(log, e, self.content_model, ret.content)
             return ret
 
 
@@ -407,7 +400,7 @@ class CrossReferenceModel(ElementModel):
             log(fc.UnsupportedAttributeValue.issue(e, "ref-type", ref_type))
             return None
         ret = bp.CrossReference(rid, ref_type)
-        self.content_model.parse_content(log, e, ret.content)
+        parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
 
@@ -429,7 +422,7 @@ class ListModel(ElementModel):
 
     def read_item(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = bp.ListItem()
-        self.content_model.parse_array(log, e, ret.append)
+        sink_array_content(log, e, self.content_model, ret.append)
         return ret
 
 
@@ -445,7 +438,7 @@ class MixedContentParser(Parser):
             return False
         self.check_no_attrib(e)
         if self.dest.empty_or_ws():
-            self.model.parse_content(self.log, e, self.dest)
+            parse_mixed_content(self.log, e, self.model, self.dest)
         else:
             self.log(fc.ExcessElement.issue(e))
         return True
@@ -458,7 +451,7 @@ class MixedContentReader(Reader[MixedContent]):
     def __call__(self, log: IssueCallback, e: etree._Element) -> MixedContent | None:
         check_no_attrib(log, e)
         ret = MixedContent()
-        self.model.parse_content(log, e, ret)
+        parse_mixed_content(log, e, self.model, ret)
         return ret
 
 
@@ -566,7 +559,8 @@ class AutoCorrector(Parser):
 
     def parse_element(self, e: etree._Element) -> bool:
         correction = make_paragraph("")
-        if not self.p_elements.parse_element(self.log, e, correction.content):
+        ep = ElementParser(self.log, correction.content.append, self.p_elements)
+        if not ep.parse_element(e):
             return False
         self.dest(correction)
         self.log(fc.UnsupportedElement.issue(e))
@@ -579,7 +573,7 @@ class SectionContentParser(Validator):
     ):
         super().__init__(log)
         self.parsers = [
-            p_level.parser(log, dest.presection.append),
+            ElementParser(log, dest.presection.append, p_level),
             AutoCorrector(log, dest.presection.append, p_elements),
             SubSectionParser(log, dest.subsections.append, p_elements),
         ]
