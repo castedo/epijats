@@ -73,7 +73,7 @@ def abstract(src: baseprint.Abstract) -> DataElement:
     return proto_section('abstract', src)
 
 
-def biblio_ref(src: baseprint.BibliographicReference) -> DataElement:
+def biblio_ref(src: baseprint.BiblioReference) -> DataElement:
     stag = StartTag('element-citation', {'publication-type': src.publication_type})
     ec = DataElement(stag)
     if src.authors:

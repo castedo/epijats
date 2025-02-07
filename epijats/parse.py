@@ -201,6 +201,10 @@ class FirstReadParser(Parser, Generic[ParsedT]):
         return True
 
 
+if TYPE_CHECKING:
+    Sink: TypeAlias = Callable[[ParsedT], None]
+
+
 class ArrayParser(Parser):
     def __init__(self, log: IssueCallback, tag: str | None):
         super().__init__(log)
@@ -212,8 +216,8 @@ class ArrayParser(Parser):
         self._parsers.append(FirstReadParser(self.log, ret, model))
         return ret
 
-    def add(self, parser: ParseFunc) -> None:
-        self._parsers.append(parser)
+    def add(self, model: Model[ParsedT], dest: Sink[ParsedT]) -> None:
+        self._parsers.append(DestParser(self.log, dest, model))
 
     def parse_element(self, e: etree._Element) -> bool:
         if self.tag and e.tag != self.tag:
@@ -293,6 +297,24 @@ class ElementModel(EModel):
 
     def reader(self, tag: str) -> Reader[Element] | None:
         return self.parse if tag in self._tags else None
+
+
+class DestParser(Parser, Generic[ParsedT]):
+    def __init__(self, log: IssueCallback, dest: Sink[ParsedT], model: Model[ParsedT]):
+        super().__init__(log)
+        self.dest = dest
+        self.model = model
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if not isinstance(e.tag, str):
+            return False
+        reader = self.model.reader(e.tag)
+        if reader is None:
+            return False
+        result = reader(self.log, e)
+        if result is not None:
+            self.dest(result)
+        return result is not None
 
 
 class ElementParser(Parser):
@@ -638,61 +660,6 @@ def read_ref_authors(
     return ret
 
 
-class BibliographicRefParser(Parser):
-    def __init__(
-        self, log: IssueCallback, dest: list[bp.BibliographicReference]
-    ):
-        super().__init__(log)
-        self.dest = dest
-
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'ref':
-            return False
-        self.check_no_attrib(e, ['id'])
-        xid = e.attrib.get('id', "")
-        self.prep_array_elements(e)
-        for s in e:
-            if s.tag == 'element-citation':
-                self._element_citation(s, xid)
-            else:
-                self.log(fc.UnsupportedElement.issue(s))
-        return True
-
-    def _element_citation(self, e: etree._Element, xid: str) -> None:
-        self.check_no_attrib(e, ['publication-type'])
-        p = ArrayParser(self.log, 'element-citation')
-        title = p.first(title_model('article-title'))
-        authors = p.first(ref_authors_model())
-        year = p.first(TModel('year', read_year))
-        fields = {}
-        for key in bp.BibliographicReference.BIBLIO_FIELD_KEYS:
-            fields[key] = p.first(TModel(key, read_string))
-        if not p.parse_element(e):
-            raise ValueError
-        br = bp.BibliographicReference()
-        br.id = xid
-        br.publication_type = e.get('publication-type', '')
-        if br.publication_type not in [
-            'book',
-            'confproc',
-            'journal',
-            'other',
-            'patent',
-            'webpage',
-        ]:
-            self.log(
-                fc.UnsupportedAttributeValue.issue(
-                     e, 'publication-type', br.publication_type
-                )
-            )
-        br.article_title = title.out
-        if authors.out:
-            br.authors = authors.out
-        br.year = year.out
-        for key, parser in fields.items():
-            if parser.out:
-                br.biblio_fields[key] = parser.out
-        self.dest.append(br)
 
 
 class ArticleFrontParser(Parser):
@@ -783,12 +750,63 @@ def p_level_model(p_elements: EModel) -> EModel:
     return p | preformatted | list_model(p_elements)
 
 
+def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioReference:
+    check_no_attrib(log, e, ['publication-type'])
+    p = ArrayParser(log, 'element-citation')
+    title = p.first(title_model('article-title'))
+    authors = p.first(ref_authors_model())
+    year = p.first(TModel('year', read_year))
+    fields = {}
+    for key in bp.BiblioReference.BIBLIO_FIELD_KEYS:
+        fields[key] = p.first(TModel(key, read_string))
+    if not p.parse_element(e):
+        raise ValueError
+    br = bp.BiblioReference()
+    br.publication_type = e.get('publication-type', '')
+    if br.publication_type not in [
+        'book',
+        'confproc',
+        'journal',
+        'other',
+        'patent',
+        'webpage',
+    ]:
+        log(
+            fc.UnsupportedAttributeValue.issue(
+                 e, 'publication-type', br.publication_type
+            )
+        )
+    br.article_title = title.out
+    if authors.out:
+        br.authors = authors.out
+    br.year = year.out
+    for key, parser in fields.items():
+        if parser.out:
+            br.biblio_fields[key] = parser.out
+    return br
+
+
+def read_biblio_ref(log: IssueCallback, e: etree._Element) -> bp.BiblioReference | None:
+    if e.tag != 'ref':
+        return None
+    check_no_attrib(log, e, ['id'])
+    prep_array_elements(log, e)
+    for s in e:
+        if s.tag == 'element-citation':
+            ret = read_element_citation(log, s)
+            ret.id = e.attrib.get('id', "")
+            return ret
+        else:
+            log(fc.UnsupportedElement.issue(s))
+    return None
+
+
 def read_ref_list(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
     check_no_attrib(log, e)
+    ret = bp.RefList()
     p = ArrayParser(log, 'ref-list')
     title = p.first(title_model('title'))
-    ret = bp.RefList()
-    p.add(BibliographicRefParser(log, ret.references))
+    p.add(TModel('ref', read_biblio_ref), ret.references.append)
     p.parse_element(e)
     ret.title = title.out
     return ret

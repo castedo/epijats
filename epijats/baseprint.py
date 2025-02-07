@@ -119,7 +119,7 @@ class Abstract(ProtoSection):
 
 
 @dataclass
-class BibliographicReference:
+class BiblioReference:
     id: str
     publication_type: str
     authors: list[PersonName | str]
@@ -149,7 +149,7 @@ class BibliographicReference:
 @dataclass
 class RefList:
     title: MixedContent | None
-    references: list[BibliographicReference]
+    references: list[BiblioReference]
 
     def __init__(self, title: MixedContent | None = None) -> None:
         self.title = None
