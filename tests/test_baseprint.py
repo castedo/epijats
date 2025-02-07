@@ -6,6 +6,7 @@ from lxml import etree
 
 import epijats.parse as _
 from epijats import html
+from epijats import baseprint as bp
 from epijats.baseprint import Abstract, Baseprint, List
 from epijats import condition as fc
 from epijats import restyle
@@ -66,7 +67,7 @@ def test_minimalish():
     issues = []
     got = _.parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
-    assert got.authors == [_.Author(_.PersonName("Wang"))]
+    assert got.authors == [bp.Author(bp.PersonName("Wang"))]
     expect = Abstract()
     expect.presection.append(make_paragraph('A simple test.'))
     assert got.abstract == expect
@@ -178,7 +179,7 @@ bar.</p>
 """)
     issues = []
     model = _.ListModel(_.TextElementModel({'p': 'p'}, _.base_hypertext_model()))
-    subel = model.parse(issues.append, wrap_to_xml(dump))
+    subel = model.read(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(list(subel)) == 3
     xe = xml_data_sub_element(subel, 0)
