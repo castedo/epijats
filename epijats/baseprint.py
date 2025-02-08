@@ -28,27 +28,22 @@ class CrossReference(MarkupElement):
         self.html = StartTag('a', {'href': "#" + name})
 
 
-class ListItem(DataElement):
-    def __init__(self) -> None:
-        super().__init__('list-item')
-        self.html = StartTag('li')
+class ListTypeCode(StrEnum):
+    BULLET = 'bullet'
+    ORDER = 'order'
 
 
 class List(DataElement):
-    list_type: Literal['bullet', 'order'] | None
+    list_type: ListTypeCode | None
 
-    def __init__(self, list_type: str | None) -> None:
+    def __init__(self, list_type: ListTypeCode | None) -> None:
         super().__init__('list')
-        if list_type == 'bullet':
-            self.list_type = 'bullet'
-            self.html = StartTag('ul')
-        elif list_type == 'order':
-            self.list_type = 'order'
+        if list_type:
+            self.xml.attrib['list-type'] = list_type
+        if list_type == ListTypeCode.ORDER:
             self.html = StartTag('ol')
         else:
-            self.list_type = None
-        if self.list_type is not None:
-            self.xml.attrib = {'list-type': self.list_type}
+            self.html = StartTag('ul')
 
 
 class AlignCode(StrEnum):

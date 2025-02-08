@@ -178,10 +178,31 @@ bar.</p>
 </list>
 """)
     issues = []
-    model = _.ListModel(_.TextElementModel({'p': 'p'}, _.base_hypertext_model()))
+    model = _.ListModel(_.p_elements_model())
     subel = model.read(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(list(subel)) == 3
+    xe = xml_sub_element(subel)
+    assert xml_to_root_str(xe) == dump
+
+
+def test_list_ordered_rountrip():
+    dump = wrap_xml("""
+<list list-type="order">
+  <list-item>
+    <p>Def <italic>time</italic>.</p>
+  </list-item>
+  <list-item>
+    <p>Foo
+bar.</p>
+  </list-item>
+</list>
+""")
+    issues = []
+    model = _.ListModel(_.p_elements_model())
+    subel = model.read(issues.append, wrap_to_xml(dump))
+    assert isinstance(subel, List)
+    assert len(list(subel)) == 2
     xe = xml_sub_element(subel)
     assert xml_to_root_str(xe) == dump
 

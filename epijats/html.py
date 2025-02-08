@@ -57,10 +57,13 @@ class HtmlGenerator(ElementFormatter):
         src: bp.ProtoSection,
         title: MixedContent | None = None,
         xid: str | None = None,
+        level: int = 0,
     ) -> list[str | HtmlElement]:
+        if level < 6:
+            level += 1
         ret: list[str | HtmlElement] = []
         if title:
-            h = E("h2", title.text)
+            h = E(f"h{level}", title.text)
             if xid is not None:
                 h.attrib['id'] = xid
             for s in title:
@@ -71,5 +74,5 @@ class HtmlGenerator(ElementFormatter):
             ret.append(self.html_element(p))
             ret.append("\n")
         for ss in src.subsections:
-            ret.extend(self._proto_section_content(ss, ss.title, ss.id))
+            ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
         return ret

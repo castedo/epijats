@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
@@ -290,16 +291,14 @@ class DataElementModel(ElementModel):
     def read(self, log: IssueCallback, e: etree._Element) -> Element | None:
         check_no_attrib(log, e)
         ret = DataElement(self.tag)
-        ap = ArrayParser(log, self.tag)
-        ap.add(self.content_model, ret.append)
-        ap.parse_element(e)
+        sink_array_content(log, e, self.content_model, ret.append)
         return ret
 
 
 class HtmlDataElementModel(DataElementModel):
-    def __init__(self, tag: str, content_model: EModel):
+    def __init__(self, tag: str, content_model: EModel, html_tag: str | None = None):
         super().__init__(tag, content_model)
-        self.html = StartTag(tag)
+        self.html = StartTag(html_tag or tag)
 
     def read(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = super().read(log, e)
@@ -416,25 +415,38 @@ class CrossReferenceModel(ElementModel):
         return ret
 
 
+if TYPE_CHECKING:
+    EnumT = TypeVar('EnumT', bound=StrEnum)
+
+
+def get_enum_value(
+    log: IssueCallback, e: etree._Element, key: str, enum: type[EnumT]
+) -> EnumT | None:
+    ret: EnumT | None = None
+    if got := e.attrib.get(key):
+        if got in enum:
+            ret = enum(got)
+        else:
+            log(fc.UnsupportedAttributeValue.issue(e, key, got))
+    return ret
+
+
 class ListModel(ElementModel):
-    def __init__(self, content_model: EModel):
+    def __init__(self, p_elements_model: EModel):
         super().__init__('list')
-        self.content_model = content_model
+        # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
+        # %list-item-model
+        p = TextElementModel({'p': 'p'}, p_elements_model)
+        list_item_content = p | self
+        self._list_content_model = HtmlDataElementModel(
+            'list-item', list_item_content, 'li'
+        )
 
     def read(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        list_type = e.attrib.get("list-type")
-        if list_type and list_type not in ["bullet", "order"]:
-            log(fc.UnsupportedAttributeValue.issue(e, "list-type", list_type))
         check_no_attrib(log, e, ['list-type'])
+        list_type = get_enum_value(log, e, 'list-type', bp.ListTypeCode)
         ret = bp.List(list_type)
-        ap = ArrayParser(log, 'list')
-        ap.add(TModel('list-item', self.read_item), ret.append)
-        ap.parse_element(e)
-        return ret
-
-    def read_item(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        ret = bp.ListItem()
-        sink_array_content(log, e, self.content_model, ret.append)
+        sink_array_content(log, e, self._list_content_model, ret.append)
         return ret
 
 
@@ -445,12 +457,7 @@ class TableCellModel(ElementModel):
 
     def read(self, log: IssueCallback, e: etree._Element) -> Element | None:
         check_no_attrib(log, e, ['align'])
-        align: bp.AlignCode | None = None
-        got = e.attrib.get('align')
-        if got and got in bp.AlignCode:
-            align = bp.AlignCode(got)
-        else:
-            log(fc.UnsupportedAttributeValue.issue(e, 'align', got)) 
+        align = get_enum_value(log, e, 'align', bp.AlignCode)
         ret = bp.TableCell(self.tag == 'th', align)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
@@ -740,15 +747,6 @@ def base_hypertext_model() -> EModel:
     return hypertext
 
 
-def list_model(p_elements: EModel) -> EModel:
-    # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
-    # %list-item-model
-    list_item_content = UnionModel()
-    list_item_content |= TextElementModel({'p': 'p'}, p_elements)
-    list_item_content |= ListModel(list_item_content)
-    return ListModel(list_item_content)
-
-
 def p_elements_model() -> EModel:
     """Paragraph Elements
 
@@ -763,7 +761,7 @@ def p_elements_model() -> EModel:
     p_elements = UnionModel()
     p_elements |= hypertext
     p_elements |= preformatted
-    p_elements |= list_model(p_elements)
+    p_elements |= ListModel(p_elements)
     return p_elements
 
 
@@ -789,7 +787,7 @@ def p_level_model(p_elements: EModel) -> EModel:
     p_level = UnionModel()
     p_level |= TextElementModel({'p': 'p'}, p_elements)
     p_level |= TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
-    p_level |= list_model(p_elements)
+    p_level |= ListModel(p_elements)
     p_level |= table_wrap_model(p_elements)
     p_level |= disp_quote_model(p_elements)
     return p_level
