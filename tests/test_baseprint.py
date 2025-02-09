@@ -221,11 +221,10 @@ def test_author_restyle():
 </contrib-group>
 """)
     issues = []
-    parser = _.AuthorGroupParser(issues.append)
-    assert parser.parse_element(wrap_to_xml(dump))
-    assert parser.out is not None
+    authors = _.read_author_group(issues.append, wrap_to_xml(dump))
+    assert authors is not None
     assert len(issues) == 0
-    x = xml_sub_element(restyle.contrib_group(parser.out))
+    x = xml_sub_element(restyle.contrib_group(authors))
     assert xml_to_root_str(x) == dump
 
 

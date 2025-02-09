@@ -132,9 +132,9 @@ class License:
     license_ref: str
     cc_license_type: CcLicenseType | None
 
-    def missing(self) -> bool:
+    def blank(self) -> bool:
         return (
-            self.license_p.empty_or_ws()
+            self.license_p.blank()
             and not self.license_ref
             and self.cc_license_type is None
         )
@@ -201,10 +201,6 @@ class BiblioReference:
 class RefList:
     title: MixedContent | None
     references: list[BiblioReference]
-
-    def __init__(self, title: MixedContent | None = None) -> None:
-        self.title = None
-        self.references = []
 
 
 @dataclass

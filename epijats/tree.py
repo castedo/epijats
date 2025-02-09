@@ -63,7 +63,7 @@ class MixedContent:
     def empty(self) -> bool:
         return not self._children and not self.text
 
-    def empty_or_ws(self) -> bool:
+    def blank(self) -> bool:
         return not self._children and not self.text.strip()
 
 
