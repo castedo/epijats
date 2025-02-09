@@ -11,7 +11,7 @@ SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
 
 CASE_SWHIDS = {
     'just_a_file.txt': 'swh:1:cnt:e7ee9eec323387d82a370674c1e2996d25c2414d',
-    'baseprint': 'swh:1:dir:78443c297b679d31de48a1de51af08ff46ba0e7f',
+    'baseprint': 'swh:1:dir:c68c7b8f0d3ba2d5cab95f5b4d4c67dffb588e45',
     'with_hidden_file': 'swh:1:dir:78443c297b679d31de48a1de51af08ff46ba0e7f',
 }
 

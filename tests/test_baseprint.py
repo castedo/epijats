@@ -20,7 +20,7 @@ ROUNDTRIP_CASE = Path(__file__).parent / "cases" / "roundtrip"
 
 HTML = html.HtmlGenerator()
 NSMAP = {
-    'ali': "http://www.niso.org/schemas/ali/1.0",
+    'ali': "http://www.niso.org/schemas/ali/1.0/",
     'mml': "http://www.w3.org/1998/Math/MathML",
     'xlink': "http://www.w3.org/1999/xlink",
 }
