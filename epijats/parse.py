@@ -36,7 +36,7 @@ def issue(
 
 
 def check_no_attrib(
-    log: IssueCallback, e: etree._Element, ignore: list[str] = []
+    log: IssueCallback, e: etree._Element, ignore: Iterable[str] = []
 ) -> None:
     for k in e.attrib.keys():
         if k not in ignore:
@@ -92,7 +92,7 @@ class Validator(ABC):
     ) -> None:
         return issue(self._log, condition, sourceline, info)
 
-    def check_no_attrib(self, e: etree._Element, ignore: list[str] = []) -> None:
+    def check_no_attrib(self, e: etree._Element, ignore: Iterable[str] = ()) -> None:
         check_no_attrib(self.log, e, ignore)
 
     def prep_array_elements(self, e: etree._Element) -> None:
@@ -120,8 +120,10 @@ class Reader(Protocol, Generic[ParsedCovT]):
     def __call__(self, log: IssueCallback, e: etree._Element) -> ParsedCovT | None: ...
 
 
-def read_string(log: IssueCallback, e: etree._Element) -> str:
-    check_no_attrib(log, e)
+def read_string(
+    log: IssueCallback, e: etree._Element, ignore: Iterable[str] = ()
+) -> str:
+    check_no_attrib(log, e, ignore)
     frags = []
     if e.text:
         frags.append(e.text)
@@ -492,8 +494,11 @@ class MixedContentReader(Reader[MixedContent]):
         return ret
 
 
-def title_model(tag: str) -> Model[MixedContent]:
+def mixed_element_model(tag: str) -> Model[MixedContent]:
     return TModel(tag, MixedContentReader(base_hypertext_model()))
+
+
+title_model = mixed_element_model
 
 
 class TitleGroupParser(Parser):
@@ -720,7 +725,7 @@ class ArticleFrontParser(Parser):
                 if self.authors.out is not None:
                     self.dest.authors = self.authors.out
             elif s.tag == 'permissions':
-                pass
+                self.dest.permissions = read_permissions(self.log, s)
             elif not any(p.parse_element(s) for p in parsers):
                 self.log(fc.UnsupportedElement.issue(s))
         return True
@@ -791,6 +796,53 @@ def p_level_model(p_elements: EModel) -> EModel:
     p_level |= table_wrap_model(p_elements)
     p_level |= disp_quote_model(p_elements)
     return p_level
+
+
+CC_URLS = {
+    'https://creativecommons.org/publicdomain/zero/': bp.CcLicenseType.CC0,
+    'https://creativecommons.org/licenses/by/': bp.CcLicenseType.BY,
+    'https://creativecommons.org/licenses/by-sa/': bp.CcLicenseType.BYSA,
+    'https://creativecommons.org/licenses/by-nc/': bp.CcLicenseType.BYNC,
+    'https://creativecommons.org/licenses/by-nc-sa/': bp.CcLicenseType.BYNCSA,
+    'https://creativecommons.org/licenses/by-nd/': bp.CcLicenseType.BYND,
+    'https://creativecommons.org/licenses/by-nc-nd/': bp.CcLicenseType.BYNCND,
+}
+
+
+def read_license_ref(log: IssueCallback, e: etree._Element, dest: bp.License) -> None:
+    dest.license_ref = read_string(log, e, ['content-type'])
+    got_license_type = get_enum_value(log, e, 'content-type', bp.CcLicenseType)
+    for prefix, matching_type in CC_URLS.items():
+        if dest.license_ref.startswith(prefix):
+            if got_license_type and got_license_type != matching_type:
+                log(fc.InvalidAttributeValue.issue(e, 'content-type', got_license_type))
+            dest.cc_license_type = matching_type
+            return
+    dest.cc_license_type = got_license_type
+
+
+def read_license(log: IssueCallback, e: etree._Element) -> bp.License | None:
+    check_no_attrib(log, e)
+    ret = bp.License(MixedContent(), "", None)
+    p = MixedContentParser(log, ret.license_p, base_hypertext_model(), "license-p")
+    prep_array_elements(log, e)
+    for s in e:
+        if s.tag == "{http://www.niso.org/schemas/ali/1.0/}license_ref":
+            read_license_ref(log, s, ret)
+        elif not p.parse_element(s):
+            log(fc.UnsupportedElement.issue(s))
+    return None if ret.missing() else ret
+
+
+def read_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | None:
+    check_no_attrib(log, e)
+    ap = ArrayParser(log, 'permissions')
+    statement = ap.first(mixed_element_model('copyright-statement'))
+    license = ap.first(TModel("license", read_license))
+    ap.parse_element(e)
+    if license.out is None or statement.out is None or statement.out.empty_or_ws():
+        return None
+    return bp.Permissions(license.out, bp.Copyright(statement.out))
 
 
 def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioReference:

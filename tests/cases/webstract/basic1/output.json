@@ -19,6 +19,9 @@
         { "condition": ["UnsupportedAttribute", "article", "dtd-version"], "sourceline": 3},
         { "condition": ["UnsupportedAttribute", "article", "article-type"], "sourceline": 3},
         { "condition": ["UnsupportedElement", "journal-meta", "front"], "sourceline": 5},
-        {"condition": ["UnsupportedElement", "pub-date", "article-meta"], "sourceline": 27}
+        {"condition": ["UnsupportedElement", "pub-date", "article-meta"], "sourceline": 27},
+        {"condition": ["UnsupportedElement", "copyright-year", "permissions"], "sourceline": 34},
+        {"condition": ["UnsupportedElement", "copyright-holder", "permissions"], "sourceline": 35},
+        {"condition": ["UnsupportedAttribute", "license", "license-type"], "sourceline": 36}
    ]
 }

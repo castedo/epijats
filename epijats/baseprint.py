@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
 
@@ -112,6 +112,41 @@ class Author:
 
 
 @dataclass
+class Copyright:
+    statement: MixedContent
+
+
+class CcLicenseType(StrEnum):
+    CC0 = 'cc0license'
+    BY = 'ccbylicense'
+    BYSA = 'ccbysalicense'
+    BYNC = 'ccbynclicense'
+    BYNCSA = 'ccbyncsalicense'
+    BYND = 'ccbyndlicense'
+    BYNCND = 'ccbyncndlicense'
+
+
+@dataclass
+class License:
+    license_p: MixedContent
+    license_ref: str
+    cc_license_type: CcLicenseType | None
+
+    def missing(self) -> bool:
+        return (
+            self.license_p.empty_or_ws()
+            and not self.license_ref
+            and self.cc_license_type is None
+        )
+
+
+@dataclass
+class Permissions:
+    license: License
+    copyright: Copyright | None = None
+
+
+@dataclass
 class ProtoSection:
     presection: list[Element]
     subsections: list[Section]
@@ -177,12 +212,14 @@ class Baseprint:
     title: MixedContent
     authors: list[Author]
     abstract: Abstract
+    permissions: Permissions | None
     body: ProtoSection
     ref_list: RefList | None
 
     def __init__(self) -> None:
         self.title = MixedContent()
         self.authors = []
+        self.permissions = None
         self.abstract = Abstract()
         self.body = ProtoSection()
         self.ref_list = None

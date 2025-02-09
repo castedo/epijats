@@ -50,6 +50,26 @@ def contrib_group(src: list[baseprint.Author]) -> DataElement:
     return ret
 
 
+def license(src: baseprint.License) -> DataElement:
+    ret = DataElement('license')
+    license_ref = MarkupElement("{http://www.niso.org/schemas/ali/1.0/}license_ref")
+    license_ref.content.text = src.license_ref
+    if src.cc_license_type:
+        license_ref.xml.attrib['content-type'] = src.cc_license_type
+    ret.append(license_ref)
+    ret.append(MarkupElement('license-p', src.license_p))
+    return ret
+
+
+def permissions(src: baseprint.Permissions) -> DataElement:
+    ret = DataElement('permissions')
+    if src.copyright is not None:
+        ret.append(MarkupElement('copyright-statement', src.copyright.statement))
+    if src.license is not None:
+        ret.append(license(src.license))
+    return ret
+
+
 def proto_section(
         tag: str,
         src: baseprint.ProtoSection,
@@ -106,14 +126,15 @@ def ref_list(src: baseprint.RefList) -> DataElement:
 
 
 def article(src: baseprint.Baseprint) -> DataElement:
-    ret = DataElement('article', [
-        DataElement('front', [
-            DataElement('article-meta', [
+    article_meta = DataElement('article-meta', [
                 title_group(src.title),
                 contrib_group(src.authors),
-                abstract(src.abstract),
-            ])
-        ]),
+    ])
+    if src.permissions:
+        article_meta.append(permissions(src.permissions))
+    article_meta.append(abstract(src.abstract))
+    ret = DataElement('article', [
+        DataElement('front', [article_meta]),
         proto_section('body', src.body),
     ])
     if src.ref_list is not None:

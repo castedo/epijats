@@ -14,6 +14,13 @@
           <email>castedo@castedo.com</email>
         </contrib>
       </contrib-group>
+      <permissions>
+        <copyright-statement>&#169; 2023, Ellerman et al</copyright-statement>
+        <license>
+          <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-p>This document is distributed under a Creative Commons Attribution 4.0 International license.</license-p>
+        </license>
+      </permissions>
       <abstract>
         <p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
         <p><bold>OBJECTIVES:</bold></p>

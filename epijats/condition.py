@@ -136,9 +136,7 @@ class UnsupportedAttribute(FormatCondition):
 
 
 @dataclass(frozen=True)
-class UnsupportedAttributeValue(FormatCondition):
-    """Unsupported XML attribute value"""
-
+class AttributeValueCondition(FormatCondition):
     tag: str | bytes | bytearray | QName
     attribute: str
     value: str | None
@@ -153,6 +151,16 @@ class UnsupportedAttributeValue(FormatCondition):
 
     def as_pod(self) -> JSONType:
         return [type(self).__name__, str(self.tag), self.attribute, self.value]
+
+
+@dataclass(frozen=True)
+class UnsupportedAttributeValue(AttributeValueCondition):
+    """Unsupported XML attribute value"""
+
+
+@dataclass(frozen=True)
+class InvalidAttributeValue(AttributeValueCondition):
+    """Invalid XML attribute value"""
 
 
 @dataclass(frozen=True)
