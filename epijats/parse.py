@@ -62,19 +62,6 @@ def prep_array_elements(log: IssueCallback, e: etree._Element) -> None:
         s.tail = None
 
 
-if TYPE_CHECKING:
-    ParseFunc: TypeAlias = Callable[[etree._Element], bool]
-
-
-def parse_array_content(
-    log: IssueCallback, e: etree._Element, parse_funcs: Iterable[ParseFunc]
-) -> None:
-    prep_array_elements(log, e)
-    for s in e:
-        if not any(pf(s) for pf in parse_funcs):
-            log(fc.UnsupportedElement.issue(s))
-
-
 class Validator(ABC):
     def __init__(self, log: IssueCallback):
         self._log = log
@@ -102,11 +89,20 @@ class Parser(Validator):
     @abstractmethod
     def parse_element(self, e: etree._Element) -> bool: ...
 
-    def __call__(self, e: etree._Element) -> bool:
-        return self.parse_element(e)
-
     def parse_array_content(self, e: etree._Element) -> None:
-        parse_array_content(self.log, e, [self])
+        prep_array_elements(self.log, e)
+        for s in e:
+            if not self.parse_element(s):
+                self.log(fc.UnsupportedElement.issue(s))
+
+
+class FunParser(Parser):
+    def __init__(self, log: IssueCallback, fun: Callable[[etree._Element], bool]):
+        super().__init__(log)
+        self.fun = fun
+
+    def parse_element(self, e: etree._Element) -> bool:
+        return self.fun(e)
 
 
 class UnionParser(Parser):
@@ -115,10 +111,10 @@ class UnionParser(Parser):
         self._parsers = list(parsers)
 
     def parse_element(self, e: etree._Element) -> bool:
-        return any(parse(e) for parse in self._parsers)
+        return any(p.parse_element(e) for p in self._parsers)
 
 
-class TaggedContentParser(Parser):
+class SimpleElementParser(Parser):
     def __init__(self, log: IssueCallback, tag: str, content_parser: Parser):
         super().__init__(log)
         self.tag = tag
@@ -204,7 +200,7 @@ class EBinder(Binder[DestT]):
         self.content_binder = content_binder
 
     def __call__(self, log: IssueCallback, dest: DestT) -> Parser:
-        return TaggedContentParser(log, self.tag, self.content_binder(log, dest))
+        return SimpleElementParser(log, self.tag, self.content_binder(log, dest))
 
 
 class ReadToDestFunc(Protocol, Generic[DestConT]):
@@ -265,8 +261,7 @@ class FirstReadParser(Parser, Generic[ParsedT]):
         return True
 
 
-if TYPE_CHECKING:
-    Sink: TypeAlias = Callable[[ParsedT], None]
+Sink: TypeAlias = Callable[[ParsedT], None]
 
 
 class ContentParser(UnionParser):
@@ -285,6 +280,9 @@ class ContentParser(UnionParser):
 
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
         self._parsers.append(binder(self.log, dest))
+
+    def mbind(self, model: Model[ParsedT], dest: Sink[ParsedT]) -> None:
+        self.bind(SinkBinder(model), dest)
 
 
 if TYPE_CHECKING:
@@ -306,7 +304,7 @@ class EModel(Model[Element]):
 def parse_mixed_content(
     log: IssueCallback, e: etree._Element, emodel: EModel, dest: MixedContent
 ) -> None:
-    eparser = ElementParser(log, dest.append, emodel)
+    eparser = SinkParser(log, dest.append, emodel)
     dest.append_text(e.text)
     for s in e:
         if not eparser.parse_element(s):
@@ -385,34 +383,24 @@ class SinkParser(Parser, Generic[ParsedT]):
             return False
         result = reader(self.log, e)
         if result is not None:
+            if isinstance(result, Element) and e.tail:
+                result.tail = e.tail
             self.dest(result)
         return result is not None
+
+
+class SinkBinder(Binder[Sink[ParsedT]]):
+    def __init__(self, model: Model[ParsedT]):
+        self.model = model
+
+    def __call__(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
+        return SinkParser(log, dest, self.model)
 
 
 def sink_array_content(
     log: IssueCallback, e: etree._Element, model: Model[ParsedT], dest: Sink[ParsedT]
 ) -> None:
-    parse_array_content(log, e, [SinkParser(log, dest, model)])
-
-
-class ElementParser(Parser):
-    def __init__(self, log: IssueCallback, dest: ElementHandler, emodel: EModel):
-        super().__init__(log)
-        self.dest = dest
-        self.emodel = emodel
-
-    def parse_element(self, e: etree._Element) -> bool:
-        if not isinstance(e.tag, str):
-            return False
-        reader = self.emodel.reader(e.tag)
-        if reader is None:
-            return False
-        out = reader(self.log, e)
-        if out is not None:
-            if e.tail:
-                out.tail = e.tail
-            self.dest(out)
-        return out is not None
+    SinkParser(log, dest, model).parse_array_content(e)
 
 
 class TextElementModel(EModel):
@@ -561,6 +549,7 @@ def mixed_element_model(tag: str) -> Model[MixedContent]:
 
 
 title_model = mixed_element_model
+make_title_model = mixed_element_model
 
 
 class MixedContentBinder(Binder[MixedContent]):
@@ -646,20 +635,25 @@ def read_author(log: IssueCallback, e: etree._Element) -> bp.Author | None:
     return bp.Author(name.out, email.out, orcid.out)
 
 
-class AutoCorrector(Parser):
-    def __init__(self, log: IssueCallback, dest: ElementHandler, p_elements: EModel):
-        super().__init__(log)
-        self.dest = dest
+class AutoCorrector(Model[Element]):
+    def __init__(self, p_elements: Model[Element]):
         self.p_elements = p_elements
 
-    def parse_element(self, e: etree._Element) -> bool:
+    def reader(self, tag: str) -> Reader[Element] | None:
+        return self.correct if self.p_elements.reader(tag) else None
+
+    def correct(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        if not isinstance(e.tag, str):
+            return None
+        reader = self.p_elements.reader(e.tag)
+        if reader is None:
+            return None
+        p_element = reader(log, e)
+        if p_element is None:
+            return None
         correction = make_paragraph("")
-        ep = ElementParser(self.log, correction.content.append, self.p_elements)
-        if not ep.parse_element(e):
-            return False
-        self.dest(correction)
-        self.log(fc.UnsupportedElement.issue(e))
-        return True
+        correction.content.append(p_element)
+        return correction
 
 
 class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
@@ -668,13 +662,11 @@ class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
         self.p_level = p_level
 
     def __call__(self, log: IssueCallback, dest: bp.ProtoSection) -> Parser:
-        sec_model = SectionModel(self.p_elements)
-        parsers = [
-            ElementParser(log, dest.presection.append, self.p_level),
-            AutoCorrector(log, dest.presection.append, self.p_elements),
-            SinkParser(log, dest.subsections.append, sec_model),
-        ]
-        return UnionParser(log, parsers)
+        ret = ContentParser(log)
+        ret.mbind(self.p_level, dest.presection.append)
+        ret.mbind(AutoCorrector(self.p_elements), dest.presection.append)
+        ret.mbind(SectionModel(self.p_elements), dest.subsections.append)
+        return ret
 
 
 class SectionContentBinder(Binder[bp.Section]):
@@ -752,7 +744,7 @@ class ArticleFrontParser(Parser):
         if e.tag != 'front':
             return False
         self.check_no_attrib(e)
-        parse_array_content(self.log, e, [self._article_meta])
+        FunParser(self.log, self._article_meta).parse_array_content(e)
         if self.title.out:
             self.dest.title = self.title.out
         if self.authors.out is not None:
@@ -765,7 +757,7 @@ class ArticleFrontParser(Parser):
         if e.tag != 'article-meta':
             return False
         self.check_no_attrib(e)
-        parse_array_content(self.log, e, [self.article_meta_content_parser])
+        self.article_meta_content_parser.parse_array_content(e)
         return True
 
 
@@ -959,7 +951,7 @@ def read_article(log: IssueCallback , e: etree._Element) -> Baseprint | None:
         e.remove(back)
     cp = ContentParser(log)
     cp.bind(make_proto_section_binder('body', p_elements_model()), ret.body)
-    parse_array_content(log, e, [ArticleFrontParser(log, ret), cp])
+    UnionParser(log, [ArticleFrontParser(log, ret), cp]).parse_array_content(e)
     if ret.title.blank():
         issue(log, fc.MissingContent('article-title', 'title-group'))
     if not len(ret.authors):
