@@ -14,7 +14,6 @@ from . import baseprint as bp
 from .baseprint import (
     Baseprint,
     Hyperlink,
-    ProtoSection,
     Section,
 )
 from .tree import (
@@ -106,6 +105,31 @@ class Parser(Validator):
     def __call__(self, e: etree._Element) -> bool:
         return self.parse_element(e)
 
+    def parse_array_content(self, e: etree._Element) -> None:
+        parse_array_content(self.log, e, [self])
+
+
+class UnionParser(Parser):
+    def __init__(self, log: IssueCallback, parsers: Iterable[Parser] = ()):
+        super().__init__(log)
+        self._parsers = list(parsers)
+
+    def parse_element(self, e: etree._Element) -> bool:
+        return any(parse(e) for parse in self._parsers)
+
+
+class TaggedContentParser(Parser):
+    def __init__(self, log: IssueCallback, tag: str, content_parser: Parser):
+        super().__init__(log)
+        self.tag = tag
+        self.content_parser = content_parser
+
+    def parse_element(self, e: etree._Element) -> bool:
+        if e.tag != self.tag:
+            return False
+        self.content_parser.parse_array_content(e)
+        return True
+
 
 ParsedT = TypeVar('ParsedT')
 ParsedCovT = TypeVar('ParsedCovT', covariant=True)
@@ -174,6 +198,15 @@ class Binder(Protocol, Generic[DestConT]):
     def __call__(self, log: IssueCallback, dest: DestConT) -> Parser: ...
 
 
+class EBinder(Binder[DestT]):
+    def __init__(self, tag: str, content_binder: Binder[DestT]):
+        self.tag = tag
+        self.content_binder = content_binder
+
+    def __call__(self, log: IssueCallback, dest: DestT) -> Parser:
+        return TaggedContentParser(log, self.tag, self.content_binder(log, dest))
+
+
 class ReadToDestFunc(Protocol, Generic[DestConT]):
     def __call__(self, log: IssueCallback, e: etree._Element, dest: DestConT) -> None: ...
 
@@ -236,12 +269,11 @@ if TYPE_CHECKING:
     Sink: TypeAlias = Callable[[ParsedT], None]
 
 
-class ContentParser(Parser):
+class ContentParser(UnionParser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
-        self._parsers: list[ParseFunc] = []
 
-    def first(self, model: Model[ParsedT]) -> Result[ParsedT]:
+    def one(self, model: Model[ParsedT]) -> Result[ParsedT]:
         ret = Result[ParsedT]()
         self._parsers.append(FirstReadParser(self.log, ret, model))
         return ret
@@ -253,12 +285,6 @@ class ContentParser(Parser):
 
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
         self._parsers.append(binder(self.log, dest))
-
-    def parse_element(self, e: etree._Element) -> bool:
-        return any(parse(e) for parse in self._parsers)
-
-    def parse_array_content(self, e: etree._Element) -> None:
-        parse_array_content(self.log, e, [self])
 
 
 if TYPE_CHECKING:
@@ -550,10 +576,13 @@ def base_hypertext_binder(tag: str) -> Binder[MixedContent]:
     return MixedContentBinder(tag, base_hypertext_model())
 
 
+make_title_binder = base_hypertext_binder
+
+
 def read_title_group(log: IssueCallback, e: etree._Element) -> MixedContent | None:
     check_no_attrib(log, e)
     ap = ContentParser(log)
-    title = ap.first(title_model('article-title'))
+    title = ap.one(title_model('article-title'))
     ap.parse_array_content(e)
     return title.out
 
@@ -591,8 +620,8 @@ def person_name_model() -> Model[bp.PersonName]:
 def read_person_name(log: IssueCallback, e: etree._Element) -> bp.PersonName | None:
     check_no_attrib(log, e)
     p = ContentParser(log)
-    surname = p.first(TModel('surname', read_string))
-    given_names = p.first(TModel('given-names', read_string))
+    surname = p.one(TModel('surname', read_string))
+    given_names = p.one(TModel('given-names', read_string))
     p.parse_array_content(e)
     if not surname.out and not given_names.out:
         log(fc.MissingContent.issue(e))
@@ -607,9 +636,9 @@ def read_author(log: IssueCallback, e: etree._Element) -> bp.Author | None:
         return None
     check_no_attrib(log, e, ['contrib-type', 'id'])
     p = ContentParser(log)
-    name = p.first(person_name_model())
-    email = p.first(TModel('email', read_string))
-    orcid = p.first(orcid_model())
+    name = p.one(person_name_model())
+    email = p.one(TModel('email', read_string))
+    orcid = p.one(orcid_model())
     p.parse_array_content(e)
     if name.out is None:
         log(fc.MissingContent.issue(e, "Missing name"))
@@ -633,66 +662,49 @@ class AutoCorrector(Parser):
         return True
 
 
-class SectionContentParser(Validator):
-    def __init__(self,
-        log: IssueCallback, dest: ProtoSection, p_elements: EModel, p_level: EModel
-    ):
-        super().__init__(log)
-        self.parsers = [
-            ElementParser(log, dest.presection.append, p_level),
-            AutoCorrector(log, dest.presection.append, p_elements),
-            SubSectionParser(log, dest.subsections.append, p_elements),
-        ]
-
-    def add_title(self, dest_title: MixedContent) -> None:
-        title_model = base_hypertext_model()
-        title_parser = MixedContentParser(self.log, dest_title, title_model, 'title')
-        self.parsers.append(title_parser)
-
-    def parse_content(self, e: etree._Element) -> None:
-        parse_array_content(self.log, e, self.parsers)
-
-
-class ProtoSectionParser(Parser):
-    def __init__(self,
-        log: IssueCallback, dest: ProtoSection, p_elements: EModel, tag: str
-    ):
-        super().__init__(log)
-        self.dest = dest
-        self.tag = tag
-        p_level = TextElementModel({'p': 'p'}, p_elements)
-        self._content = SectionContentParser(log, dest, p_elements, p_level)
-
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != self.tag:
-            return False
-        self.check_no_attrib(e)
-        if not self.dest.has_no_content():
-            self.log(fc.ExcessElement.issue(e))
-            return True
-        self._content.parse_content(e)
-        return True
-
-
-class SubSectionParser(Parser):
-    def __init__(self,
-         log: IssueCallback, dest: Callable[[Section], None], p_elements: EModel
-    ):
-        super().__init__(log)
-        self.dest = dest
+class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
+    def __init__(self, p_elements: EModel, p_level: EModel):
         self.p_elements = p_elements
+        self.p_level = p_level
 
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'sec':
-            return False
-        self.check_no_attrib(e, ['id'])
-        sec = Section([],[], e.attrib.get('id'), MixedContent())
-        p_level = p_level_model(self.p_elements)
-        content = SectionContentParser(self.log, sec, self.p_elements, p_level)
-        content.add_title(sec.title)
-        content.parse_content(e)
-        self.dest(sec)
-        return True
+    def __call__(self, log: IssueCallback, dest: bp.ProtoSection) -> Parser:
+        sec_model = SectionModel(self.p_elements)
+        parsers = [
+            ElementParser(log, dest.presection.append, self.p_level),
+            AutoCorrector(log, dest.presection.append, self.p_elements),
+            SinkParser(log, dest.subsections.append, sec_model),
+        ]
+        return UnionParser(log, parsers)
+
+
+class SectionContentBinder(Binder[bp.Section]):
+    def __init__(self, p_elements: EModel):
+        p_level = p_level_model(p_elements)
+        self._proto = ProtoSectionContentBinder(p_elements, p_level)
+
+    def __call__(self, log: IssueCallback, dest: bp.Section) -> Parser:
+        title_binder = make_title_binder('title')
+        parsers = [title_binder(log, dest.title), self._proto(log, dest)]
+        return UnionParser(log, parsers)
+
+
+def make_proto_section_binder(tag: str, p_elements: EModel) -> Binder[bp.ProtoSection]:
+    p_level = TextElementModel({'p': 'p'}, p_elements)
+    return EBinder(tag, ProtoSectionContentBinder(p_elements,p_level))
+
+
+class SectionModel(Model[bp.Section]):
+    def __init__(self, p_elements: EModel):
+        self.content_binder = SectionContentBinder(p_elements)
+
+    def reader(self, tag: str) -> Reader[bp.Section] | None:
+        return self.read if tag == 'sec' else None
+
+    def read(self, log: IssueCallback, e: etree._Element) -> bp.Section | None:
+        check_no_attrib(log, e, ['id'])
+        ret = Section([],[], e.attrib.get('id'), MixedContent())
+        self.content_binder(log, ret).parse_array_content(e)
+        return ret
 
 
 def ref_authors_model() -> Model[list[bp.PersonName | str]]:
@@ -727,13 +739,14 @@ class ArticleFrontParser(Parser):
         super().__init__(log)
         self.dest = dest
         p_elements = p_elements_model()
-        acp = ContentParser(log)
-        self.title = acp.first(TModel('title-group', read_title_group))
-        self.authors = acp.first(TModel('contrib-group', read_author_group))
-        self._parsers = [
-            acp,
-            ProtoSectionParser(log, dest.abstract, p_elements, 'abstract'),
-        ]
+
+        cp = ContentParser(log)
+        self.title = cp.one(TModel('title-group', read_title_group))
+        self.authors = cp.one(TModel('contrib-group', read_author_group))
+        cp.bind(make_proto_section_binder('abstract', p_elements), dest.abstract)
+        self.permissions = cp.one(TModel('permissions', read_permissions))
+
+        self.article_meta_content_parser = cp
 
     def parse_element(self, e: etree._Element) -> bool:
         if e.tag != 'front':
@@ -744,18 +757,15 @@ class ArticleFrontParser(Parser):
             self.dest.title = self.title.out
         if self.authors.out is not None:
             self.dest.authors = self.authors.out
+        if self.permissions.out is not None:
+            self.dest.permissions = self.permissions.out
         return True
 
     def _article_meta(self, e: etree._Element) -> bool:
         if e.tag != 'article-meta':
             return False
         self.check_no_attrib(e)
-        self.prep_array_elements(e)
-        for s in e:
-            if s.tag == 'permissions':
-                self.dest.permissions = read_permissions(self.log, s)
-            elif not any(pf(s) for pf in self._parsers):
-                self.log(fc.UnsupportedElement.issue(s))
+        parse_array_content(self.log, e, [self.article_meta_content_parser])
         return True
 
 
@@ -863,8 +873,8 @@ def read_license(log: IssueCallback, e: etree._Element) -> bp.License | None:
 def read_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | None:
     check_no_attrib(log, e)
     ap = ContentParser(log)
-    statement = ap.first(mixed_element_model('copyright-statement'))
-    license = ap.first(TModel("license", read_license))
+    statement = ap.one(mixed_element_model('copyright-statement'))
+    license = ap.one(TModel("license", read_license))
     ap.parse_array_content(e)
     if license.out is None or statement.out is None or statement.out.blank():
         return None
@@ -874,12 +884,12 @@ def read_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | 
 def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioReference:
     check_no_attrib(log, e, ['publication-type'])
     ap = ContentParser(log)
-    title = ap.first(title_model('article-title'))
-    authors = ap.first(ref_authors_model())
-    year = ap.first(TModel('year', read_year))
+    title = ap.one(title_model('article-title'))
+    authors = ap.one(ref_authors_model())
+    year = ap.one(TModel('year', read_year))
     fields = {}
     for key in bp.BiblioReference.BIBLIO_FIELD_KEYS:
-        fields[key] = ap.first(TModel(key, read_string))
+        fields[key] = ap.one(TModel(key, read_string))
     ap.parse_array_content(e)
     br = bp.BiblioReference()
     br.publication_type = e.get('publication-type', '')
@@ -924,7 +934,7 @@ def read_biblio_ref(log: IssueCallback, e: etree._Element) -> bp.BiblioReference
 def read_ref_list(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
     check_no_attrib(log, e)
     ap = ContentParser(log)
-    title = ap.first(title_model('title'))
+    title = ap.one(title_model('title'))
     references = ap.every(TModel('ref', read_biblio_ref))
     ap.parse_array_content(e)
     return bp.RefList(title.out, list(references))
@@ -933,7 +943,7 @@ def read_ref_list(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
 def read_article_back(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
     check_no_attrib(log, e)
     p = ContentParser(log)
-    ref_list = p.first(TModel('ref-list', read_ref_list))
+    ref_list = p.one(TModel('ref-list', read_ref_list))
     p.parse_array_content(e)
     return ref_list.out
 
@@ -947,10 +957,9 @@ def read_article(log: IssueCallback , e: etree._Element) -> Baseprint | None:
     if back is not None:
         ret.ref_list = read_article_back(log, back)
         e.remove(back)
-    parse_array_content(log, e, [
-        ArticleFrontParser(log, ret),
-        ProtoSectionParser(log, ret.body, p_elements_model(), 'body'),
-    ])
+    cp = ContentParser(log)
+    cp.bind(make_proto_section_binder('body', p_elements_model()), ret.body)
+    parse_array_content(log, e, [ArticleFrontParser(log, ret), cp])
     if ret.title.blank():
         issue(log, fc.MissingContent('article-title', 'title-group'))
     if not len(ret.authors):
