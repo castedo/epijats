@@ -96,15 +96,6 @@ class Parser(Validator):
                 self.log(fc.UnsupportedElement.issue(s))
 
 
-class FunParser(Parser):
-    def __init__(self, log: IssueCallback, fun: Callable[[etree._Element], bool]):
-        super().__init__(log)
-        self.fun = fun
-
-    def parse_element(self, e: etree._Element) -> bool:
-        return self.fun(e)
-
-
 class UnionParser(Parser):
     def __init__(self, log: IssueCallback, parsers: Iterable[Parser] = ()):
         super().__init__(log)
@@ -726,41 +717,6 @@ def read_ref_authors(
     return ret
 
 
-class ArticleFrontParser(Parser):
-    def __init__(self, log: IssueCallback, dest: Baseprint):
-        super().__init__(log)
-        self.dest = dest
-        p_elements = p_elements_model()
-
-        cp = ContentParser(log)
-        self.title = cp.one(TModel('title-group', read_title_group))
-        self.authors = cp.one(TModel('contrib-group', read_author_group))
-        cp.bind(make_proto_section_binder('abstract', p_elements), dest.abstract)
-        self.permissions = cp.one(TModel('permissions', read_permissions))
-
-        self.article_meta_content_parser = cp
-
-    def parse_element(self, e: etree._Element) -> bool:
-        if e.tag != 'front':
-            return False
-        self.check_no_attrib(e)
-        FunParser(self.log, self._article_meta).parse_array_content(e)
-        if self.title.out:
-            self.dest.title = self.title.out
-        if self.authors.out is not None:
-            self.dest.authors = self.authors.out
-        if self.permissions.out is not None:
-            self.dest.permissions = self.permissions.out
-        return True
-
-    def _article_meta(self, e: etree._Element) -> bool:
-        if e.tag != 'article-meta':
-            return False
-        self.check_no_attrib(e)
-        self.article_meta_content_parser.parse_array_content(e)
-        return True
-
-
 def formatted_text_model(sub_model: EModel | None = None) -> EModel:
     formatted_text_tags = {
         'bold': 'strong',
@@ -873,6 +829,34 @@ def read_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | 
     return bp.Permissions(license.out, bp.Copyright(statement.out))
 
 
+def read_article_meta(
+    log: IssueCallback, e: etree._Element, dest: bp.Baseprint
+) -> None:
+    check_no_attrib(log, e)
+    p_elements = p_elements_model()
+    cp = ContentParser(log)
+    title = cp.one(TModel('title-group', read_title_group))
+    authors = cp.one(TModel('contrib-group', read_author_group))
+    cp.bind(make_proto_section_binder('abstract', p_elements), dest.abstract)
+    permissions = cp.one(TModel('permissions', read_permissions))
+    cp.parse_array_content(e)
+    if title.out:
+        dest.title = title.out
+    if authors.out is not None:
+        dest.authors = authors.out
+    if permissions.out is not None:
+        dest.permissions = permissions.out
+
+
+def read_article_front(
+    log: IssueCallback, e: etree._Element, dest: bp.Baseprint
+) -> None:
+    check_no_attrib(log, e)
+    cp = ContentParser(log)
+    cp.bind(TBinder('article-meta', read_article_meta), dest)
+    cp.parse_array_content(e)
+
+
 def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioReference:
     check_no_attrib(log, e, ['publication-type'])
     ap = ContentParser(log)
@@ -950,8 +934,9 @@ def read_article(log: IssueCallback , e: etree._Element) -> Baseprint | None:
         ret.ref_list = read_article_back(log, back)
         e.remove(back)
     cp = ContentParser(log)
+    cp.bind(TBinder('front', read_article_front), ret)
     cp.bind(make_proto_section_binder('body', p_elements_model()), ret.body)
-    UnionParser(log, [ArticleFrontParser(log, ret), cp]).parse_array_content(e)
+    cp.parse_array_content(e)
     if ret.title.blank():
         issue(log, fc.MissingContent('article-title', 'title-group'))
     if not len(ret.authors):
