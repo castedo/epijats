@@ -58,8 +58,8 @@ def assert_bdom_roundtrip(expect: Baseprint):
 def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
     issues: list[fc.FormatIssue] = []
     ret = Abstract()
-    binder = _.make_proto_section_binder('abstract', _.p_elements_model())
-    p = binder(issues.append, ret)
+    binder = _.proto_section_binder('abstract', _.p_elements_model())
+    p = binder.bind(issues.append, ret)
     p.parse_element(e)
     return (ret, issues)
 
@@ -180,7 +180,7 @@ bar.</p>
 """)
     issues = []
     model = _.ListModel(_.p_elements_model())
-    subel = model.read(issues.append, wrap_to_xml(dump))
+    subel = model.load(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(list(subel)) == 3
     xe = xml_sub_element(subel)
@@ -201,7 +201,7 @@ bar.</p>
 """)
     issues = []
     model = _.ListModel(_.p_elements_model())
-    subel = model.read(issues.append, wrap_to_xml(dump))
+    subel = model.load(issues.append, wrap_to_xml(dump))
     assert isinstance(subel, List)
     assert len(list(subel)) == 2
     xe = xml_sub_element(subel)
@@ -222,7 +222,7 @@ def test_author_restyle():
 </contrib-group>
 """)
     issues = []
-    authors = _.read_author_group(issues.append, wrap_to_xml(dump))
+    authors = _.load_author_group(issues.append, wrap_to_xml(dump))
     assert authors is not None
     assert len(issues) == 0
     x = xml_sub_element(restyle.contrib_group(authors))
