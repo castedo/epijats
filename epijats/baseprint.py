@@ -191,6 +191,7 @@ class BiblioReference:
 
     def __init__(self) -> None:
         self.id = ""
+        self.publication_type = ""
         self.authors = []
         self.year = None
         self.article_title = None

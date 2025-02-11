@@ -286,23 +286,11 @@ class LoaderModel(Model[ParsedT]):
         return LoaderParser(log, dest, self._tag, self._loader)
 
 
-@dataclass
-class Result(Generic[ParsedT]):
-    out: ParsedT | None = None
-
-    def __call__(self, parsed: ParsedT) -> None:
-        self.out = parsed
-
-
-class FirstReadParser(Parser, Generic[ParsedT]):
-    def __init__(
-        self,
-        parser: Parser,
-        dest: Result[ParsedT],
-    ):
+class OnlyOnceParser(Parser):
+    def __init__(self, parser: Parser):
         super().__init__(parser.log)
         self._parser = parser
-        self._dest = dest
+        self._parse_done = False
 
     def match(self, tag: str) -> ParseFunc | None:
         fun = self._parser.match(tag)
@@ -311,14 +299,30 @@ class FirstReadParser(Parser, Generic[ParsedT]):
     def _parse(self, e: etree._Element) -> bool:
         if not isinstance(e.tag, str):
             return False
-        fun = self._parser.match(e.tag)
-        if fun is None:
+        parse_func = self._parser.match(e.tag)
+        if parse_func is None:
             return False
-        if self._dest.out is None:
-            fun(e)
+        if not self._parse_done:
+            self._parse_done = parse_func(e)
         else:
             self.log(fc.ExcessElement.issue(e))
         return True
+
+
+class OnlyOnceBinder(Binder[DestT]):
+    def __init__(self, binder: Binder[DestT]):
+        self.binder = binder
+
+    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
+        return OnlyOnceParser(self.binder.bind(log, dest))
+
+
+@dataclass
+class Result(Generic[ParsedT]):
+    out: ParsedT | None = None
+
+    def __call__(self, parsed: ParsedT) -> None:
+        self.out = parsed
 
 
 class FirstReadBinder(Binder[Result[ParsedT]]):
@@ -326,7 +330,7 @@ class FirstReadBinder(Binder[Result[ParsedT]]):
         self._model = model
 
     def bind(self, log: IssueCallback, dest: Result[ParsedT]) -> Parser:
-        return FirstReadParser(self._model.bind(log, dest), dest)
+        return OnlyOnceParser(self._model.bind(log, dest))
 
 
 class ContentParser(UnionParser):
@@ -345,6 +349,9 @@ class ContentParser(UnionParser):
 
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
         self._parsers.append(binder.bind(self.log, dest))
+
+    def once(self, binder: Binder[DestT], dest: DestT) -> None:
+        self.bind(OnlyOnceBinder(binder), dest)
 
     def bind_reader(self, tag: str, reader: Reader[DestT], dest: DestT) -> None:
         self.bind(ReaderBinder(tag, reader), dest)
@@ -665,17 +672,6 @@ class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
         return ret
 
 
-class SectionContentBinder(Binder[bp.Section]):
-    def __init__(self, p_elements: EModel):
-        p_level = p_level_model(p_elements)
-        self._proto = ProtoSectionContentBinder(p_elements, p_level)
-
-    def bind(self, log: IssueCallback, dest: bp.Section) -> Parser:
-        title = title_binder('title')
-        parsers = [title.bind(log, dest.title), self._proto.bind(log, dest)]
-        return UnionParser(log, parsers)
-
-
 def proto_section_binder(tag: str, p_elements: EModel) -> Binder[bp.ProtoSection]:
     p_level = TextElementModel({'p': 'p'}, p_elements)
     return SingleElementBinder(tag, ProtoSectionContentBinder(p_elements,p_level))
@@ -683,12 +679,16 @@ def proto_section_binder(tag: str, p_elements: EModel) -> Binder[bp.ProtoSection
 
 class SectionLoader(Loader[bp.Section]):
     def __init__(self, p_elements: EModel):
-        self.content_binder = SectionContentBinder(p_elements)
+        p_level = p_level_model(p_elements)
+        self._proto = ProtoSectionContentBinder(p_elements, p_level)
 
     def __call__(self, log: IssueCallback, e: etree._Element) -> bp.Section | None:
         check_no_attrib(log, e, ['id'])
         ret = bp.Section([],[], e.attrib.get('id'), MixedContent())
-        self.content_binder.bind(log, ret).parse_array_content(e)
+        cp = ContentParser(log)
+        cp.bind(title_binder('title'), ret.title)
+        cp.bind(self._proto, ret)
+        cp.parse_array_content(e)
         return ret
 
 
@@ -819,8 +819,8 @@ def load_license(log: IssueCallback, e: etree._Element) -> bp.License | None:
     ret = bp.License(MixedContent(), "", None)
     check_no_attrib(log, e)
     ap = ContentParser(log)
-    ap.bind(hypertext_element_binder('license-p'), ret.license_p)
-    ap.bind_reader(f"{ali}license_ref", read_license_ref, ret)
+    ap.once(hypertext_element_binder('license-p'), ret.license_p)
+    ap.once(ReaderBinder(f"{ali}license_ref", read_license_ref), ret)
     ap.parse_array_content(e)
     return None if ret.blank() else ret
 
@@ -844,7 +844,7 @@ def read_article_meta(
     cp = ContentParser(log)
     title = cp.one(LoaderModel('title-group', load_title_group))
     authors = cp.one(LoaderModel('contrib-group', load_author_group))
-    cp.bind(proto_section_binder('abstract', p_elements), dest.abstract)
+    cp.once(proto_section_binder('abstract', p_elements), dest.abstract)
     permissions = cp.one(LoaderModel('permissions', load_permissions))
     cp.parse_array_content(e)
     if title.out:
@@ -861,12 +861,14 @@ def read_article_front(
 ) -> bool:
     check_no_attrib(log, e)
     cp = ContentParser(log)
-    cp.bind_reader('article-meta', read_article_meta, dest)
+    cp.once(ReaderBinder('article-meta', read_article_meta), dest)
     cp.parse_array_content(e)
     return True
 
 
-def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioReference:
+def read_element_citation(
+    log: IssueCallback, e: etree._Element, dest: bp.BiblioReference
+) -> bool:
     check_no_attrib(log, e, ['publication-type'])
     ap = ContentParser(log)
     title = ap.one(title_model('article-title'))
@@ -876,9 +878,8 @@ def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioRef
     for key in bp.BiblioReference.BIBLIO_FIELD_KEYS:
         fields[key] = ap.one(LoaderModel(key, load_string))
     ap.parse_array_content(e)
-    br = bp.BiblioReference()
-    br.publication_type = e.get('publication-type', '')
-    if br.publication_type not in [
+    dest.publication_type = e.get('publication-type', '')
+    if dest.publication_type not in [
         'book',
         'confproc',
         'journal',
@@ -888,40 +889,35 @@ def read_element_citation(log: IssueCallback, e: etree._Element) -> bp.BiblioRef
     ]:
         log(
             fc.UnsupportedAttributeValue.issue(
-                 e, 'publication-type', br.publication_type
+                 e, 'publication-type', dest.publication_type
             )
         )
-    br.article_title = title.out
+    dest.article_title = title.out
     if authors.out:
-        br.authors = authors.out
-    br.year = year.out
+        dest.authors = authors.out
+    dest.year = year.out
     for key, parser in fields.items():
         if parser.out:
-            br.biblio_fields[key] = parser.out
-    return br
+            dest.biblio_fields[key] = parser.out
+    return True
 
 
 def load_biblio_ref(log: IssueCallback, e: etree._Element) -> bp.BiblioReference | None:
-    if e.tag != 'ref':
-        return None
+    ret = bp.BiblioReference()
     check_no_attrib(log, e, ['id'])
-    prep_array_elements(log, e)
-    for s in e:
-        if s.tag == 'element-citation':
-            ret = read_element_citation(log, s)
-            ret.id = e.attrib.get('id', "")
-            return ret
-        else:
-            log(fc.UnsupportedElement.issue(s))
-    return None
+    cp = ContentParser(log)
+    cp.once(ReaderBinder('element-citation', read_element_citation), ret)
+    cp.parse_array_content(e)
+    ret.id = e.attrib.get('id', "")
+    return ret
 
 
 def load_ref_list(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
     check_no_attrib(log, e)
-    ap = ContentParser(log)
-    title = ap.one(title_model('title'))
-    references = ap.every(LoaderModel('ref', load_biblio_ref))
-    ap.parse_array_content(e)
+    cp = ContentParser(log)
+    title = cp.one(title_model('title'))
+    references = cp.every(LoaderModel('ref', load_biblio_ref))
+    cp.parse_array_content(e)
     return bp.RefList(title.out, list(references))
 
 
