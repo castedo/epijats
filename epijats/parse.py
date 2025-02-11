@@ -326,7 +326,7 @@ class Result(Generic[ParsedT]):
 
 
 class FirstReadBinder(Binder[Result[ParsedT]]):
-    def __init__(self, model: Binder[Sink[ParsedT]]):
+    def __init__(self, model: Model[ParsedT]):
         self._model = model
 
     def bind(self, log: IssueCallback, dest: Result[ParsedT]) -> Parser:
@@ -357,6 +357,27 @@ class ContentParser(UnionParser):
         self.bind(ReaderBinder(tag, reader), dest)
 
 
+class SingleSubElementReader(Reader[DestT]):
+    def __init__(self, binder: Binder[DestT]):
+        self._binder = binder
+
+    def __call__(self, log: IssueCallback, e: etree._Element, dest: DestT) -> bool:
+        check_no_attrib(log, e)
+        cp = ContentParser(log)
+        cp.once(self._binder, dest)
+        cp.parse_array_content(e)
+        return True
+
+
+def load_single_sub_element(
+    log: IssueCallback, e: etree._Element, model: Model[ParsedT]
+) -> ParsedT | None:
+    reader = SingleSubElementReader(model)
+    ret = Result[ParsedT]()
+    reader(log, e, ret)
+    return ret.out
+
+
 def parse_mixed_content(
     log: IssueCallback, e: etree._Element, emodel: EModel, dest: MixedContent
 ) -> None:
@@ -369,18 +390,18 @@ def parse_mixed_content(
             dest.append_text(s.tail)
 
 
-class ElementModelBase(Model[Element]):
+class BaseModel(Model[ParsedT]):
     def __init__(self, tag: str):
         self.tag = tag
 
     @abstractmethod
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
+    def load(self, log: IssueCallback, e: etree._Element) -> ParsedT | None: ...
 
-    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
+    def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
         return LoaderParser(log, dest, self.tag, self.load)
 
 
-class DataElementModel(ElementModelBase):
+class DataElementModel(BaseModel[Element]):
     def __init__(self, tag: str, content_model: EModel):
         super().__init__(tag)
         self.content_model = content_model
@@ -426,7 +447,7 @@ class TextElementModel(Model[Element]):
         return ret
 
 
-class ExtLinkModel(ElementModelBase):
+class ExtLinkModel(BaseModel[Element]):
     def __init__(self, content_model: EModel):
         super().__init__('ext-link')
         self.content_model = content_model
@@ -448,7 +469,7 @@ class ExtLinkModel(ElementModelBase):
             return ret
 
 
-class CrossReferenceModel(ElementModelBase):
+class CrossReferenceModel(BaseModel[Element]):
     def __init__(self, content_model: EModel):
         super().__init__('xref')
         self.content_model = content_model
@@ -484,7 +505,7 @@ def get_enum_value(
     return ret
 
 
-class ListModel(ElementModelBase):
+class ListModel(BaseModel[Element]):
     def __init__(self, p_elements_model: EModel):
         super().__init__('list')
         # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
@@ -503,7 +524,7 @@ class ListModel(ElementModelBase):
         return ret
 
 
-class TableCellModel(ElementModelBase):
+class TableCellModel(BaseModel[Element]):
     def __init__(self, content_model: EModel, *, header: bool):
         super().__init__('th' if header else 'td')
         self.content_model = content_model
@@ -569,12 +590,9 @@ def hypertext_element_binder(tag: str) -> Binder[MixedContent]:
 title_binder = hypertext_element_binder
 
 
-def load_title_group(log: IssueCallback, e: etree._Element) -> MixedContent | None:
-    check_no_attrib(log, e)
-    ap = ContentParser(log)
-    title = ap.one(title_model('article-title'))
-    ap.parse_array_content(e)
-    return title.out
+def title_group_model() -> Model[MixedContent]:
+    reader = SingleSubElementReader(title_model('article-title'))
+    return ReaderBinder('title-group', reader)
 
 
 def orcid_model() -> Model[bp.Orcid]:
@@ -842,7 +860,7 @@ def read_article_meta(
     check_no_attrib(log, e)
     p_elements = p_elements_model()
     cp = ContentParser(log)
-    title = cp.one(LoaderModel('title-group', load_title_group))
+    title = cp.one(title_group_model())
     authors = cp.one(LoaderModel('contrib-group', load_author_group))
     cp.once(proto_section_binder('abstract', p_elements), dest.abstract)
     permissions = cp.one(LoaderModel('permissions', load_permissions))
@@ -912,21 +930,17 @@ def load_biblio_ref(log: IssueCallback, e: etree._Element) -> bp.BiblioReference
     return ret
 
 
-def load_ref_list(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
-    check_no_attrib(log, e)
-    cp = ContentParser(log)
-    title = cp.one(title_model('title'))
-    references = cp.every(LoaderModel('ref', load_biblio_ref))
-    cp.parse_array_content(e)
-    return bp.RefList(title.out, list(references))
+class RefListModel(BaseModel[bp.RefList]):
+    def __init__(self) -> None:
+        super().__init__('ref-list')
 
-
-def read_article_back(log: IssueCallback, e: etree._Element) -> bp.RefList | None:
-    check_no_attrib(log, e)
-    p = ContentParser(log)
-    ref_list = p.one(LoaderModel('ref-list', load_ref_list))
-    p.parse_array_content(e)
-    return ref_list.out
+    def load(self, log: IssueCallback, e: etree._Element) -> bp.RefList | None:
+        check_no_attrib(log, e)
+        cp = ContentParser(log)
+        title = cp.one(title_model('title'))
+        references = cp.every(LoaderModel('ref', load_biblio_ref))
+        cp.parse_array_content(e)
+        return bp.RefList(title.out, list(references))
 
 
 def load_article(log: IssueCallback , e: etree._Element) -> bp.Baseprint | None:
@@ -936,7 +950,7 @@ def load_article(log: IssueCallback , e: etree._Element) -> bp.Baseprint | None:
     ret = bp.Baseprint()
     back = e.find("back")
     if back is not None:
-        ret.ref_list = read_article_back(log, back)
+        ret.ref_list = load_single_sub_element(log, back, RefListModel())
         e.remove(back)
     cp = ContentParser(log)
     cp.bind_reader('front', read_article_front, ret)
