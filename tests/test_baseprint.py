@@ -4,13 +4,13 @@ from typing import Tuple
 
 from lxml import etree
 
-import epijats.parse as _
+import epijats.parse.jats as _
 from epijats import html
 from epijats import baseprint as bp
 from epijats.baseprint import Abstract, Baseprint, List
 from epijats import condition as fc
 from epijats import restyle
-from epijats.parse import parse_baseprint
+from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.tree import make_paragraph
 from epijats.xml import xml_element
 
@@ -52,7 +52,7 @@ def assert_bdom_roundtrip(expect: Baseprint):
     xe = xml_sub_element(restyle.article(expect))
     dump = etree.tostring(xe).decode()
     root = xml_fromstring(dump)
-    assert _.parse_baseprint_root(root) == expect
+    assert parse_baseprint_root(root) == expect
 
 
 def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
@@ -66,7 +66,7 @@ def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
 
 def test_minimalish():
     issues = []
-    got = _.parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
+    got = parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
     assert got.authors == [bp.Author(bp.PersonName("Wang"))]
     expect = Abstract()
@@ -81,7 +81,7 @@ def test_roundtrip(case):
     with open(xml_path, "r") as f:
         expect = f.read()
     issues = []
-    bp = _.parse_baseprint(xml_path, issues.append)
+    bp = parse_baseprint(xml_path, issues.append)
     assert bp is not None, issues
     xe = xml_sub_element(restyle.article(bp))
     assert etree.tostring(xe).decode() == expect
@@ -103,12 +103,12 @@ def test_html(case):
 
 
 def test_minimal_html_title():
-    bp = _.parse_baseprint(SNAPSHOT_CASE / "baseprint")
+    bp = parse_baseprint(SNAPSHOT_CASE / "baseprint")
     assert HTML.content_to_str(bp.title) == 'A test'
 
 
 def test_article_title():
-    bp = _.parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
+    bp = parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
     expect = """Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a>"""
     assert HTML.content_to_str(bp.title) == expect
     assert_bdom_roundtrip(bp)
@@ -274,7 +274,7 @@ def test_abstract_restyle():
 
 def test_minimal_with_issues():
     issues = set()
-    bp = _.parse_baseprint_root(xml_fromstring("<article/>"), issues.add)
+    bp = parse_baseprint_root(xml_fromstring("<article/>"), issues.add)
     print(issues)
     assert bp == Baseprint()
     assert len(issues) == 4
