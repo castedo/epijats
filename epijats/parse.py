@@ -11,11 +11,6 @@ from lxml import etree
 
 from . import condition as fc
 from . import baseprint as bp
-from .baseprint import (
-    Baseprint,
-    Hyperlink,
-    Section,
-)
 from .tree import (
     DataElement, Element, MarkupElement, MixedContent, StartTag, make_paragraph
 )
@@ -187,19 +182,38 @@ def load_year(log: IssueCallback, e: etree._Element) -> int | None:
     return read_int(log, e)
 
 
-class Binder(ABC, Generic[DestConT]):
+class Binder(ABC, Generic[DestT]):
     @abstractmethod
-    def bind(self, log: IssueCallback, dest: DestConT) -> Parser: ...
+    def bind(self, log: IssueCallback, dest: DestT) -> Parser: ...
+
+    def as_binders(self) -> Iterable[Binder[DestT]]:
+        return [self]
+
+    def __or__(self, other: Binder[DestT]) -> Binder[DestT]:
+        union = list(self.as_binders()) + list(other.as_binders())
+        return UnionBinder(union)
+
+
+class UnionBinder(Binder[DestT]):
+    def __init__(self, binders: Iterable[Binder[DestT]] = ()):
+        self._binders = list(binders)
+
+    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
+        parsers = [b.bind(log, dest) for b in self._binders]
+        return UnionParser(log, parsers)
+
+    def as_binders(self) -> Iterable[Binder[DestT]]:
+        return self._binders
+
+    def __ior__(self, other: Binder[DestT]) -> UnionBinder[DestT]:
+        self._binders.extend(other.as_binders())
+        return self
 
 
 Sink: TypeAlias = Callable[[ParsedT], None]
-
-class Model(Binder[Sink[ParsedT]]):
-    @abstractmethod
-    def match(self, tag: str) -> Loader[ParsedT] | None: ...
-
-    def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
-        return SinkParser(log, dest, self)
+Model: TypeAlias = Binder[Sink[ParsedT]]
+UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
+EModel: TypeAlias = Model[Element]
 
 
 class SingleElementBinder(Binder[DestT]):
@@ -238,46 +252,81 @@ class ReaderBinderParser(Parser, Generic[DestT]):
         return ret
 
 
+class LoaderParser(Parser, Generic[ParsedT]):
+    def __init__(
+        self,
+        log: IssueCallback,
+        dest: Sink[ParsedT],
+        tags: str | Iterable[str],
+        loader: Loader[ParsedT]
+    ):
+        super().__init__(log)
+        self.dest = dest
+        self._tags = [tags] if isinstance(tags, str) else list(tags)
+        self.loader = loader
+
+    def match(self, tag: str) -> ParseFunc | None:
+        return self._parse if tag in self._tags else None
+
+    def _parse(self, e: etree._Element) -> bool:
+        result = self.loader(self.log, e)
+        if result is not None:
+            if isinstance(result, Element) and e.tail:
+                result.tail = e.tail
+            self.dest(result)
+        return result is not None
+
+
 class LoaderModel(Model[ParsedT]):
     def __init__(self, tag: str, loader: Loader[ParsedT]):
         self._tag = tag
         self._loader = loader
 
-    def match(self, tag: str) -> Loader[ParsedT] | None:
-        return None if tag != self._tag else self._loader
+    def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
+        return LoaderParser(log, dest, self._tag, self._loader)
 
 
 @dataclass
 class Result(Generic[ParsedT]):
     out: ParsedT | None = None
 
+    def __call__(self, parsed: ParsedT) -> None:
+        self.out = parsed
+
 
 class FirstReadParser(Parser, Generic[ParsedT]):
     def __init__(
         self,
-        log: IssueCallback,
-        result: Result[ParsedT],
-        model: Model[ParsedT],
+        parser: Parser,
+        dest: Result[ParsedT],
     ):
-        super().__init__(log)
-        self.result = result
-        self._model = model
+        super().__init__(parser.log)
+        self._parser = parser
+        self._dest = dest
 
     def match(self, tag: str) -> ParseFunc | None:
-        loader = self._model.match(tag)
-        return None if loader is None else self._parse
+        fun = self._parser.match(tag)
+        return None if fun is None else self._parse
 
     def _parse(self, e: etree._Element) -> bool:
         if not isinstance(e.tag, str):
             return False
-        loader = self._model.match(e.tag)
-        if loader is None:
+        fun = self._parser.match(e.tag)
+        if fun is None:
             return False
-        if self.result.out is None:
-            self.result.out = loader(self.log, e)
+        if self._dest.out is None:
+            fun(e)
         else:
             self.log(fc.ExcessElement.issue(e))
         return True
+
+
+class FirstReadBinder(Binder[Result[ParsedT]]):
+    def __init__(self, model: Binder[Sink[ParsedT]]):
+        self._model = model
+
+    def bind(self, log: IssueCallback, dest: Result[ParsedT]) -> Parser:
+        return FirstReadParser(self._model.bind(log, dest), dest)
 
 
 class ContentParser(UnionParser):
@@ -286,7 +335,7 @@ class ContentParser(UnionParser):
 
     def one(self, model: Model[ParsedT]) -> Result[ParsedT]:
         ret = Result[ParsedT]()
-        self._parsers.append(FirstReadParser(self.log, ret, model))
+        self.bind(FirstReadBinder(model), ret)
         return ret
 
     def every(self, binder: Binder[Sink[ParsedT]]) -> Sequence[ParsedT]:
@@ -301,27 +350,11 @@ class ContentParser(UnionParser):
         self.bind(ReaderBinder(tag, reader), dest)
 
 
-if TYPE_CHECKING:
-    ElementHandler: TypeAlias = Callable[[Element], None]
-
-
-class EModel(Model[Element]):
-    def __or__(self, other: EModel) -> EModel:
-        union = self._models.copy() if isinstance(self, UnionModel) else [self]
-        if isinstance(other, UnionModel):
-            union.extend(other._models)
-        elif isinstance(other, EModel):
-            union.append(other)
-        else:
-            raise TypeError()
-        return UnionModel(union)
-
-
 def parse_mixed_content(
     log: IssueCallback, e: etree._Element, emodel: EModel, dest: MixedContent
 ) -> None:
-    eparser = SinkParser(log, dest.append, emodel)
     dest.append_text(e.text)
+    eparser = emodel.bind(log, dest.append)
     for s in e:
         if not eparser.parse_element(s):
             log(fc.UnsupportedElement.issue(s))
@@ -329,36 +362,15 @@ def parse_mixed_content(
             dest.append_text(s.tail)
 
 
-class UnionModel(EModel):
-    def __init__(self, models: Iterable[EModel] | None = None):
-        self._models = list(models) if models else []
-
-    def match(self, tag: str) -> Loader[Element] | None:
-        for m in self._models:
-            ret = m.match(tag)
-            if ret is not None:
-                return ret
-        return None
-
-    def __ior__(self, other: EModel) -> UnionModel:
-        if isinstance(other, UnionModel):
-            self._models.extend(other._models)
-        elif isinstance(other, EModel):
-            self._models.append(other)
-        else:
-            raise TypeError()
-        return self
-
-
-class ElementModelBase(EModel):
+class ElementModelBase(Model[Element]):
     def __init__(self, tag: str):
         self.tag = tag
 
     @abstractmethod
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
 
-    def match(self, tag: str) -> Loader[Element] | None:
-        return self.load if tag == self.tag else None
+    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
+        return LoaderParser(log, dest, self.tag, self.load)
 
 
 class DataElementModel(ElementModelBase):
@@ -385,39 +397,15 @@ class HtmlDataElementModel(DataElementModel):
         return ret
 
 
-class SinkParser(Parser, Generic[ParsedT]):
-    def __init__(self, log: IssueCallback, dest: Sink[ParsedT], model: Model[ParsedT]):
-        super().__init__(log)
-        self.dest = dest
-        self.model = model
-
-    def match(self, tag: str) -> ParseFunc | None:
-        loader = self.model.match(tag)
-        return None if loader is None else self._parse
-
-    def _parse(self, e: etree._Element) -> bool:
-        if not isinstance(e.tag, str):
-            return False
-        loader = self.model.match(e.tag)
-        if loader is None:
-            return False
-        result = loader(self.log, e)
-        if result is not None:
-            if isinstance(result, Element) and e.tail:
-                result.tail = e.tail
-            self.dest(result)
-        return result is not None
-
-
-class TextElementModel(EModel):
+class TextElementModel(Model[Element]):
     def __init__(self, tagmap: dict[str, str], content_model: EModel | bool = True):
         self.tagmap = tagmap
         self.content_model: EModel | None = None
         if content_model:
             self.content_model = self if content_model == True else content_model
 
-    def match(self, tag: str) -> Loader[Element] | None:
-        return self.load if tag in self.tagmap else None
+    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
+        return LoaderParser(log, dest, self.tagmap.keys(), self.load)
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None
@@ -448,7 +436,7 @@ class ExtLinkModel(ElementModelBase):
             log(fc.MissingAttribute.issue(e, k_href))
             return None
         else:
-            ret = Hyperlink(href)
+            ret = bp.Hyperlink(href)
             parse_mixed_content(log, e, self.content_model, ret.content)
             return ret
 
@@ -641,25 +629,27 @@ def load_author(log: IssueCallback, e: etree._Element) -> bp.Author | None:
     return bp.Author(name.out, email.out, orcid.out)
 
 
-class AutoCorrector(Model[Element]):
-    def __init__(self, p_elements: Model[Element]):
+class AutoCorrectModel(Model[Element]):
+    def __init__(self, p_elements: EModel):
         self.p_elements = p_elements
 
-    def match(self, tag: str) -> Loader[Element] | None:
-        return self.correct if self.p_elements.match(tag) else None
+    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
+        return AutoCorrectParser(log, dest, self.p_elements)
 
-    def correct(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        if not isinstance(e.tag, str):
-            return None
-        loader = self.p_elements.match(e.tag)
-        if loader is None:
-            return None
-        p_element = loader(log, e)
-        if p_element is None:
-            return None
+
+class AutoCorrectParser(Parser):
+    def __init__(self, log: IssueCallback, dest: Sink[Element], p_elements: EModel):
+        super().__init__(log)
+        self.dest = dest
+        self._parser = p_elements.bind(log, self._dest)
+
+    def _dest(self, parsed_p_element: Element) -> None:
         correction = make_paragraph("")
-        correction.content.append(p_element)
-        return correction
+        correction.content.append(parsed_p_element)
+        self.dest(correction)
+
+    def match(self, tag: str) -> ParseFunc | None:
+        return self._parser.match(tag)
 
 
 class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
@@ -670,8 +660,8 @@ class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
     def bind(self, log: IssueCallback, dest: bp.ProtoSection) -> Parser:
         ret = ContentParser(log)
         ret.bind(self.p_level, dest.presection.append)
-        ret.bind(AutoCorrector(self.p_elements), dest.presection.append)
-        ret.bind(SectionModel(self.p_elements), dest.subsections.append)
+        ret.bind(AutoCorrectModel(self.p_elements), dest.presection.append)
+        ret.bind(section_model(self.p_elements), dest.subsections.append)
         return ret
 
 
@@ -691,18 +681,19 @@ def proto_section_binder(tag: str, p_elements: EModel) -> Binder[bp.ProtoSection
     return SingleElementBinder(tag, ProtoSectionContentBinder(p_elements,p_level))
 
 
-class SectionModel(Model[bp.Section]):
+class SectionLoader(Loader[bp.Section]):
     def __init__(self, p_elements: EModel):
         self.content_binder = SectionContentBinder(p_elements)
 
-    def match(self, tag: str) -> Loader[bp.Section] | None:
-        return self.load if tag == 'sec' else None
-
-    def load(self, log: IssueCallback, e: etree._Element) -> bp.Section | None:
+    def __call__(self, log: IssueCallback, e: etree._Element) -> bp.Section | None:
         check_no_attrib(log, e, ['id'])
-        ret = Section([],[], e.attrib.get('id'), MixedContent())
+        ret = bp.Section([],[], e.attrib.get('id'), MixedContent())
         self.content_binder.bind(log, ret).parse_array_content(e)
         return ret
+
+
+def section_model(p_elements: EModel) -> Model[bp.Section]:
+    return LoaderModel('sec', SectionLoader(p_elements))
 
 
 def ref_authors_model() -> Model[list[bp.PersonName | str]]:
@@ -746,7 +737,7 @@ def formatted_text_model(sub_model: EModel | None = None) -> EModel:
 
 def base_hypertext_model() -> EModel:
     """Base hypertext model"""
-    hypertext = UnionModel()
+    hypertext = UnionModel[Element]()
     hypertext |= ExtLinkModel(formatted_text_model())
     hypertext |= CrossReferenceModel(formatted_text_model())
     hypertext |= formatted_text_model(hypertext)
@@ -764,7 +755,7 @@ def p_elements_model() -> EModel:
 
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     # %p-elements
-    p_elements = UnionModel()
+    p_elements = UnionModel[Element]()
     p_elements |= hypertext
     p_elements |= preformatted
     p_elements |= ListModel(p_elements)
@@ -790,7 +781,7 @@ def disp_quote_model(p_elements: EModel) -> EModel:
 
 def p_level_model(p_elements: EModel) -> EModel:
     hypertext = base_hypertext_model()
-    p_level = UnionModel()
+    p_level = UnionModel[Element]()
     p_level |= TextElementModel({'p': 'p'}, p_elements)
     p_level |= TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
     p_level |= ListModel(p_elements)
@@ -942,7 +933,7 @@ def read_article_back(log: IssueCallback, e: etree._Element) -> bp.RefList | Non
     return ref_list.out
 
 
-def load_article(log: IssueCallback , e: etree._Element) -> Baseprint | None:
+def load_article(log: IssueCallback , e: etree._Element) -> bp.Baseprint | None:
     lang = '{http://www.w3.org/XML/1998/namespace}lang'
     confirm_attrib_value(log, e, lang, ['en', None])
     check_no_attrib(log, e, [lang])
@@ -972,7 +963,7 @@ def ignore_issue(issue: fc.FormatIssue) -> None:
 
 def parse_baseprint_root(
     root: etree._Element, log: IssueCallback = ignore_issue
-) -> Baseprint | None:
+) -> bp.Baseprint | None:
     for pi in root.xpath("//processing-instruction()"):
         log(fc.ProcessingInstruction.issue(pi))
         etree.strip_elements(root, pi.tag, with_tail=False)
@@ -982,7 +973,9 @@ def parse_baseprint_root(
     return load_article(log, root)
 
 
-def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint | None:
+def parse_baseprint(
+    src: Path, log: IssueCallback = ignore_issue
+) -> bp.Baseprint | None:
     path = Path(src)
     if path.is_dir():
         xml_path = path / "article.xml"
