@@ -141,7 +141,9 @@ DestConT = TypeVar('DestConT', contravariant=True)
 
 
 class Reader(Protocol, Generic[DestConT]):
-    def __call__(self, log: IssueCallback, e: etree._Element, dest: DestConT) -> bool: ...
+    def __call__(
+        self, log: IssueCallback, e: etree._Element, dest: DestConT
+    ) -> bool: ...
 
 
 ParsedT = TypeVar('ParsedT')
@@ -264,8 +266,10 @@ class ReaderBinderParser(Parser, Generic[DestT]):
         reader = self.model.reader(tag)
         if reader is None:
             return None
+
         def ret(e: etree._Element) -> bool:
             return reader(self.log, e, self.dest)
+
         return ret
 
 
@@ -275,7 +279,7 @@ class LoaderParser(Parser, Generic[ParsedT]):
         log: IssueCallback,
         dest: Sink[ParsedT],
         tags: str | Iterable[str],
-        loader: Loader[ParsedT]
+        loader: Loader[ParsedT],
     ):
         super().__init__(log)
         self.dest = dest
@@ -372,6 +376,11 @@ class ContentParser(UnionParser):
 
     def bind_reader(self, tag: str, reader: Reader[DestT], dest: DestT) -> None:
         self.bind(ReaderBinder(tag, reader), dest)
+
+    def bind_loader(
+        self, tag: str, loader: Loader[ParsedT], dest: Sink[ParsedT]
+    ) -> None:
+        self.bind(LoaderModel(tag, loader), dest)
 
 
 class SingleSubElementReader(Reader[DestT]):

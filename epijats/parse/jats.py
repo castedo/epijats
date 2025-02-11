@@ -12,7 +12,6 @@ from .kit import (
     Binder,
     ContentParser,
     IssueCallback,
-    Loader,
     LoaderModel,
     Model,
     Parser,
@@ -104,11 +103,13 @@ class TableCellModel(BaseModel[Element]):
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
+
 def mixed_element_model(tag: str) -> Model[MixedContent]:
     return LoaderModel(tag, MixedContentLoader(base_hypertext_model()))
 
 
 title_model = mixed_element_model
+
 
 def hypertext_element_binder(tag: str) -> Binder[MixedContent]:
     return MixedContentBinder(tag, base_hypertext_model())
@@ -213,23 +214,28 @@ class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
         ret = ContentParser(log)
         ret.bind(self.p_level, dest.presection.append)
         ret.bind(AutoCorrectModel(self.p_elements), dest.presection.append)
-        ret.bind(section_model(self.p_elements), dest.subsections.append)
+        ret.bind(SectionModel(self.p_elements), dest.subsections.append)
         return ret
 
 
 def proto_section_binder(tag: str, p_elements: EModel) -> Binder[bp.ProtoSection]:
     p_level = TextElementModel({'p': 'p'}, p_elements)
-    return kit.SingleElementBinder(tag, ProtoSectionContentBinder(p_elements,p_level))
+    return kit.SingleElementBinder(tag, ProtoSectionContentBinder(p_elements, p_level))
 
 
-class SectionLoader(Loader[bp.Section]):
+class SectionModel(BaseModel[bp.Section]):
+    """<sec> Section
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
+    """
+
     def __init__(self, p_elements: EModel):
+        super().__init__('sec')
         p_level = p_level_model(p_elements)
         self._proto = ProtoSectionContentBinder(p_elements, p_level)
 
-    def __call__(self, log: IssueCallback, e: etree._Element) -> bp.Section | None:
+    def load(self, log: IssueCallback, e: etree._Element) -> bp.Section | None:
         kit.check_no_attrib(log, e, ['id'])
-        ret = bp.Section([],[], e.attrib.get('id'), MixedContent())
+        ret = bp.Section([], [], e.attrib.get('id'), MixedContent())
         cp = ContentParser(log)
         cp.bind(title_binder('title'), ret.title)
         cp.bind(self._proto, ret)
@@ -237,35 +243,29 @@ class SectionLoader(Loader[bp.Section]):
         return ret
 
 
-def section_model(p_elements: EModel) -> Model[bp.Section]:
-    return LoaderModel('sec', SectionLoader(p_elements))
+class RefAuthorsModel(BaseModel[list[bp.PersonName | str]]):
+    """<person-group> Person Group for a Cited Publication
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/person-group.html
+    """
 
+    def __init__(self) -> None:
+        super().__init__('person-group')
 
-def ref_authors_model() -> Model[list[bp.PersonName | str]]:
-    return LoaderModel('person-group', load_ref_authors)
-
-
-def load_ref_authors(
-    log: IssueCallback, e: etree._Element
-) -> list[bp.PersonName | str] | None:
-    ret: list[bp.PersonName | str] = []
-    k = 'person-group-type'
-    kit.check_no_attrib(log, e, [k])
-    v = e.attrib.get(k, "")
-    if v != 'author':
-        log(fc.UnsupportedAttributeValue.issue(e, k, v))
-        return None
-    kit.prep_array_elements(log, e)
-    for s in e:
-        if s.tag == 'name':
-            if pname := load_person_name(log, s):
-                ret.append(pname)
-        elif s.tag == 'string-name':
-            if sname := kit.load_string(log, s):
-                ret.append(sname)
-        else:
-            log(fc.UnsupportedElement.issue(s))
-    return ret
+    def load(
+        self, log: IssueCallback, e: etree._Element
+    ) -> list[bp.PersonName | str] | None:
+        ret: list[bp.PersonName | str] = []
+        k = 'person-group-type'
+        kit.check_no_attrib(log, e, [k])
+        v = e.attrib.get(k, "")
+        if v != 'author':
+            log(fc.UnsupportedAttributeValue.issue(e, k, v))
+            return None
+        cp = ContentParser(log)
+        cp.bind_loader('name', load_person_name, ret.append)
+        cp.bind_loader('string-name', kit.load_string, ret.append)
+        cp.parse_array_content(e)
+        return ret
 
 
 def formatted_text_model(sub_model: EModel | None = None) -> EModel:
@@ -319,7 +319,7 @@ def table_wrap_model(p_elements: EModel) -> EModel:
 
 def disp_quote_model(p_elements: EModel) -> EModel:
     p = TextElementModel({'p': 'p'}, p_elements)
-    ret =  HtmlDataElementModel('disp-quote', p)
+    ret = HtmlDataElementModel('disp-quote', p)
     ret.html = StartTag('blockquote')
     return ret
 
@@ -417,7 +417,7 @@ def read_element_citation(
     kit.check_no_attrib(log, e, ['publication-type'])
     ap = ContentParser(log)
     title = ap.one(title_model('article-title'))
-    authors = ap.one(ref_authors_model())
+    authors = ap.one(RefAuthorsModel())
     year = ap.one(LoaderModel('year', kit.load_year))
     fields = {}
     for key in bp.BiblioReference.BIBLIO_FIELD_KEYS:
@@ -434,7 +434,7 @@ def read_element_citation(
     ]:
         log(
             fc.UnsupportedAttributeValue.issue(
-                 e, 'publication-type', dest.publication_type
+                e, 'publication-type', dest.publication_type
             )
         )
     dest.article_title = title.out
@@ -470,7 +470,10 @@ class RefListModel(BaseModel[bp.RefList]):
         return bp.RefList(title.out, list(references))
 
 
-def load_article(log: IssueCallback , e: etree._Element) -> bp.Baseprint | None:
+def load_article(log: IssueCallback, e: etree._Element) -> bp.Baseprint | None:
+    """Loader function for <article>
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article.html
+    """
     lang = '{http://www.w3.org/XML/1998/namespace}lang'
     kit.confirm_attrib_value(log, e, lang, ['en', None])
     kit.check_no_attrib(log, e, [lang])
