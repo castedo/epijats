@@ -93,7 +93,7 @@ def abstract(src: baseprint.Abstract) -> DataElement:
     return proto_section('abstract', src)
 
 
-def biblio_ref(src: baseprint.BiblioReference) -> DataElement:
+def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
     stag = StartTag('element-citation', {'publication-type': src.publication_type})
     ec = DataElement(stag)
     if src.authors:
@@ -121,7 +121,7 @@ def ref_list(src: baseprint.RefList) -> DataElement:
     if src.title is not None:
         ret.append(MarkupElement('title', src.title))
     for ref in src.references:
-        ret.append(biblio_ref(ref))
+        ret.append(biblio_ref_item(ref))
     return ret
 
 

@@ -170,7 +170,7 @@ class Abstract(ProtoSection):
 
 
 @dataclass
-class BiblioReference:
+class BiblioRefItem:
     id: str
     publication_type: str
     authors: list[PersonName | str]
@@ -179,12 +179,14 @@ class BiblioReference:
     biblio_fields: dict[str, str]
 
     BIBLIO_FIELD_KEYS: ClassVar[list[str]] = [
+        'source',
+        'publisher-name',
+        'publisher-loc',
         'edition',
         'fpage',
         'isbn',
         'issn',
         'lpage',
-        'source',
         'uri',
         'volume',
     ]
@@ -201,7 +203,7 @@ class BiblioReference:
 @dataclass
 class RefList:
     title: MixedContent | None
-    references: list[BiblioReference]
+    references: list[BiblioRefItem]
 
 
 @dataclass

@@ -8,11 +8,11 @@ from ..tree import Element, MixedContent, StartTag, make_paragraph
 
 from . import kit
 from .kit import (
-    BaseModel,
+    TagModelBase,
     Binder,
     ContentParser,
     IssueCallback,
-    LoaderModel,
+    tag_model,
     Model,
     Parser,
     ReaderBinder,
@@ -25,12 +25,13 @@ from .tree import (
     HtmlDataElementModel,
     MixedContentBinder,
     MixedContentLoader,
+    TagElementModelBase,
     TextElementModel,
     parse_mixed_content,
 )
 
 
-class ExtLinkModel(BaseModel[Element]):
+class ExtLinkModel(TagElementModelBase):
     def __init__(self, content_model: EModel):
         super().__init__('ext-link')
         self.content_model = content_model
@@ -52,7 +53,7 @@ class ExtLinkModel(BaseModel[Element]):
             return ret
 
 
-class CrossReferenceModel(BaseModel[Element]):
+class CrossReferenceModel(TagElementModelBase):
     def __init__(self, content_model: EModel):
         super().__init__('xref')
         self.content_model = content_model
@@ -72,7 +73,7 @@ class CrossReferenceModel(BaseModel[Element]):
         return ret
 
 
-class ListModel(BaseModel[Element]):
+class ListModel(TagElementModelBase):
     def __init__(self, p_elements_model: EModel):
         super().__init__('list')
         # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
@@ -91,7 +92,7 @@ class ListModel(BaseModel[Element]):
         return ret
 
 
-class TableCellModel(BaseModel[Element]):
+class TableCellModel(TagElementModelBase):
     def __init__(self, content_model: EModel, *, header: bool):
         super().__init__('th' if header else 'td')
         self.content_model = content_model
@@ -105,7 +106,7 @@ class TableCellModel(BaseModel[Element]):
 
 
 def mixed_element_model(tag: str) -> Model[MixedContent]:
-    return LoaderModel(tag, MixedContentLoader(base_hypertext_model()))
+    return tag_model(tag, MixedContentLoader(base_hypertext_model()))
 
 
 title_model = mixed_element_model
@@ -124,7 +125,7 @@ def title_group_model() -> Model[MixedContent]:
 
 
 def orcid_model() -> Model[bp.Orcid]:
-    return LoaderModel('contrib-id', load_orcid)
+    return tag_model('contrib-id', load_orcid)
 
 
 def load_orcid(log: IssueCallback, e: etree._Element) -> bp.Orcid | None:
@@ -144,20 +145,20 @@ def load_orcid(log: IssueCallback, e: etree._Element) -> bp.Orcid | None:
 def load_author_group(log: IssueCallback, e: etree._Element) -> list[bp.Author] | None:
     kit.check_no_attrib(log, e)
     acp = ContentParser(log)
-    ret = acp.every(LoaderModel('contrib', load_author))
+    ret = acp.every(tag_model('contrib', load_author))
     acp.parse_array_content(e)
     return list(ret)
 
 
 def person_name_model() -> Model[bp.PersonName]:
-    return LoaderModel('name', load_person_name)
+    return tag_model('name', load_person_name)
 
 
 def load_person_name(log: IssueCallback, e: etree._Element) -> bp.PersonName | None:
     kit.check_no_attrib(log, e)
     p = ContentParser(log)
-    surname = p.one(LoaderModel('surname', kit.load_string))
-    given_names = p.one(LoaderModel('given-names', kit.load_string))
+    surname = p.one(tag_model('surname', kit.load_string))
+    given_names = p.one(tag_model('given-names', kit.load_string))
     p.parse_array_content(e)
     if not surname.out and not given_names.out:
         log(fc.MissingContent.issue(e))
@@ -173,7 +174,7 @@ def load_author(log: IssueCallback, e: etree._Element) -> bp.Author | None:
     kit.check_no_attrib(log, e, ['contrib-type', 'id'])
     p = ContentParser(log)
     name = p.one(person_name_model())
-    email = p.one(LoaderModel('email', kit.load_string))
+    email = p.one(tag_model('email', kit.load_string))
     orcid = p.one(orcid_model())
     p.parse_array_content(e)
     if name.out is None:
@@ -223,7 +224,7 @@ def proto_section_binder(tag: str, p_elements: EModel) -> Binder[bp.ProtoSection
     return kit.SingleElementBinder(tag, ProtoSectionContentBinder(p_elements, p_level))
 
 
-class SectionModel(BaseModel[bp.Section]):
+class SectionModel(TagModelBase[bp.Section]):
     """<sec> Section
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
@@ -243,7 +244,7 @@ class SectionModel(BaseModel[bp.Section]):
         return ret
 
 
-class RefAuthorsModel(BaseModel[list[bp.PersonName | str]]):
+class RefAuthorsModel(TagModelBase[list[bp.PersonName | str]]):
     """<person-group> Person Group for a Cited Publication
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/person-group.html
     """
@@ -262,8 +263,8 @@ class RefAuthorsModel(BaseModel[list[bp.PersonName | str]]):
             log(fc.UnsupportedAttributeValue.issue(e, k, v))
             return None
         cp = ContentParser(log)
-        cp.bind_loader('name', load_person_name, ret.append)
-        cp.bind_loader('string-name', kit.load_string, ret.append)
+        cp.bind(tag_model('name', load_person_name), ret.append)
+        cp.bind(tag_model('string-name', kit.load_string), ret.append)
         cp.parse_array_content(e)
         return ret
 
@@ -364,8 +365,8 @@ def load_license(log: IssueCallback, e: etree._Element) -> bp.License | None:
     ret = bp.License(MixedContent(), "", None)
     kit.check_no_attrib(log, e)
     ap = ContentParser(log)
-    ap.once(hypertext_element_binder('license-p'), ret.license_p)
-    ap.once(ReaderBinder(f"{ali}license_ref", read_license_ref), ret)
+    ap.bind(hypertext_element_binder('license-p').once(), ret.license_p)
+    ap.bind(ReaderBinder(f"{ali}license_ref", read_license_ref).once(), ret)
     ap.parse_array_content(e)
     return None if ret.blank() else ret
 
@@ -374,7 +375,7 @@ def load_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | 
     kit.check_no_attrib(log, e)
     ap = ContentParser(log)
     statement = ap.one(mixed_element_model('copyright-statement'))
-    license = ap.one(LoaderModel("license", load_license))
+    license = ap.one(tag_model("license", load_license))
     ap.parse_array_content(e)
     if license.out is None or statement.out is None or statement.out.blank():
         return None
@@ -388,9 +389,9 @@ def read_article_meta(
     p_elements = p_elements_model()
     cp = ContentParser(log)
     title = cp.one(title_group_model())
-    authors = cp.one(LoaderModel('contrib-group', load_author_group))
-    cp.once(proto_section_binder('abstract', p_elements), dest.abstract)
-    permissions = cp.one(LoaderModel('permissions', load_permissions))
+    authors = cp.one(tag_model('contrib-group', load_author_group))
+    cp.bind(proto_section_binder('abstract', p_elements).once(), dest.abstract)
+    permissions = cp.one(tag_model('permissions', load_permissions))
     cp.parse_array_content(e)
     if title.out:
         dest.title = title.out
@@ -406,22 +407,22 @@ def read_article_front(
 ) -> bool:
     kit.check_no_attrib(log, e)
     cp = ContentParser(log)
-    cp.once(ReaderBinder('article-meta', read_article_meta), dest)
+    cp.bind(ReaderBinder('article-meta', read_article_meta).once(), dest)
     cp.parse_array_content(e)
     return True
 
 
 def read_element_citation(
-    log: IssueCallback, e: etree._Element, dest: bp.BiblioReference
+    log: IssueCallback, e: etree._Element, dest: bp.BiblioRefItem
 ) -> bool:
     kit.check_no_attrib(log, e, ['publication-type'])
     ap = ContentParser(log)
     title = ap.one(title_model('article-title'))
     authors = ap.one(RefAuthorsModel())
-    year = ap.one(LoaderModel('year', kit.load_year))
+    year = ap.one(tag_model('year', kit.load_year))
     fields = {}
-    for key in bp.BiblioReference.BIBLIO_FIELD_KEYS:
-        fields[key] = ap.one(LoaderModel(key, kit.load_string))
+    for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
+        fields[key] = ap.one(tag_model(key, kit.load_string))
     ap.parse_array_content(e)
     dest.publication_type = e.get('publication-type', '')
     if dest.publication_type not in [
@@ -447,17 +448,25 @@ def read_element_citation(
     return True
 
 
-def load_biblio_ref(log: IssueCallback, e: etree._Element) -> bp.BiblioReference | None:
-    ret = bp.BiblioReference()
-    kit.check_no_attrib(log, e, ['id'])
-    cp = ContentParser(log)
-    cp.once(ReaderBinder('element-citation', read_element_citation), ret)
-    cp.parse_array_content(e)
-    ret.id = e.attrib.get('id', "")
-    return ret
+class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
+    """<ref> Reference Item
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/ref.html
+    """
+    def __init__(self) -> None:
+        super().__init__('ref')
+
+    def load(self, log: IssueCallback, e: etree._Element) -> bp.BiblioRefItem | None:
+        ret = bp.BiblioRefItem()
+        kit.check_no_attrib(log, e, ['id'])
+        cp = ContentParser(log)
+        cp.bind(ReaderBinder('element-citation', read_element_citation).once(), ret)
+        cp.parse_array_content(e)
+        ret.id = e.attrib.get('id', "")
+        return ret
 
 
-class RefListModel(BaseModel[bp.RefList]):
+class RefListModel(TagModelBase[bp.RefList]):
     def __init__(self) -> None:
         super().__init__('ref-list')
 
@@ -465,13 +474,14 @@ class RefListModel(BaseModel[bp.RefList]):
         kit.check_no_attrib(log, e)
         cp = ContentParser(log)
         title = cp.one(title_model('title'))
-        references = cp.every(LoaderModel('ref', load_biblio_ref))
+        references = cp.every(BiblioRefItemModel())
         cp.parse_array_content(e)
         return bp.RefList(title.out, list(references))
 
 
 def load_article(log: IssueCallback, e: etree._Element) -> bp.Baseprint | None:
     """Loader function for <article>
+
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article.html
     """
     lang = '{http://www.w3.org/XML/1998/namespace}lang'
@@ -483,7 +493,7 @@ def load_article(log: IssueCallback, e: etree._Element) -> bp.Baseprint | None:
         ret.ref_list = kit.load_single_sub_element(log, back, RefListModel())
         e.remove(back)
     cp = ContentParser(log)
-    cp.bind_reader('front', read_article_front, ret)
+    cp.bind(ReaderBinder('front', read_article_front), ret)
     cp.bind(proto_section_binder('body', p_elements_model()), ret.body)
     cp.parse_array_content(e)
     if ret.title.blank():

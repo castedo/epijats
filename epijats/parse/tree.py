@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TypeAlias
+from abc import abstractmethod
+from typing import Iterable, TypeAlias
 
 from lxml import etree
 
@@ -9,7 +10,7 @@ from ..tree import DataElement, Element, MarkupElement, MixedContent, StartTag
 
 from . import kit
 from .kit import (
-    BaseModel,
+    ReaderBinderParser,
     Binder,
     IssueCallback,
     Loader,
@@ -34,7 +35,37 @@ def parse_mixed_content(
             dest.append_text(s.tail)
 
 
-class DataElementModel(BaseModel[Element]):
+class ElementModelBase(Model[Element]):
+    @property
+    @abstractmethod
+    def tags(self) -> Iterable[str]: ...
+
+    @abstractmethod
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        ...
+
+    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
+        return ReaderBinderParser(log, dest, self.tags, self.read)
+
+    def read(self, log: IssueCallback, e: etree._Element, dest: Sink[Element]) -> bool:
+        parsed = self.load(log, e)
+        if parsed is not None:
+            if isinstance(parsed, Element) and e.tail:
+                parsed.tail = e.tail
+            dest(parsed)
+        return parsed is not None
+
+
+class TagElementModelBase(ElementModelBase):
+    def __init__(self, tag: str):
+        self.tag = tag
+
+    @property
+    def tags(self) -> Iterable[str]:
+        return [self.tag]
+
+
+class DataElementModel(TagElementModelBase):
     def __init__(self, tag: str, content_model: EModel):
         super().__init__(tag)
         self.content_model = content_model
@@ -58,15 +89,16 @@ class HtmlDataElementModel(DataElementModel):
         return ret
 
 
-class TextElementModel(Model[Element]):
+class TextElementModel(ElementModelBase):
     def __init__(self, tagmap: dict[str, str], content_model: EModel | bool = True):
         self.tagmap = tagmap
         self.content_model: EModel | None = None
         if content_model:
             self.content_model = self if content_model == True else content_model
 
-    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
-        return kit.LoaderParser(log, dest, self.tagmap.keys(), self.load)
+    @property
+    def tags(self) -> Iterable[str]:
+        return self.tagmap.keys()
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None

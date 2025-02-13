@@ -9,7 +9,6 @@ from typing import Generic, Protocol, Sequence, TypeAlias, TypeVar
 from lxml import etree
 
 from .. import condition as fc
-from ..tree import Element
 
 
 IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
@@ -198,6 +197,9 @@ class Binder(ABC, Generic[DestT]):
     def as_binders(self) -> Iterable[Binder[DestT]]:
         return [self]
 
+    def once(self: Binder[DestT]) -> Binder[DestT]:
+        return OnlyOnceBinder(self)
+
     def __or__(self, other: Binder[DestT]) -> Binder[DestT]:
         union = list(self.as_binders()) + list(other.as_binders())
         return UnionBinder(union)
@@ -224,7 +226,7 @@ Model: TypeAlias = Binder[Sink[ParsedT]]
 UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
 
 
-class BaseModel(Model[ParsedT]):
+class TagModelBase(Model[ParsedT]):
     def __init__(self, tag: str):
         self.tag = tag
 
@@ -232,7 +234,7 @@ class BaseModel(Model[ParsedT]):
     def load(self, log: IssueCallback, e: etree._Element) -> ParsedT | None: ...
 
     def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
-        return LoaderParser(log, dest, self.tag, self.load)
+        return ReaderBinderParser(log, dest, self.tag, LoaderReader(self.load))
 
 
 class SingleElementBinder(Binder[DestT]):
@@ -249,62 +251,43 @@ class ReaderBinder(Binder[DestT]):
         self.tag = tag
         self._reader = reader
 
-    def reader(self, tag: str) -> Reader[DestT] | None:
-        return self._reader if tag == self.tag else None
-
     def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        return ReaderBinderParser(log, dest, self)
+        return ReaderBinderParser(log, dest, self.tag, self._reader)
 
 
 class ReaderBinderParser(Parser, Generic[DestT]):
-    def __init__(self, log: IssueCallback, dest: DestT, model: ReaderBinder[DestT]):
-        super().__init__(log)
-        self.dest = dest
-        self.model = model
-
-    def match(self, tag: str) -> ParseFunc | None:
-        reader = self.model.reader(tag)
-        if reader is None:
-            return None
-
-        def ret(e: etree._Element) -> bool:
-            return reader(self.log, e, self.dest)
-
-        return ret
-
-
-class LoaderParser(Parser, Generic[ParsedT]):
     def __init__(
         self,
         log: IssueCallback,
-        dest: Sink[ParsedT],
-        tags: str | Iterable[str],
-        loader: Loader[ParsedT],
+        dest: DestT,
+        tag: str | Iterable[str],
+        reader: Reader[DestT]
     ):
         super().__init__(log)
         self.dest = dest
-        self._tags = [tags] if isinstance(tags, str) else list(tags)
-        self.loader = loader
+        self._tags = [tag] if isinstance(tag, str) else list(tag)
+        self._reader = reader
 
     def match(self, tag: str) -> ParseFunc | None:
         return self._parse if tag in self._tags else None
 
     def _parse(self, e: etree._Element) -> bool:
-        result = self.loader(self.log, e)
-        if result is not None:
-            if isinstance(result, Element) and e.tail:
-                result.tail = e.tail
-            self.dest(result)
-        return result is not None
+        return self._reader(self.log, e, self.dest)
 
 
-class LoaderModel(Model[ParsedT]):
-    def __init__(self, tag: str, loader: Loader[ParsedT]):
-        self._tag = tag
+class LoaderReader(Reader[Sink[ParsedT]]):
+    def __init__(self, loader: Loader[ParsedT]):
         self._loader = loader
 
-    def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
-        return LoaderParser(log, dest, self._tag, self._loader)
+    def __call__(self, log: IssueCallback, e: etree._Element, dest: Sink[ParsedT]) -> bool:
+        parsed = self._loader(log, e)
+        if parsed is not None:
+            dest(parsed)
+        return parsed is not None
+
+
+def tag_model(tag: str, loader: Loader[ParsedT]) -> Model[ParsedT]:
+    return ReaderBinder(tag, LoaderReader(loader))
 
 
 class OnlyOnceParser(Parser):
@@ -346,21 +329,14 @@ class Result(Generic[ParsedT]):
         self.out = parsed
 
 
-class FirstReadBinder(Binder[Result[ParsedT]]):
-    def __init__(self, model: Model[ParsedT]):
-        self._model = model
-
-    def bind(self, log: IssueCallback, dest: Result[ParsedT]) -> Parser:
-        return OnlyOnceParser(self._model.bind(log, dest))
-
-
 class ContentParser(UnionParser):
     def __init__(self, log: IssueCallback):
         super().__init__(log)
 
     def one(self, model: Model[ParsedT]) -> Result[ParsedT]:
         ret = Result[ParsedT]()
-        self.bind(FirstReadBinder(model), ret)
+        sink: Sink[ParsedT] = ret
+        self.bind(model.once(), sink)
         return ret
 
     def every(self, binder: Binder[Sink[ParsedT]]) -> Sequence[ParsedT]:
@@ -371,17 +347,6 @@ class ContentParser(UnionParser):
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
         self._parsers.append(binder.bind(self.log, dest))
 
-    def once(self, binder: Binder[DestT], dest: DestT) -> None:
-        self.bind(OnlyOnceBinder(binder), dest)
-
-    def bind_reader(self, tag: str, reader: Reader[DestT], dest: DestT) -> None:
-        self.bind(ReaderBinder(tag, reader), dest)
-
-    def bind_loader(
-        self, tag: str, loader: Loader[ParsedT], dest: Sink[ParsedT]
-    ) -> None:
-        self.bind(LoaderModel(tag, loader), dest)
-
 
 class SingleSubElementReader(Reader[DestT]):
     def __init__(self, binder: Binder[DestT]):
@@ -390,7 +355,7 @@ class SingleSubElementReader(Reader[DestT]):
     def __call__(self, log: IssueCallback, e: etree._Element, dest: DestT) -> bool:
         check_no_attrib(log, e)
         cp = ContentParser(log)
-        cp.once(self._binder, dest)
+        cp.bind(self._binder.once(), dest)
         cp.parse_array_content(e)
         return True
 
