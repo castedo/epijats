@@ -11,7 +11,7 @@ from epijats.baseprint import Abstract, Baseprint, List
 from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
-from epijats.tree import make_paragraph
+from epijats.tree import Element, make_paragraph
 from epijats.xml import xml_element
 
 
@@ -33,25 +33,36 @@ def assert_eq_if_exists(got: str, expect: Path):
             assert got == f.read()
 
 
-def xml_sub_element(src) -> etree._Element:
-    ret = xml_element(src)
-    ret.tail = "\n"
-    return ret
+def str_from_lxml_element(e: etree._Element) -> str:
+    root = etree.Element("root", nsmap=NSMAP)
+    root.append(e)
+    return etree.tostring(e, method="c14n", exclusive=True).decode()
 
 
-def xml_fromstring(src: str) -> etree._Element:
+def root_wrap(content: str):
+    return ("<root {}>{}</root>\n".format(NSMAP_STR, content))
+
+
+def lxml_root_from_str(src: str) -> etree._Element:
     parser = etree.XMLParser(remove_comments=True, load_dtd=False)
     return etree.fromstring(src, parser=parser)
 
 
-def wrap_xml(content: str):
-    return ("<root {}>{}</root>\n".format(NSMAP_STR, content))
+def lxml_element_from_str(s: str) -> etree._Element:
+    root = lxml_root_from_str(root_wrap(s.strip()))
+    assert not root.text
+    assert len(root) == 1
+    return root[0]
+
+
+def str_from_element(ele: Element) -> str:
+    return str_from_lxml_element(xml_element(ele))
 
 
 def assert_bdom_roundtrip(expect: Baseprint):
-    xe = xml_sub_element(restyle.article(expect))
+    xe = xml_element(restyle.article(expect))
     dump = etree.tostring(xe).decode()
-    root = xml_fromstring(dump)
+    root = lxml_root_from_str(dump)
     assert parse_baseprint_root(root) == expect
 
 
@@ -79,11 +90,11 @@ def test_minimalish():
 def test_roundtrip(case):
     xml_path = ROUNDTRIP_CASE / case / "article.xml"
     with open(xml_path, "r") as f:
-        expect = f.read()
+        expect = f.read().rstrip()
     issues = []
     bp = parse_baseprint(xml_path, issues.append)
     assert bp is not None, issues
-    xe = xml_sub_element(restyle.article(bp))
+    xe = xml_element(restyle.article(bp))
     assert etree.tostring(xe).decode() == expect
     assert not issues
 
@@ -138,33 +149,19 @@ def test_ext_link_xml_parse():
 
 
 def test_nested_ext_link_xml_parse():
-    xml = wrap_xml('Foo<ext-link xlink:href="https://x.es">bar<sup>baz</sup>boo</ext-link>foo')
+    xml = root_wrap('Foo<ext-link xlink:href="https://x.es">bar<sup>baz</sup>boo</ext-link>foo')
     assert xml2html(xml) == ('Foo<a href="https://x.es">bar<sup>baz</sup>boo</a>foo', 0)
-    xml = wrap_xml('Foo<sup><ext-link xlink:href="https://x.es">bar</ext-link>baz</sup>boo')
+    xml = root_wrap('Foo<sup><ext-link xlink:href="https://x.es">bar</ext-link>baz</sup>boo')
     assert xml2html(xml) == ('Foo<sup><a href="https://x.es">bar</a>baz</sup>boo', 0)
-    xml = wrap_xml('Foo<ext-link xlink:href="https://x.es">'
+    xml = root_wrap('Foo<ext-link xlink:href="https://x.es">'
         + '<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
     assert xml2html(xml) == ('Foo<a href="https://x.es">barbaz</a>boo', 1)
-    xml = wrap_xml('<ext-link>Foo<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
+    xml = root_wrap('<ext-link>Foo<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
     assert xml2html(xml) == ('Foo<a href="https://y.es">bar</a>bazboo', 2)
 
 
-def xml_to_root_str(e: etree._Element) -> str:
-    root = etree.Element("root", nsmap=NSMAP)
-    root.text = "\n"
-    root.append(e)
-    root.tail = "\n"
-    return etree.tostring(root).decode()
-
-
-def wrap_to_xml(root_wrap: str) -> etree._Element:
-    root = xml_fromstring(root_wrap)
-    assert root.tag == 'root'
-    return root[0]
-
-
 def test_list_rountrip():
-    dump = wrap_xml("""
+    expect = """\
 <list list-type="bullet">
   <list-item>
     <p>Def <italic>time</italic>.</p>
@@ -176,19 +173,17 @@ bar.</p>
   <list-item>
     <p>Baz</p>
   </list-item>
-</list>
-""")
+</list>"""
     issues = []
     model = _.ListModel(_.p_elements_model())
-    subel = model.load(issues.append, wrap_to_xml(dump))
+    subel = model.load(issues.append, lxml_element_from_str(expect))
     assert isinstance(subel, List)
     assert len(list(subel)) == 3
-    xe = xml_sub_element(subel)
-    assert xml_to_root_str(xe) == dump
+    assert str_from_element(subel) == expect
 
 
 def test_list_ordered_rountrip():
-    dump = wrap_xml("""
+    expect = """\
 <list list-type="order">
   <list-item>
     <p>Def <italic>time</italic>.</p>
@@ -197,19 +192,17 @@ def test_list_ordered_rountrip():
     <p>Foo
 bar.</p>
   </list-item>
-</list>
-""")
+</list>"""
     issues = []
     model = _.ListModel(_.p_elements_model())
-    subel = model.load(issues.append, wrap_to_xml(dump))
+    subel = model.load(issues.append, lxml_element_from_str(expect))
     assert isinstance(subel, List)
     assert len(list(subel)) == 2
-    xe = xml_sub_element(subel)
-    assert xml_to_root_str(xe) == dump
+    assert str_from_element(subel) == expect
 
 
 def test_author_restyle():
-    dump = wrap_xml("""
+    expect = """\
 <contrib-group>
   <contrib contrib-type="author">
     <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
@@ -219,18 +212,17 @@ def test_author_restyle():
     </name>
     <email>castedo@castedo.com</email>
   </contrib>
-</contrib-group>
-""")
+</contrib-group>"""
     issues = []
-    authors = _.load_author_group(issues.append, wrap_to_xml(dump))
+    authors = _.load_author_group(issues.append, lxml_element_from_str(expect))
     assert authors is not None
     assert len(issues) == 0
-    x = xml_sub_element(restyle.contrib_group(authors))
-    assert xml_to_root_str(x) == dump
+    ele = restyle.contrib_group(authors)
+    assert str_from_element(ele) == expect
 
 
 def test_abstract_restyle():
-    bad_style = wrap_xml("""
+    bad_style = """\
 <abstract>
     <p>OK</p>
                 <list list-type="bullet">
@@ -239,10 +231,9 @@ def test_abstract_restyle():
         </list-item>
     </list>
                 <p>OK</p>
-</abstract>
-""")
-    (bdom, _) = parse_abstract(wrap_to_xml(bad_style))
-    restyled = wrap_xml("""
+</abstract>"""
+    (bdom, _) = parse_abstract(lxml_element_from_str(bad_style))
+    restyled = """\
 <abstract>
   <p>OK</p>
   <p><list list-type="bullet">
@@ -251,10 +242,9 @@ def test_abstract_restyle():
       </list-item>
     </list></p>
   <p>OK</p>
-</abstract>
-""")
-    xe = xml_sub_element(restyle.abstract(bdom))
-    assert xml_to_root_str(xe) == restyled
+</abstract>"""
+    xe = xml_element(restyle.abstract(bdom))
+    assert str_from_lxml_element(xe) == restyled
 
     issues = []
     (roundtrip, issues) = parse_abstract(xe)
@@ -274,7 +264,7 @@ def test_abstract_restyle():
 
 def test_minimal_with_issues():
     issues = set()
-    bp = parse_baseprint_root(xml_fromstring("<article/>"), issues.add)
+    bp = parse_baseprint_root(lxml_root_from_str("<article/>"), issues.add)
     print(issues)
     assert bp == Baseprint()
     assert len(issues) == 4
@@ -299,7 +289,6 @@ def test_minimal_with_issues():
   </front>
   <body>
   </body>
-</article>
-"""
-    xe = xml_sub_element(restyle.article(bp))
+</article>"""
+    xe = xml_element(restyle.article(bp))
     assert etree.tostring(xe).decode() == expect
