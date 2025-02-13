@@ -11,7 +11,7 @@ from .xml import ElementFormatter
 
 
 def _html_to_str(*ins: str | HtmlElement) -> str:
-    ss = [x if isinstance(x, str) else tostring(x).decode() for x in ins]
+    ss = [x if isinstance(x, str) else tostring(x, encoding='unicode') for x in ins]
     return "".join(ss)
 
 
