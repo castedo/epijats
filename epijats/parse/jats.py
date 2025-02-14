@@ -466,17 +466,17 @@ class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
         return ret
 
 
-class RefListModel(TagModelBase[bp.RefList]):
+class RefListModel(TagModelBase[bp.BiblioRefList]):
     def __init__(self) -> None:
         super().__init__('ref-list')
 
-    def load(self, log: IssueCallback, e: etree._Element) -> bp.RefList | None:
+    def load(self, log: IssueCallback, e: etree._Element) -> bp.BiblioRefList | None:
         kit.check_no_attrib(log, e)
         cp = ContentParser(log)
         title = cp.one(title_model('title'))
         references = cp.every(BiblioRefItemModel())
         cp.parse_array_content(e)
-        return bp.RefList(title.out, list(references))
+        return bp.BiblioRefList(title.out, list(references))
 
 
 def load_article(log: IssueCallback, e: etree._Element) -> bp.Baseprint | None:

@@ -201,7 +201,7 @@ class BiblioRefItem:
 
 
 @dataclass
-class RefList:
+class BiblioRefList:
     title: MixedContent | None
     references: list[BiblioRefItem]
 
@@ -213,7 +213,7 @@ class Baseprint:
     abstract: Abstract
     permissions: Permissions | None
     body: ProtoSection
-    ref_list: RefList | None
+    ref_list: BiblioRefList | None
 
     def __init__(self) -> None:
         self.title = MixedContent()

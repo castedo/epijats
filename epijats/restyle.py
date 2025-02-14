@@ -116,7 +116,7 @@ def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
     return ret
 
 
-def ref_list(src: baseprint.RefList) -> DataElement:
+def ref_list(src: baseprint.BiblioRefList) -> DataElement:
     ret = DataElement('ref-list', [])
     if src.title is not None:
         ret.append(MarkupElement('title', src.title))

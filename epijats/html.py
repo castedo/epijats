@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Iterable
 from warnings import warn
 
 from lxml.html import HtmlElement, tostring
@@ -10,7 +11,7 @@ from .tree import Element, MixedContent
 from .xml import ElementFormatter
 
 
-def _html_to_str(*ins: str | HtmlElement) -> str:
+def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
     ss = [x if isinstance(x, str) else tostring(x, encoding='unicode') for x in ins]
     return "".join(ss)
 
@@ -37,10 +38,10 @@ class HtmlGenerator(ElementFormatter):
         ss: list[str | HtmlElement] = [src.text]
         for sub in src:
             ss.append(self.tailed_html_element(sub))
-        return _html_to_str(*ss)
+        return html_content_to_str(ss)
 
     def proto_section_to_str(self, src: bp.ProtoSection) -> str:
-        return _html_to_str(*self._proto_section_content(src))
+        return html_content_to_str(self._proto_section_content(src))
 
     def html_element(self, src: Element) -> HtmlElement:
         ret = self.start_element(src)
@@ -52,22 +53,26 @@ class HtmlGenerator(ElementFormatter):
         ret.tail = src.tail
         return ret
 
+    def _copy_content(self, src: MixedContent, dest: HtmlElement) -> None:
+        dest.text = src.text
+        for s in src:
+            dest.append(self.tailed_html_element(s))
+
     def _proto_section_content(
         self,
         src: bp.ProtoSection,
         title: MixedContent | None = None,
         xid: str | None = None,
         level: int = 0,
-    ) -> list[str | HtmlElement]:
+    ) -> Iterable[str | HtmlElement]:
         if level < 6:
             level += 1
         ret: list[str | HtmlElement] = []
         if title:
-            h = E(f"h{level}", title.text)
+            h = E(f"h{level}")
             if xid is not None:
                 h.attrib['id'] = xid
-            for s in title:
-                h.append(self.tailed_html_element(s))
+            self._copy_content(title, h)
             h.tail = "\n"
             ret.append(h)
         for p in src.presection:
@@ -75,4 +80,13 @@ class HtmlGenerator(ElementFormatter):
             ret.append("\n")
         for ss in src.subsections:
             ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
+        return ret
+
+    def references(self, src: bp.BiblioRefList) -> Iterable[str | HtmlElement]:
+        ret: list[str | HtmlElement] = []
+        if src.title:
+            h = E('h2')
+            self._copy_content(src.title, h)
+            h.tail = '\n'
+            ret.append(h)
         return ret
