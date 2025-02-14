@@ -105,7 +105,7 @@ while also having the option to discover newer versions.</p>
           <person-group person-group-type="author">
             <string-name>Wikipedia contributors</string-name>
           </person-group>
-          <year iso-8601-date="2023">2023</year>
+          <year>2023</year>
           <article-title>Journal article tag suite &#8212; Wikipedia, the free encyclopedia</article-title>
           <uri>https://en.wikipedia.org/w/index.php?title=Journal_Article_Tag_Suite&amp;oldid=1172109468</uri>
         </element-citation>
@@ -118,7 +118,7 @@ while also having the option to discover newer versions.</p>
               <given-names>E. Castedo</given-names>
             </name>
           </person-group>
-          <year iso-8601-date="2024">2024</year>
+          <year>2024</year>
           <article-title>Document succession identifiers</article-title>
           <uri>https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo/2</uri>
         </element-citation>

@@ -168,7 +168,7 @@ def load_string(
     return "".join(frags)
 
 
-def read_int(log: IssueCallback, e: etree._Element) -> int | None:
+def load_int(log: IssueCallback, e: etree._Element) -> int | None:
     for s in e:
         log(fc.UnsupportedElement.issue(s))
         if s.tail and s.tail.strip():
@@ -179,15 +179,6 @@ def read_int(log: IssueCallback, e: etree._Element) -> int | None:
     except ValueError:
         log(fc.InvalidInteger.issue(e, text))
         return None
-
-
-def load_year(log: IssueCallback, e: etree._Element) -> int | None:
-    check_no_attrib(log, e, ['iso-8601-date'])
-    expect = (e.text or "").strip()
-    got = e.attrib.get('iso-8601-date', '').strip()
-    if got and expect != got:
-        log(fc.UnsupportedAttributeValue.issue(e, 'iso-8601-date', got))
-    return read_int(log, e)
 
 
 class Binder(ABC, Generic[DestT]):

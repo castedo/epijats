@@ -175,6 +175,7 @@ class BiblioRefItem:
     publication_type: str
     authors: list[PersonName | str]
     year: int | None
+    month: int | None
     article_title: MixedContent | None
     biblio_fields: dict[str, str]
 
@@ -196,6 +197,7 @@ class BiblioRefItem:
         self.publication_type = ""
         self.authors = []
         self.year = None
+        self.month = None
         self.article_title = None
         self.biblio_fields = {}
 

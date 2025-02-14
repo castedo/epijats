@@ -412,6 +412,15 @@ def read_article_front(
     return True
 
 
+def load_month(log: IssueCallback, e: etree._Element) -> int | None:
+    kit.check_no_attrib(log, e)
+    month = kit.load_int(log, e)
+    if month and month not in range(1, 13): 
+        log(fc.UnsupportedAttributeValue.issue(e, 'month', str(month)))
+        month = None
+    return month
+
+
 def read_element_citation(
     log: IssueCallback, e: etree._Element, dest: bp.BiblioRefItem
 ) -> bool:
@@ -419,7 +428,8 @@ def read_element_citation(
     ap = ContentParser(log)
     title = ap.one(title_model('article-title'))
     authors = ap.one(RefAuthorsModel())
-    year = ap.one(tag_model('year', kit.load_year))
+    year = ap.one(tag_model('year', kit.load_int))
+    month = ap.one(tag_model('month', load_month))
     fields = {}
     for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
         fields[key] = ap.one(tag_model(key, kit.load_string))
@@ -442,6 +452,8 @@ def read_element_citation(
     if authors.out:
         dest.authors = authors.out
     dest.year = year.out
+    if dest.year:
+        dest.month = month.out
     for key, parser in fields.items():
         if parser.out:
             dest.biblio_fields[key] = parser.out

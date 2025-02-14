@@ -94,7 +94,9 @@ def abstract(src: baseprint.Abstract) -> DataElement:
 
 
 def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
-    stag = StartTag('element-citation', {'publication-type': src.publication_type})
+    stag = StartTag('element-citation')
+    if src.publication_type:
+        stag.attrib['publication-type'] = src.publication_type
     ec = DataElement(stag)
     if src.authors:
         pg = DataElement(StartTag('person-group', {'person-group-type': 'author'}))
@@ -106,7 +108,10 @@ def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
         ec.append(pg)
     if src.year is not None:
         y = str(src.year)
-        ec.append(MarkupElement(StartTag('year', {'iso-8601-date': y}), y))
+        ec.append(MarkupElement('year', y))
+        if src.month is not None:
+            m = str(src.month)
+            ec.append(MarkupElement('month', m))
     if src.article_title:
         ec.append(markup_element('article-title', src.article_title))
     for key, value in src.biblio_fields.items():
