@@ -24,7 +24,7 @@ class CrossReference(MarkupElement):
         super().__init__('xref')
         self.xml.attrib = {"rid": name}
         if ref_type:
-            self.xml.attrib['ref-type'] = ref_type    
+            self.xml.attrib['ref-type'] = ref_type
         self.html = StartTag('a', {'href': "#" + name})
 
 
@@ -53,11 +53,7 @@ class AlignCode(StrEnum):
 
 
 class TableCell(MarkupElement):
-    def __init__(
-        self,
-        header: bool,
-        align: AlignCode | None
-    ):
+    def __init__(self, header: bool, align: AlignCode | None):
         super().__init__('th' if header else 'td')
         if align:
             self.xml.attrib['align'] = align
@@ -169,6 +165,11 @@ class Abstract(ProtoSection):
     pass
 
 
+class PubIdType(StrEnum):
+    DOI = 'doi'
+    PMID = 'pmid'
+
+
 @dataclass
 class BiblioRefItem:
     id: str
@@ -178,6 +179,7 @@ class BiblioRefItem:
     month: int | None
     article_title: MixedContent | None
     biblio_fields: dict[str, str]
+    pub_ids: dict[PubIdType, str]
 
     BIBLIO_FIELD_KEYS: ClassVar[list[str]] = [
         'source',
@@ -200,6 +202,7 @@ class BiblioRefItem:
         self.month = None
         self.article_title = None
         self.biblio_fields = {}
+        self.pub_ids = {}
 
 
 @dataclass

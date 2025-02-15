@@ -1,0 +1,22 @@
+<ref id="ref-misc_item">
+  <element-citation>
+    <person-group person-group-type="author">
+      <name>
+        <surname>Author</surname>
+      </name>
+    </person-group>
+    <year>2000</year>
+    <month>12</month>
+    <article-title>A Title</article-title>
+    <publisher-name>Univ. of Illinois Press</publisher-name>
+    <publisher-loc>Location</publisher-loc>
+    <edition>3rd ed</edition>
+    <fpage>876</fpage>
+    <isbn>978-0-7637-3527-2</isbn>
+    <issn>1943-2631</issn>
+    <lpage>987</lpage>
+    <uri>https://example.com</uri>
+    <volume>666</volume>
+    <pub-id pub-id-type="doi">10.1534/genetics.116.195198</pub-id>
+  </element-citation>
+</ref>

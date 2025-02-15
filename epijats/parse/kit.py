@@ -212,6 +212,44 @@ class UnionBinder(Binder[DestT]):
         return self
 
 
+class SingleElementBinder(Binder[DestT]):
+    def __init__(self, tag: str, content_binder: Binder[DestT]):
+        self.tag = tag
+        self.content_binder = content_binder
+
+    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
+        return SingleElementParser(log, self.tag, self.content_binder.bind(log, dest))
+
+
+class ReaderBinderParser(Parser, Generic[DestT]):
+    def __init__(
+        self,
+        log: IssueCallback,
+        dest: DestT,
+        tag: str | Iterable[str],
+        reader: Reader[DestT],
+    ):
+        super().__init__(log)
+        self.dest = dest
+        self._tags = [tag] if isinstance(tag, str) else list(tag)
+        self._reader = reader
+
+    def match(self, tag: str) -> ParseFunc | None:
+        return self._parse if tag in self._tags else None
+
+    def _parse(self, e: etree._Element) -> bool:
+        return self._reader(self.log, e, self.dest)
+
+
+class ReaderBinder(Binder[DestT]):
+    def __init__(self, tag: str, reader: Reader[DestT]):
+        self.tag = tag
+        self._reader = reader
+
+    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
+        return ReaderBinderParser(log, dest, self.tag, self._reader)
+
+
 Sink: TypeAlias = Callable[[ParsedT], None]
 Model: TypeAlias = Binder[Sink[ParsedT]]
 UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
@@ -228,49 +266,13 @@ class TagModelBase(Model[ParsedT]):
         return ReaderBinderParser(log, dest, self.tag, LoaderReader(self.load))
 
 
-class SingleElementBinder(Binder[DestT]):
-    def __init__(self, tag: str, content_binder: Binder[DestT]):
-        self.tag = tag
-        self.content_binder = content_binder
-
-    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        return SingleElementParser(log, self.tag, self.content_binder.bind(log, dest))
-
-
-class ReaderBinder(Binder[DestT]):
-    def __init__(self, tag: str, reader: Reader[DestT]):
-        self.tag = tag
-        self._reader = reader
-
-    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        return ReaderBinderParser(log, dest, self.tag, self._reader)
-
-
-class ReaderBinderParser(Parser, Generic[DestT]):
-    def __init__(
-        self,
-        log: IssueCallback,
-        dest: DestT,
-        tag: str | Iterable[str],
-        reader: Reader[DestT]
-    ):
-        super().__init__(log)
-        self.dest = dest
-        self._tags = [tag] if isinstance(tag, str) else list(tag)
-        self._reader = reader
-
-    def match(self, tag: str) -> ParseFunc | None:
-        return self._parse if tag in self._tags else None
-
-    def _parse(self, e: etree._Element) -> bool:
-        return self._reader(self.log, e, self.dest)
-
-
 class LoaderReader(Reader[Sink[ParsedT]]):
     def __init__(self, loader: Loader[ParsedT]):
         self._loader = loader
 
-    def __call__(self, log: IssueCallback, e: etree._Element, dest: Sink[ParsedT]) -> bool:
+    def __call__(
+        self, log: IssueCallback, e: etree._Element, dest: Sink[ParsedT]
+    ) -> bool:
         parsed = self._loader(log, e)
         if parsed is not None:
             dest(parsed)

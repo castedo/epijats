@@ -71,10 +71,10 @@ def permissions(src: baseprint.Permissions) -> DataElement:
 
 
 def proto_section(
-        tag: str,
-        src: baseprint.ProtoSection,
-        xid: str | None = None,
-        title: MixedContent | None = None,
+    tag: str,
+    src: baseprint.ProtoSection,
+    xid: str | None = None,
+    title: MixedContent | None = None,
 ) -> DataElement:
     ret = DataElement(tag)
     if xid is not None:
@@ -116,6 +116,10 @@ def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
         ec.append(markup_element('article-title', src.article_title))
     for key, value in src.biblio_fields.items():
         ec.append(MarkupElement(key, value))
+    for pub_id_type, value in src.pub_ids.items():
+        ele = MarkupElement('pub-id', value)
+        ele.xml.attrib['pub-id-type'] = pub_id_type
+        ec.append(ele)
     ret = DataElement('ref', [ec])
     ret.xml.attrib['id'] = src.id
     return ret
@@ -131,17 +135,23 @@ def ref_list(src: baseprint.BiblioRefList) -> DataElement:
 
 
 def article(src: baseprint.Baseprint) -> DataElement:
-    article_meta = DataElement('article-meta', [
-                title_group(src.title),
-                contrib_group(src.authors),
-    ])
+    article_meta = DataElement(
+        'article-meta',
+        [
+            title_group(src.title),
+            contrib_group(src.authors),
+        ],
+    )
     if src.permissions:
         article_meta.append(permissions(src.permissions))
     article_meta.append(abstract(src.abstract))
-    ret = DataElement('article', [
-        DataElement('front', [article_meta]),
-        proto_section('body', src.body),
-    ])
+    ret = DataElement(
+        'article',
+        [
+            DataElement('front', [article_meta]),
+            proto_section('body', src.body),
+        ],
+    )
     if src.ref_list is not None:
         ret.append(DataElement('back', [ref_list(src.ref_list)]))
     return ret

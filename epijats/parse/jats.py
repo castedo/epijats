@@ -415,27 +415,50 @@ def read_article_front(
 def load_month(log: IssueCallback, e: etree._Element) -> int | None:
     kit.check_no_attrib(log, e)
     month = kit.load_int(log, e)
-    if month and month not in range(1, 13): 
+    if month and month not in range(1, 13):
         log(fc.UnsupportedAttributeValue.issue(e, 'month', str(month)))
         month = None
     return month
+
+
+def read_pub_id(
+    log: IssueCallback, e: etree._Element, dest: dict[bp.PubIdType, str]
+) -> bool:
+    """<pub-id> Publication Identifier for a Cited Publication
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/pub-id.html
+    """
+    kit.check_no_attrib(log, e, ['pub-id-type'])
+    pub_id_type = kit.get_enum_value(log, e, 'pub-id-type', bp.PubIdType)
+    if not pub_id_type:
+        return False
+    if pub_id_type in dest:
+        log(fc.ExcessElement.issue(e))
+        return False
+    value = kit.load_string(log, e, ['pub-id-type'])
+    if not value:
+        return False
+    dest[pub_id_type] = value
+    return True
 
 
 def read_element_citation(
     log: IssueCallback, e: etree._Element, dest: bp.BiblioRefItem
 ) -> bool:
     kit.check_no_attrib(log, e, ['publication-type'])
-    ap = ContentParser(log)
-    title = ap.one(title_model('article-title'))
-    authors = ap.one(RefAuthorsModel())
-    year = ap.one(tag_model('year', kit.load_int))
-    month = ap.one(tag_model('month', load_month))
+    cp = ContentParser(log)
+    title = cp.one(title_model('article-title'))
+    authors = cp.one(RefAuthorsModel())
+    year = cp.one(tag_model('year', kit.load_int))
+    month = cp.one(tag_model('month', load_month))
     fields = {}
     for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
-        fields[key] = ap.one(tag_model(key, kit.load_string))
-    ap.parse_array_content(e)
+        fields[key] = cp.one(tag_model(key, kit.load_string))
+    cp.bind(kit.ReaderBinder('pub-id', read_pub_id), dest.pub_ids)
+    cp.parse_array_content(e)
     dest.publication_type = e.get('publication-type', '')
     if dest.publication_type not in [
+        '',
         'book',
         'confproc',
         'journal',
@@ -465,6 +488,7 @@ class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/ref.html
     """
+
     def __init__(self) -> None:
         super().__init__('ref')
 
