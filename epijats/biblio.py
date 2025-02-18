@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Mapping, TypeAlias
+from typing import Any, TypeAlias
 
 from . import baseprint as bp
 
@@ -21,6 +21,21 @@ JATS_TO_CSL = {
 }
 
 
+def csljson_from_authors(src: list[bp.PersonName | str]) -> JSONType:
+    authors: list[JSONType] = []
+    for name in src:
+        if isinstance(name, bp.PersonName):
+            a: dict[str, JSONType] = {}
+            if name.surname:
+                a['family'] = name.surname
+            if name.given_names:
+                a['given'] = name.given_names
+        else:
+            raise NotImplementedError
+        authors.append(a)
+    return authors
+
+
 def csljson_from_ref_item(src: bp.BiblioRefItem) -> JSONType:
     ret: dict[str, Any] = {
         'id': src.id,
@@ -36,23 +51,12 @@ def csljson_from_ref_item(src: bp.BiblioRefItem) -> JSONType:
         ret['issued'] = {'date-parts': [parts]}
     if source := src.biblio_fields.get('source'):
         # TODO: special handling for diff types
-        # MixedContent source type
         ret['title'] = source
     if src.article_title is not None:
-        # TODO: need to do something with hypertext
-        ret['title'] = src.article_title.text
-    authors: list[Mapping[str, JSONType]] = []
-    for name in src.authors:
-        if isinstance(name, bp.PersonName):
-            a = {}
-            if name.surname:
-                a['family'] = name.surname
-            if name.given_names:
-                a['given'] = name.given_names
-        else:
-            raise NotImplementedError
-        authors.append(a)
-    ret['author'] = authors
+        ret['title'] = src.article_title
+    ret['author'] = csljson_from_authors(src.authors)
+    if src.edition is not None:
+        ret['edition'] = src.edition
     if fpage := src.biblio_fields.get('fpage'):
         ret['page'] = fpage
         if lpage := src.biblio_fields.get('lpage'):

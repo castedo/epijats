@@ -113,7 +113,9 @@ def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
             m = str(src.month)
             ec.append(MarkupElement('month', m))
     if src.article_title:
-        ec.append(markup_element('article-title', src.article_title))
+        ec.append(MarkupElement('article-title', src.article_title))
+    if src.edition is not None:
+        ec.append(MarkupElement('edition', str(src.edition)))
     for key, value in src.biblio_fields.items():
         ec.append(MarkupElement(key, value))
     for pub_id_type, value in src.pub_ids.items():

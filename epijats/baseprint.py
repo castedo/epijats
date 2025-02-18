@@ -177,7 +177,8 @@ class BiblioRefItem:
     authors: list[PersonName | str]
     year: int | None
     month: int | None
-    article_title: MixedContent | None
+    article_title: str | None
+    edition: int | None
     biblio_fields: dict[str, str]
     pub_ids: dict[PubIdType, str]
 
@@ -185,7 +186,6 @@ class BiblioRefItem:
         'source',
         'publisher-name',
         'publisher-loc',
-        'edition',
         'fpage',
         'isbn',
         'issn',
@@ -201,6 +201,7 @@ class BiblioRefItem:
         self.year = None
         self.month = None
         self.article_title = None
+        self.edition = None
         self.biblio_fields = {}
         self.pub_ids = {}
 

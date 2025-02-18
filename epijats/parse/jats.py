@@ -447,10 +447,11 @@ def read_element_citation(
 ) -> bool:
     kit.check_no_attrib(log, e, ['publication-type'])
     cp = ContentParser(log)
-    title = cp.one(title_model('article-title'))
+    title = cp.one(tag_model('article-title', kit.load_string))
     authors = cp.one(RefAuthorsModel())
     year = cp.one(tag_model('year', kit.load_int))
     month = cp.one(tag_model('month', load_month))
+    edition = cp.one(tag_model('edition', kit.load_int))
     fields = {}
     for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
         fields[key] = cp.one(tag_model(key, kit.load_string))
@@ -477,6 +478,7 @@ def read_element_citation(
     dest.year = year.out
     if dest.year:
         dest.month = month.out
+    dest.edition = edition.out
     for key, parser in fields.items():
         if parser.out:
             dest.biblio_fields[key] = parser.out
