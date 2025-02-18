@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
+from pathlib import Path
+from collections.abc import Iterable, Sequence
 from typing import Any, TypeAlias
+
+from lxml import html
+from lxml.html import HtmlElement
 
 from . import baseprint as bp
 
@@ -64,3 +70,39 @@ def csljson_from_ref_item(src: bp.BiblioRefItem) -> JSONType:
     for pub_id_type, value in src.pub_ids.items():
         ret[pub_id_type.upper()] = value
     return ret
+
+
+class BiblioFormatter(ABC):
+    @abstractmethod
+    def to_elements(
+        self, refs: Iterable[bp.BiblioRefItem]
+    ) -> Sequence[HtmlElement]: ...
+
+    def to_str(self, refs: Iterable[bp.BiblioRefItem]) -> str:
+        es = self.to_elements(refs)
+        lines = [html.tostring(e, encoding='unicode') for e in es]
+        return "\n".join([*lines, ''])
+
+
+class CiteprocBiblioFormatter(BiblioFormatter):
+    def __init__(self, csl: Path):
+        import citeproc
+
+        self._style = citeproc.CitationStylesStyle(Path(csl))
+
+    def to_elements(self, refs: Iterable[bp.BiblioRefItem]) -> Sequence[HtmlElement]:
+        import citeproc
+
+        ret = []
+        csljson = [csljson_from_ref_item(r) for r in refs]
+        bib_source = citeproc.source.json.CiteProcJSON(csljson)
+        biblio = citeproc.CitationStylesBibliography(
+            self._style, bib_source, citeproc.formatter.html
+        )
+        for ref_item in refs:
+            c = citeproc.Citation([citeproc.CitationItem(ref_item.id)])
+            biblio.register(c)
+        for item in biblio.bibliography():
+            frags = html.fragments_fromstring(str(item))
+            ret.append(html.builder.DIV(*frags))
+        return ret

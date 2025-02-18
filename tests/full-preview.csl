@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" version="1.0" class="in-text" default-locale="en">
+  <info>
+    <title>Epijats Full Preview</title>
+    <id>epijats</id>
+    <link href="https://gitlab.com/perm.pub/epijats" rel="documentation"/>
+    <author>
+      <name>E. Castedo Ellerman</name>
+      <email>castedo@castedo.com</email>
+    </author>
+    <category citation-format="numeric"/>
+    <category field="generic-base"/>
+    <rights license="https://creativecommons.org/publicdomain/zero/1.0/">This work has been marked as dedicated to the public domain.</rights>
+    <updated>2099-01-01T00:00:00+00:00</updated>
+  </info>
+  <citation>
+    <layout>
+      <text value=""/>
+    </layout>
+  </citation>
+  <bibliography>
+    <layout>
+      <group delimiter=" ">
+        <names variable="author"/>
+        <text variable="title"/>
+        <text variable="edition"/>
+        <text variable="publisher-place"/>
+        <text variable="publisher"/>
+        <date variable="issued" delimiter="-">
+          <date-part name="year"/>
+        </date>
+      </group>
+    </layout>
+  </bibliography>
+</style>

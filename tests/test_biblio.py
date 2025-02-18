@@ -45,3 +45,16 @@ def test_csljson(case):
     ref_item = parse_clean_ref_item(REF_ITEM_CASE / case / "jats.xml")
     got = biblio.csljson_from_ref_item(ref_item)
     assert got == expect
+
+
+@pytest.mark.parametrize("case", os.listdir(REF_ITEM_CASE))
+def test_biblio_ref_html(case):
+    path = REF_ITEM_CASE / case / "ref.html"
+    if not path.exists():
+        return
+    with open(path, "r") as f:
+        expect = f.read()
+    ref_item = parse_clean_ref_item(REF_ITEM_CASE / case / "jats.xml")
+    csl_path = Path(__file__).parent / "full-preview.csl"
+    bf = biblio.CiteprocBiblioFormatter(csl_path)
+    assert bf.to_str([ref_item]) == expect
