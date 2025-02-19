@@ -1,26 +1,28 @@
-{
-  "ISBN": "978-0-7637-3527-2",
-  "author": [
-    {
-      "family": "Hartl",
-      "given": "Daniel L."
-    },
-    {
-      "family": "Jones",
-      "given": "Elizabeth W."
-    }
-  ],
-  "edition": 4,
-  "id": "ref-hartl_essential_2006",
-  "issued": {
-    "date-parts": [
-      [
-        2006
+[
+  {
+    "ISBN": "978-0-7637-3527-2",
+    "author": [
+      {
+        "family": "Hartl",
+        "given": "Daniel L."
+      },
+      {
+        "family": "Jones",
+        "given": "Elizabeth W."
+      }
+    ],
+    "edition": 4,
+    "id": "ref-hartl_essential_2006",
+    "issued": {
+      "date-parts": [
+        [
+          2006
+        ]
       ]
-    ]
-  },
-  "publisher": "Jones and Bartlett Publishers",
-  "publisher-place": "Boston",
-  "title": "Essential genetics: A genomics perspective",
-  "type": "book"
-}
+    },
+    "publisher": "Jones and Bartlett Publishers",
+    "publisher-place": "Boston",
+    "title": "Essential genetics: A genomics perspective",
+    "type": "book"
+  }
+]

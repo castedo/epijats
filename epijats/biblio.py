@@ -103,6 +103,8 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             c = citeproc.Citation([citeproc.CitationItem(ref_item.id)])
             biblio.register(c)
         for item in biblio.bibliography():
-            frags = html.fragments_fromstring(str(item))
+            s = str(item)
+            s = s.replace(".. ", ". ")  # HACK for citeproc-py
+            frags = html.fragments_fromstring(s)
             ret.append(html.builder.DIV(*frags))
         return ret

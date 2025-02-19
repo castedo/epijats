@@ -1,27 +1,30 @@
-{
-  "DOI": "10.1534/genetics.116.195198",
-  "ISBN": "978-0-7637-3527-2",
-  "ISSN": "1943-2631",
-  "URL": "https://example.com",
-  "author": [
-    {
-      "family": "Author"
-    }
-  ],
-  "edition": 3,
-  "id": "ref-misc_item",
-  "issued": {
-    "date-parts": [
-      [
-        2000,
-        12
+[
+  {
+    "DOI": "10.1534/genetics.116.195198",
+    "ISBN": "978-0-7637-3527-2",
+    "ISSN": "1943-2631",
+    "URL": "https://example.com",
+    "author": [
+      {
+        "family": "Wang",
+        "given": "Jo D."
+      }
+    ],
+    "edition": 3,
+    "id": "ref-misc_item",
+    "issued": {
+      "date-parts": [
+        [
+          2000,
+          12
+        ]
       ]
-    ]
-  },
-  "page": "876-987",
-  "publisher": "Univ. of Illinois Press",
-  "publisher-place": "Location",
-  "title": "A Title",
-  "type": "",
-  "volume": "666"
-}
+    },
+    "page": "876-987",
+    "publisher": "Univ. of Pi Press",
+    "publisher-place": "Rome",
+    "title": "A Title",
+    "type": "",
+    "volume": "666"
+  }
+]
