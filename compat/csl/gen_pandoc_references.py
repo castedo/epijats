@@ -6,14 +6,14 @@ from pathlib import Path
 
 STYLES = [
   Path(__file__).parent / "../../tests/full-preview.csl",
+  'modern-language-association.csl',
+  'vancouver.csl',
+  'ieee.csl',
+  'iso690-numeric-en.csl',
   'apa.csl',
   'chicago-author-date.csl',
   'harvard-cite-them-right.csl',
   'howard-hughes-medical-institute.csl',
-  'ieee.csl',
-  'iso690-numeric-en.csl',
-  'modern-language-association.csl',
-  'vancouver.csl',
 ]
 
 

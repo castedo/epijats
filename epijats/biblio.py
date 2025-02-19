@@ -84,6 +84,17 @@ class BiblioFormatter(ABC):
         return "\n".join([*lines, ''])
 
 
+def put_tags_on_own_lines(e: HtmlElement) -> None:
+    e.text = "\n{}".format(e.text or '')
+    s = None
+    for s in e:
+        pass
+    if s is None:
+        e.text += "\n"
+    else:
+        s.tail = "{}\n".format(s.tail or '')
+
+
 class CiteprocBiblioFormatter(BiblioFormatter):
     def __init__(self, csl: Path):
         import citeproc
@@ -104,7 +115,12 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             biblio.register(c)
         for item in biblio.bibliography():
             s = str(item)
-            s = s.replace(".. ", ". ")  # HACK for citeproc-py
+            s = s.replace("..\n", ".\n")
             frags = html.fragments_fromstring(s)
-            ret.append(html.builder.DIV(*frags))
+            li = html.builder.LI(*frags)
+            put_tags_on_own_lines(li)
+            li.tail = "\n"
+            ol = html.builder.OL(li)
+            ol.text = "\n"
+            ret.append(ol)
         return ret

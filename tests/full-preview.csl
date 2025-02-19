@@ -36,12 +36,12 @@
   </citation>
   <bibliography>
     <layout>
-      <group delimiter=". " suffix=".">
+      <group delimiter=".&#x0A;" suffix=".">
         <names variable="author">
-          <name name-as-sort-order="first" delimiter=", " and="text" delimiter-precedes-last="always"/>
+          <name name-as-sort-order="first" delimiter=",&#x0A;" and="text" delimiter-precedes-last="always"/>
         </names>
         <text variable="title" font-style="italic" />
-        <group delimiter=", ">
+        <group delimiter=",&#x0A;">
           <group delimiter=" ">
             <number variable="edition" form="ordinal"/>
             <text term="edition" form="short"/>
