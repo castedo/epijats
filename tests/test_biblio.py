@@ -78,7 +78,7 @@ def test_pmc_ref(case):
     ref_item = parse_pmc_ref(PMC_REF_CASE / case / "jats.xml")
     got = biblio.csljson_from_ref_item(ref_item)
     assert got == expect
-    html_path = PMC_REF_CASE / case / "ref.html"
+    html_path = PMC_REF_CASE / case / "full.html"
     if html_path.exists():
         with open(html_path, "r") as f:
             expect = f.read()
@@ -88,8 +88,7 @@ def test_pmc_ref(case):
 
 @pytest.mark.parametrize("case", os.listdir(REF_ITEM_CASE))
 def test_biblio_ref_html(case):
-    pytest.importorskip("citeproc")
-    path = REF_ITEM_CASE / case / "ref.html"
+    path = REF_ITEM_CASE / case / "full.html"
     if not path.exists():
         return
     with open(path, "r") as f:
