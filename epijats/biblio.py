@@ -3,8 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 from collections.abc import Iterable, Sequence
+from importlib import resources
 from typing import Any, TypeAlias
 
+import citeproc
 from lxml import html
 from lxml.html import HtmlElement
 
@@ -108,14 +110,15 @@ def put_tags_on_own_lines(e: HtmlElement) -> None:
 
 
 class CiteprocBiblioFormatter(BiblioFormatter):
-    def __init__(self, csl: Path):
-        import citeproc
-
-        self._style = citeproc.CitationStylesStyle(Path(csl))
+    def __init__(self, csl: Path | None = None):
+        if csl is None:
+            r = resources.files(__package__) / "csl/full-preview.csl"
+            with resources.as_file(r) as csl_file:
+                self._style = citeproc.CitationStylesStyle(csl_file, validate=False)
+        else:
+            self._style = citeproc.CitationStylesStyle(Path(csl))
 
     def to_elements(self, refs: Iterable[bp.BiblioRefItem]) -> Sequence[HtmlElement]:
-        import citeproc
-
         ret = []
         csljson = [csljson_from_ref_item(r) for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)

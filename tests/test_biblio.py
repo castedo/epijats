@@ -1,6 +1,10 @@
 import os, json, pytest
 from pathlib import Path
 
+from lxml import etree
+
+from citeproc import SCHEMA_PATH
+
 from epijats import restyle
 from epijats import baseprint as bp
 from epijats.parse import jats
@@ -78,8 +82,7 @@ def test_pmc_ref(case):
     if html_path.exists():
         with open(html_path, "r") as f:
             expect = f.read()
-        csl_path = Path(__file__).parent / "full-preview.csl"
-        bf = biblio.CiteprocBiblioFormatter(csl_path)
+        bf = biblio.CiteprocBiblioFormatter()
         assert bf.to_str([ref_item]) == expect
 
 
@@ -92,6 +95,13 @@ def test_biblio_ref_html(case):
     with open(path, "r") as f:
         expect = f.read()
     ref_item = parse_clean_ref_item(REF_ITEM_CASE / case / "jats.xml")
-    csl_path = Path(__file__).parent / "full-preview.csl"
-    bf = biblio.CiteprocBiblioFormatter(csl_path)
+    bf = biblio.CiteprocBiblioFormatter()
     assert bf.to_str([ref_item]) == expect
+
+
+def test_csl_valid():
+        schema = etree.RelaxNG(etree.parse(SCHEMA_PATH))
+        csl_path = Path(__file__).parent / "../epijats/csl/full-preview.csl"
+        parser = etree.XMLParser(remove_comments=True, encoding='utf-8')
+        root = etree.parse(csl_path, parser)
+        assert schema.validate(root), str(schema.error_log)

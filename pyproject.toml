@@ -20,6 +20,7 @@ authors = [
   { name="Castedo Ellerman", email = "castedo@castedo.com" },
 ]
 dependencies = [
+  "citeproc",
   "dulwich",
   "hidos >= 2.0",
   "jinja2",
@@ -38,6 +39,7 @@ epijats = "epijats.__main__:main"
 [tool.setuptools]
 packages = [
   "epijats",
+  "epijats.csl",
   "epijats.pandoc",
   "epijats.static",
   "epijats.static.katex",
