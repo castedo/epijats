@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from collections.abc import Iterable, Sequence
 from importlib import resources
+from html import escape
 from typing import Any, TypeAlias
 
 import citeproc
@@ -35,55 +36,61 @@ JATS_TO_CSL_TYPE = {
 }
 
 
-def csljson_from_authors(src: list[bp.PersonName | str]) -> JSONType:
-    authors: list[JSONType] = []
-    for name in src:
-        if isinstance(name, bp.PersonName):
+class CsljsonItem(dict[str, Any]): #JSONType]):
+    def set_str(self, key: str, src: str | int | None) -> None:
+        if src is not None:
+            if isinstance(src, int):
+                src = str(src)
+            self[key] = escape(src, quote=False)
+
+    def append_author(self, src: bp.PersonName | str) -> None:
+        authors = self.setdefault('author', [])
+        if isinstance(src, bp.PersonName):
             a: dict[str, JSONType] = {}
-            if name.surname:
-                a['family'] = name.surname
-            if name.given_names:
-                a['given'] = name.given_names
+            if src.surname:
+                a['family'] = escape(src.surname)
+            if src.given_names:
+                a['given'] = escape(src.given_names)
+            authors.append(a)
         else:
             raise NotImplementedError
-        authors.append(a)
-    return authors
 
+    def assign_csjson_titles(self, src: bp.BiblioRefItem) -> None:
+        match src.publication_type:
+            case 'book':
+                self.set_str('title', src.source)
+            case _:
+                self.set_str('container-title', src.source)
+                self.set_str('title', src.article_title)
 
-def assign_csjson_titles(src: bp.BiblioRefItem, dest: dict[str, Any]) -> None:
-    match src.publication_type:
-        case 'book':
-            if src.source is not None:
-                dest['title'] = src.source
-        case _:
-            if src.source is not None:
-                dest['container-title'] = src.source
-            if src.article_title is not None:
-                dest['title'] = src.article_title
+    def assign_dates(self, src: bp.BiblioRefItem) -> None:
+        if src.year:
+            parts = [src.year]
+            if src.month:
+                parts.append(src.month)
+            self['issued'] = {'date-parts': [parts]}
 
-
-def csljson_from_ref_item(src: bp.BiblioRefItem) -> JSONType:
-    ret: dict[str, Any] = {'id': src.id}
-    ret['type'] = JATS_TO_CSL_TYPE.get(src.publication_type, '')
-    for jats_key, value in src.biblio_fields.items():
-        if csl_key := JATS_TO_CSL_VAR.get(jats_key):
-            ret[csl_key] = value
-    assign_csjson_titles(src, ret)
-    if src.year:
-        parts = [src.year]
-        if src.month:
-            parts.append(src.month)
-        ret['issued'] = {'date-parts': [parts]}
-    ret['author'] = csljson_from_authors(src.authors)
-    if src.edition is not None:
-        ret['edition'] = src.edition
-    if fpage := src.biblio_fields.get('fpage'):
-        ret['page'] = fpage
-        if lpage := src.biblio_fields.get('lpage'):
-            ret['page'] += f"-{lpage}"
-    for pub_id_type, value in src.pub_ids.items():
-        ret[pub_id_type.upper()] = value
-    return ret
+    @staticmethod
+    def from_ref_item(src: bp.BiblioRefItem) -> JSONType:
+        ret = CsljsonItem()
+        ret.set_str('id', src.id)
+        ret['type'] = JATS_TO_CSL_TYPE.get(src.publication_type, '')
+        for jats_key, value in src.biblio_fields.items():
+            if csl_key := JATS_TO_CSL_VAR.get(jats_key):
+                ret.set_str(csl_key, value)
+        ret.assign_csjson_titles(src)
+        ret.assign_dates(src)
+        for person in src.authors:
+            ret.append_author(person)
+        ret.set_str('edition', src.edition)
+        if fpage := src.biblio_fields.get('fpage'):
+            page = fpage
+            if lpage := src.biblio_fields.get('lpage'):
+                page += f"-{lpage}"
+            ret.set_str('page', page)
+        for pub_id_type, value in src.pub_ids.items():
+            ret.set_str(pub_id_type.upper(), value)
+        return ret
 
 
 class BiblioFormatter(ABC):
@@ -120,7 +127,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
 
     def to_elements(self, refs: Iterable[bp.BiblioRefItem]) -> Sequence[HtmlElement]:
         ret = []
-        csljson = [csljson_from_ref_item(r) for r in refs]
+        csljson = [CsljsonItem.from_ref_item(r) for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(
             self._style, bib_source, citeproc.formatter.html

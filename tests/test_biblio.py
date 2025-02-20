@@ -66,7 +66,7 @@ def test_csljson(case):
     with open(path, "r") as f:
         expect = json.load(f)[0]
     ref_item = parse_clean_ref_item(REF_ITEM_CASE / case / "jats.xml")
-    got = biblio.csljson_from_ref_item(ref_item)
+    got = biblio.CsljsonItem.from_ref_item(ref_item)
     assert got == expect
 
 
@@ -76,7 +76,7 @@ def test_pmc_ref(case):
     with open(path, "r") as f:
         expect = json.load(f)[0]
     ref_item = parse_pmc_ref(PMC_REF_CASE / case / "jats.xml")
-    got = biblio.csljson_from_ref_item(ref_item)
+    got = biblio.CsljsonItem.from_ref_item(ref_item)
     assert got == expect
     html_path = PMC_REF_CASE / case / "full.html"
     if html_path.exists():
