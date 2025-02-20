@@ -106,16 +106,18 @@ def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
             else:
                 pg.append(MarkupElement('string-name', a))
         ec.append(pg)
+    if src.article_title:
+        ec.append(MarkupElement('article-title', src.article_title))
+    if src.source:
+        ec.append(MarkupElement('source', src.source))
+    if src.edition is not None:
+        ec.append(MarkupElement('edition', str(src.edition)))
     if src.year is not None:
         y = str(src.year)
         ec.append(MarkupElement('year', y))
         if src.month is not None:
             m = str(src.month)
             ec.append(MarkupElement('month', m))
-    if src.article_title:
-        ec.append(MarkupElement('article-title', src.article_title))
-    if src.edition is not None:
-        ec.append(MarkupElement('edition', str(src.edition)))
     for key, value in src.biblio_fields.items():
         ec.append(MarkupElement(key, value))
     for pub_id_type, value in src.pub_ids.items():

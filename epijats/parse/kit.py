@@ -103,8 +103,12 @@ class Parser(Validator):
     def parse_array_content(self, e: etree._Element) -> None:
         prep_array_elements(self.log, e)
         for s in e:
-            if not self.parse_element(s):
-                self.log(fc.UnsupportedElement.issue(s))
+            if isinstance(s.tag, str):
+                fun = self.match(s.tag)
+                if fun is not None:
+                    fun(s)
+                    continue
+            self.log(fc.UnsupportedElement.issue(s))
 
 
 class UnionParser(Parser):

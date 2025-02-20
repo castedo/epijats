@@ -40,8 +40,9 @@
         <names variable="author">
           <name name-as-sort-order="first" delimiter=",&#x0A;" and="text" delimiter-precedes-last="always"/>
         </names>
-        <text variable="title" font-style="italic" />
+        <text variable="title" font-style="italic"/>
         <group delimiter=",&#x0A;">
+          <text variable="container-title" font-style="italic"/>
           <group delimiter=" ">
             <number variable="edition" form="ordinal"/>
             <text term="edition" form="short"/>
@@ -49,6 +50,10 @@
           <group delimiter=" ">
             <text term="volume" form="short"/>
             <text variable="volume"/>
+          </group>
+          <group delimiter=" ">
+            <text term="issue" form="short"/>
+            <text variable="issue"/>
           </group>
           <group delimiter=": ">
             <text variable="publisher-place"/>

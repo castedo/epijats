@@ -15,15 +15,21 @@ JSONType: TypeAlias = (
     None | str | int | float | list['JSONType'] | dict[str, 'JSONType']
 )
 
-JATS_TO_CSL = {
+JATS_TO_CSL_VAR = {
     'edition': 'edition',
     'isbn': 'ISBN',
     'issn': 'ISSN',
+    'issue': 'issue',
     'publisher-loc': 'publisher-place',
     'publisher-name': 'publisher',
     'title': 'title',
     'uri': 'URL',
     'volume': 'volume',
+}
+
+JATS_TO_CSL_TYPE = {
+    'book': 'book',
+    'journal': 'article-journal',
 }
 
 
@@ -42,24 +48,30 @@ def csljson_from_authors(src: list[bp.PersonName | str]) -> JSONType:
     return authors
 
 
+def assign_csjson_titles(src: bp.BiblioRefItem, dest: dict[str, Any]) -> None:
+    match src.publication_type:
+        case 'book':
+            if src.source is not None:
+                dest['title'] = src.source
+        case _:
+            if src.source is not None:
+                dest['container-title'] = src.source
+            if src.article_title is not None:
+                dest['title'] = src.article_title
+
+
 def csljson_from_ref_item(src: bp.BiblioRefItem) -> JSONType:
-    ret: dict[str, Any] = {
-        'id': src.id,
-        'type': src.publication_type,
-    }
+    ret: dict[str, Any] = {'id': src.id}
+    ret['type'] = JATS_TO_CSL_TYPE.get(src.publication_type, '')
     for jats_key, value in src.biblio_fields.items():
-        if csl_key := JATS_TO_CSL.get(jats_key):
+        if csl_key := JATS_TO_CSL_VAR.get(jats_key):
             ret[csl_key] = value
+    assign_csjson_titles(src, ret)
     if src.year:
         parts = [src.year]
         if src.month:
             parts.append(src.month)
         ret['issued'] = {'date-parts': [parts]}
-    if source := src.biblio_fields.get('source'):
-        # TODO: special handling for diff types
-        ret['title'] = source
-    if src.article_title is not None:
-        ret['title'] = src.article_title
     ret['author'] = csljson_from_authors(src.authors)
     if src.edition is not None:
         ret['edition'] = src.edition

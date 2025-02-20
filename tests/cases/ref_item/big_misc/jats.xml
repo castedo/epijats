@@ -6,18 +6,18 @@
         <given-names>Jo D.</given-names>
       </name>
     </person-group>
-    <year>2000</year>
-    <month>12</month>
     <article-title>A Title</article-title>
     <edition>3</edition>
+    <year>2000</year>
+    <month>12</month>
+    <volume>666</volume>
     <publisher-name>Univ. of Pi Press</publisher-name>
     <publisher-loc>Rome</publisher-loc>
     <fpage>876</fpage>
+    <lpage>987</lpage>
     <isbn>978-0-7637-3527-2</isbn>
     <issn>1943-2631</issn>
-    <lpage>987</lpage>
     <uri>https://example.com</uri>
-    <volume>666</volume>
     <pub-id pub-id-type="doi">10.1534/genetics.116.195198</pub-id>
   </element-citation>
 </ref>

@@ -177,21 +177,23 @@ class BiblioRefItem:
     authors: list[PersonName | str]
     year: int | None
     month: int | None
+    day: int | None
     article_title: str | None
+    source: str | None
     edition: int | None
     biblio_fields: dict[str, str]
     pub_ids: dict[PubIdType, str]
 
     BIBLIO_FIELD_KEYS: ClassVar[list[str]] = [
-        'source',
+        'volume',
+        'issue',
         'publisher-name',
         'publisher-loc',
         'fpage',
+        'lpage',
         'isbn',
         'issn',
-        'lpage',
         'uri',
-        'volume',
     ]
 
     def __init__(self) -> None:
@@ -200,7 +202,9 @@ class BiblioRefItem:
         self.authors = []
         self.year = None
         self.month = None
+        self.day = None
         self.article_title = None
+        self.source = None
         self.edition = None
         self.biblio_fields = {}
         self.pub_ids = {}

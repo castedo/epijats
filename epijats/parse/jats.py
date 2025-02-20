@@ -412,13 +412,18 @@ def read_article_front(
     return True
 
 
-def load_month(log: IssueCallback, e: etree._Element) -> int | None:
-    kit.check_no_attrib(log, e)
-    month = kit.load_int(log, e)
-    if month and month not in range(1, 13):
-        log(fc.UnsupportedAttributeValue.issue(e, 'month', str(month)))
-        month = None
-    return month
+class IntModel(TagModelBase[int]):
+    def __init__(self, tag: str, max_int: int):
+        super().__init__(tag)
+        self.max_int = max_int
+
+    def load(self, log: IssueCallback, e: etree._Element) -> int | None:
+        kit.check_no_attrib(log, e)
+        ret = kit.load_int(log, e)
+        if ret and ret not in range(1, self.max_int + 1):
+            log(fc.UnsupportedAttributeValue.issue(e, self.tag, str(ret)))
+            ret = None
+        return ret
 
 
 def read_pub_id(
@@ -447,10 +452,12 @@ def read_element_citation(
 ) -> bool:
     kit.check_no_attrib(log, e, ['publication-type'])
     cp = ContentParser(log)
+    source = cp.one(tag_model('source', kit.load_string))
     title = cp.one(tag_model('article-title', kit.load_string))
     authors = cp.one(RefAuthorsModel())
     year = cp.one(tag_model('year', kit.load_int))
-    month = cp.one(tag_model('month', load_month))
+    month = cp.one(IntModel('month', 12))
+    day = cp.one(IntModel('day', 31))
     edition = cp.one(tag_model('edition', kit.load_int))
     fields = {}
     for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
@@ -472,12 +479,15 @@ def read_element_citation(
                 e, 'publication-type', dest.publication_type
             )
         )
+    dest.source = source.out
     dest.article_title = title.out
     if authors.out:
         dest.authors = authors.out
     dest.year = year.out
     if dest.year:
         dest.month = month.out
+        if dest.month:
+            dest.day = day.out
     dest.edition = edition.out
     for key, parser in fields.items():
         if parser.out:
