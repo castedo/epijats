@@ -90,6 +90,8 @@ class CsljsonItem(dict[str, JSONType]):
             parts: list[JSONType] = [src.year]
             if src.month:
                 parts.append(src.month)
+                if src.day:
+                    parts.append(src.day)
             self['issued'] = {'date-parts': [parts]}
 
     @staticmethod

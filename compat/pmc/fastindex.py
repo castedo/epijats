@@ -30,12 +30,12 @@ class FastIndex:
             return self.pmc / f"oa_comm/xml/all/PMC{e.pmcid}.xml"
         return self.pmc / f"oa_noncomm/xml/all/PMC{e.pmcid}.xml"
 
-    def load_strs(self, filename: str) -> set[str]:
+    def load_strs(self, filename: str) -> list[str]:
         p = self.pmc / filename
         if p.exists():
             with open(p) as f:
-                return set([s.strip() for s in f.readlines()])
-        return set()
+                return [s.strip() for s in f.readlines()]
+        return []
 
     def save_strs(self, filename: str, ss: set[str]) -> None:
         p = self.pmc / filename
@@ -44,12 +44,12 @@ class FastIndex:
             for l in lines:
                 print(l, file=f)
 
-    def journal_list_paths(self, filename: str) -> set[str]:
-        ret = set()
+    def journal_list_paths(self, filename: str) -> list[str]:
+        ret = list()
         journals = self.load_strs(filename)
         for e in self.entries:
             if e.journal_id in journals:
-                ret.add(self.path(e))
+                ret.append(self.path(e))
         return ret
 
 
