@@ -466,21 +466,6 @@ def read_element_citation(
         fields[key] = cp.one(tag_model(key, kit.load_string))
     cp.bind(kit.ReaderBinder('pub-id', read_pub_id), dest.pub_ids)
     cp.parse_array_content(e)
-    dest.publication_type = e.get('publication-type', '')
-    if dest.publication_type not in [
-        '',
-        'book',
-        'confproc',
-        'journal',
-        'other',
-        'patent',
-        'webpage',
-    ]:
-        log(
-            fc.UnsupportedAttributeValue.issue(
-                e, 'publication-type', dest.publication_type
-            )
-        )
     dest.source = source.out
     dest.article_title = title.out
     if authors.out:

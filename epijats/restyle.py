@@ -95,8 +95,6 @@ def abstract(src: baseprint.Abstract) -> DataElement:
 
 def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
     stag = StartTag('element-citation')
-    if src.publication_type:
-        stag.attrib['publication-type'] = src.publication_type
     ec = DataElement(stag)
     if src.authors:
         pg = DataElement(StartTag('person-group', {'person-group-type': 'author'}))

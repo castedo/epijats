@@ -121,7 +121,7 @@ while also having the option to discover newer versions.</p>
         </element-citation>
       </ref>
       <ref id="ref-DSI_spec">
-        <element-citation publication-type="webpage">
+        <element-citation>
           <person-group person-group-type="author">
             <name>
               <surname>Ellerman</surname>
@@ -144,7 +144,7 @@ while also having the option to discover newer versions.</p>
         </element-citation>
       </ref>
       <ref id="ref-what_is_baseprint">
-        <element-citation publication-type="webpage">
+        <element-citation>
           <person-group person-group-type="author">
             <name>
               <surname>Ellerman</surname>

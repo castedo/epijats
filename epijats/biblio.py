@@ -49,6 +49,9 @@ def hyperlink(html_content: str, prepend: str | None = None) -> str:
 
 
 class CsljsonItem(dict[str, JSONType]):
+    def __init__(self) -> None:
+        self['type'] = ''
+
     def set_str(self, key: str, src: str | int | None) -> None:
         if src is not None:
             if isinstance(src, int):
@@ -78,12 +81,11 @@ class CsljsonItem(dict[str, JSONType]):
         authors.append(a)
 
     def assign_csjson_titles(self, src: bp.BiblioRefItem) -> None:
-        match src.publication_type:
-            case 'book':
-                self.set_str('title', src.source)
-            case _:
-                self.set_str('container-title', src.source)
-                self.set_str('title', src.article_title)
+        if src.article_title:
+            self.set_str('container-title', src.source)
+            self.set_str('title', src.article_title)
+        else:
+            self.set_str('title', src.source)
 
     def assign_dates(self, src: bp.BiblioRefItem) -> None:
         if src.year:
@@ -98,7 +100,6 @@ class CsljsonItem(dict[str, JSONType]):
     def from_ref_item(src: bp.BiblioRefItem) -> CsljsonItem:
         ret = CsljsonItem()
         ret.set_str('id', src.id)
-        ret['type'] = JATS_TO_CSL_TYPE.get(src.publication_type, '')
         for jats_key, value in src.biblio_fields.items():
             if csl_key := JATS_TO_CSL_VAR.get(jats_key):
                 ret.set_str(csl_key, value)

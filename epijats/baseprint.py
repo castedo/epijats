@@ -173,7 +173,6 @@ class PubIdType(StrEnum):
 @dataclass
 class BiblioRefItem:
     id: str
-    publication_type: str
     authors: list[PersonName | str]
     year: int | None
     month: int | None
@@ -199,7 +198,6 @@ class BiblioRefItem:
 
     def __init__(self) -> None:
         self.id = ""
-        self.publication_type = ""
         self.authors = []
         self.year = None
         self.month = None
