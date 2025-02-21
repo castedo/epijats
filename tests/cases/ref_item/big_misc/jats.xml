@@ -18,6 +18,7 @@
     <isbn>978-0-7637-3527-2</isbn>
     <issn>1943-2631</issn>
     <uri>https://example.com</uri>
+    <comment>Note!</comment>
     <pub-id pub-id-type="doi">10.1534/genetics.116.195198</pub-id>
   </element-citation>
 </ref>

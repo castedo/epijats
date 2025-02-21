@@ -157,16 +157,18 @@ class Loader(Protocol, Generic[ParsedCovT]):
     def __call__(self, log: IssueCallback, e: etree._Element) -> ParsedCovT | None: ...
 
 
-def load_string(
-    log: IssueCallback, e: etree._Element, ignore: Iterable[str] = ()
-) -> str:
-    check_no_attrib(log, e, ignore)
+def load_string(log: IssueCallback, e: etree._Element) -> str:
+    check_no_attrib(log, e)
+    return load_string_content(log, e)
+
+
+def load_string_content(log: IssueCallback, e: etree._Element) -> str:
     frags = []
     if e.text:
         frags.append(e.text)
     for s in e:
         log(fc.UnsupportedElement.issue(s))
-        frags += load_string(log, s)
+        frags += load_string_content(log, s)
         if s.tail:
             frags.append(s.tail)
     return "".join(frags)

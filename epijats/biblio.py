@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from collections.abc import Iterable
+from collections.abc import Sequence
 from importlib import resources
 from html import escape
 from typing import TypeAlias, cast
@@ -19,6 +19,7 @@ JSONType: TypeAlias = (
 )
 
 JATS_TO_CSL_VAR = {
+    'comment': 'note',
     'edition': 'edition',
     'isbn': 'ISBN',
     'issn': 'ISSN',
@@ -116,9 +117,9 @@ class CsljsonItem(dict[str, JSONType]):
 
 class BiblioFormatter(ABC):
     @abstractmethod
-    def to_element(self, refs: Iterable[bp.BiblioRefItem]) -> HtmlElement: ...
+    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> HtmlElement: ...
 
-    def to_str(self, refs: Iterable[bp.BiblioRefItem]) -> str:
+    def to_str(self, refs: Sequence[bp.BiblioRefItem]) -> str:
         e = self.to_element(refs)
         e.tail = "\n"
         return html.tostring(e, encoding='unicode')
@@ -135,6 +136,20 @@ def put_tags_on_own_lines(e: HtmlElement) -> None:
         s.tail = "{}\n".format(s.tail or '')
 
 
+def divs_from_citeproc_bibliography(
+    biblio: citeproc.CitationStylesBibliography
+) -> list[HtmlElement]:
+    ret = []
+    for item in biblio.bibliography():
+        s = str(item).replace("..\n", ".\n")
+        frags = html.fragments_fromstring(s)
+        div = html.builder.DIV(*frags)
+        put_tags_on_own_lines(div)
+        div.tail = "\n"
+        ret.append(div)
+    return ret
+
+
 class CiteprocBiblioFormatter(BiblioFormatter):
     def __init__(self, csl: Path | None = None):
         if csl is None:
@@ -144,27 +159,28 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         else:
             self._style = citeproc.CitationStylesStyle(Path(csl))
 
-    def to_element(self, refs: Iterable[bp.BiblioRefItem]) -> HtmlElement:
+    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> HtmlElement:
         csljson = [CsljsonItem.from_ref_item(r).hyperlinkize() for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(
             self._style, bib_source, citeproc.formatter.html
         )
-        case_sensitive_ids = []
         for ref_item in refs:
-            case_sensitive_ids.append(ref_item.id)
             c = citeproc.Citation([citeproc.CitationItem(ref_item.id)])
             biblio.register(c)
-        strs = [str(s) for s in biblio.bibliography()]
-        assert len(strs) == len(case_sensitive_ids)
+        divs = divs_from_citeproc_bibliography(biblio)
+        assert len(divs) == len(refs)
         ret = html.builder.OL()
         ret.text = "\n"
-        for i in range(len(strs)):
-            s = strs[i].replace("..\n", ".\n")
-            frags = html.fragments_fromstring(s)
-            li = html.builder.LI(*frags)
-            li.attrib['id'] = case_sensitive_ids[i]
-            put_tags_on_own_lines(li)
+        for i in range(len(divs)):
+            li = html.builder.LI()
+            li.attrib['id'] = refs[i].id
+            li.text = "\n"
+            li.append(divs[i])
+            if comment := refs[i].biblio_fields.get('comment'):
+                div2 = html.builder.DIV(comment)
+                div2.tail = "\n"
+                li.append(div2)
             li.tail = "\n"
             ret.append(li)
         return ret

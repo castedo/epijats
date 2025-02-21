@@ -194,6 +194,7 @@ class BiblioRefItem:
         'isbn',
         'issn',
         'uri',
+        'comment',
     ]
 
     def __init__(self) -> None:

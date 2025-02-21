@@ -348,7 +348,8 @@ CC_URLS = {
 
 
 def read_license_ref(log: IssueCallback, e: etree._Element, dest: bp.License) -> bool:
-    dest.license_ref = kit.load_string(log, e, ['content-type'])
+    kit.check_no_attrib(log, e, ['content-type'])
+    dest.license_ref = kit.load_string_content(log, e)
     got_license_type = kit.get_enum_value(log, e, 'content-type', bp.CcLicenseType)
     for prefix, matching_type in CC_URLS.items():
         if dest.license_ref.startswith(prefix):
@@ -440,7 +441,8 @@ def read_pub_id(
     if pub_id_type in dest:
         log(fc.ExcessElement.issue(e))
         return False
-    value = kit.load_string(log, e, ['pub-id-type'])
+    kit.check_no_attrib(log, e, ['pub-id-type'])
+    value = kit.load_string_content(log, e)
     if not value:
         return False
     dest[pub_id_type] = value
