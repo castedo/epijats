@@ -64,7 +64,7 @@
             <label variable="page" form="short"/>
             <text variable="page"/>
           </group>
-          <text variable="DOI" prefix="https://doi.org/"/>
+          <text variable="DOI"/>
           <text variable="URL"/>
         </group>
       </group>

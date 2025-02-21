@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from importlib import resources
 from html import escape
-from typing import Any, TypeAlias
+from typing import TypeAlias, cast
 
 import citeproc
 from lxml import html
@@ -36,24 +36,45 @@ JATS_TO_CSL_TYPE = {
 }
 
 
-class CsljsonItem(dict[str, Any]): #JSONType]):
+def hyperlink(html_content: str, prepend: str | None = None) -> str:
+    frags = html.fragments_fromstring(html_content)
+    if not frags or not isinstance(frags[0], str):
+        return html_content
+    url = frags[0]
+    if prepend:
+        url = prepend + url
+    element = html.builder.A(url, href=url)
+    return html.tostring(element, encoding='unicode')    
+
+
+class CsljsonItem(dict[str, JSONType]):
     def set_str(self, key: str, src: str | int | None) -> None:
         if src is not None:
             if isinstance(src, int):
                 src = str(src)
             self[key] = escape(src, quote=False)
 
+    def hyperlinkize(self) -> CsljsonItem:
+        for key, value in self.items():
+            match key:
+                case 'URL':
+                    self[key] = hyperlink(cast(str, value))
+                case 'DOI':
+                    self[key] = hyperlink(cast(str, value), "https://doi.org/")
+        return self
+
     def append_author(self, src: bp.PersonName | str) -> None:
-        authors = self.setdefault('author', [])
+        authors = cast(list[JSONType], self.setdefault('author', []))
+        a: dict[str, JSONType] = {}
         if isinstance(src, bp.PersonName):
-            a: dict[str, JSONType] = {}
             if src.surname:
-                a['family'] = escape(src.surname)
+                a['family'] = escape(src.surname, quote=False)
             if src.given_names:
-                a['given'] = escape(src.given_names)
-            authors.append(a)
+                a['given'] = escape(src.given_names, quote=False)
         else:
-            raise NotImplementedError
+            assert isinstance(src, str)
+            a['literal'] = escape(str(src), quote=False)
+        authors.append(a)
 
     def assign_csjson_titles(self, src: bp.BiblioRefItem) -> None:
         match src.publication_type:
@@ -65,13 +86,13 @@ class CsljsonItem(dict[str, Any]): #JSONType]):
 
     def assign_dates(self, src: bp.BiblioRefItem) -> None:
         if src.year:
-            parts = [src.year]
+            parts: list[JSONType] = [src.year]
             if src.month:
                 parts.append(src.month)
             self['issued'] = {'date-parts': [parts]}
 
     @staticmethod
-    def from_ref_item(src: bp.BiblioRefItem) -> JSONType:
+    def from_ref_item(src: bp.BiblioRefItem) -> CsljsonItem:
         ret = CsljsonItem()
         ret.set_str('id', src.id)
         ret['type'] = JATS_TO_CSL_TYPE.get(src.publication_type, '')
@@ -95,14 +116,12 @@ class CsljsonItem(dict[str, Any]): #JSONType]):
 
 class BiblioFormatter(ABC):
     @abstractmethod
-    def to_elements(
-        self, refs: Iterable[bp.BiblioRefItem]
-    ) -> Sequence[HtmlElement]: ...
+    def to_element(self, refs: Iterable[bp.BiblioRefItem]) -> HtmlElement: ...
 
     def to_str(self, refs: Iterable[bp.BiblioRefItem]) -> str:
-        es = self.to_elements(refs)
-        lines = [html.tostring(e, encoding='unicode') for e in es]
-        return "\n".join([*lines, ''])
+        e = self.to_element(refs)
+        e.tail = "\n"
+        return html.tostring(e, encoding='unicode')
 
 
 def put_tags_on_own_lines(e: HtmlElement) -> None:
@@ -125,24 +144,27 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         else:
             self._style = citeproc.CitationStylesStyle(Path(csl))
 
-    def to_elements(self, refs: Iterable[bp.BiblioRefItem]) -> Sequence[HtmlElement]:
-        ret = []
-        csljson = [CsljsonItem.from_ref_item(r) for r in refs]
+    def to_element(self, refs: Iterable[bp.BiblioRefItem]) -> HtmlElement:
+        csljson = [CsljsonItem.from_ref_item(r).hyperlinkize() for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(
             self._style, bib_source, citeproc.formatter.html
         )
+        case_sensitive_ids = []
         for ref_item in refs:
+            case_sensitive_ids.append(ref_item.id)
             c = citeproc.Citation([citeproc.CitationItem(ref_item.id)])
             biblio.register(c)
-        for item in biblio.bibliography():
-            s = str(item)
-            s = s.replace("..\n", ".\n")
+        strs = [str(s) for s in biblio.bibliography()]
+        assert len(strs) == len(case_sensitive_ids)
+        ret = html.builder.OL()
+        ret.text = "\n"
+        for i in range(len(strs)):
+            s = strs[i].replace("..\n", ".\n")
             frags = html.fragments_fromstring(s)
             li = html.builder.LI(*frags)
+            li.attrib['id'] = case_sensitive_ids[i]
             put_tags_on_own_lines(li)
             li.tail = "\n"
-            ol = html.builder.OL(li)
-            ol.text = "\n"
-            ret.append(ol)
+            ret.append(li)
         return ret

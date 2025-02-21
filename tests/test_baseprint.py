@@ -109,7 +109,7 @@ def test_html(case):
     assert_eq_if_exists(title, case_path / "title.html")
     abstract = HTML.proto_section_to_str(bp.abstract)
     assert_eq_if_exists(abstract, case_path / "abstract.html")
-    body = HTML.proto_section_to_str(bp.body)
+    body = HTML.html_body_content(bp)
     assert_eq_if_exists(body, case_path / "body.html")
 
 

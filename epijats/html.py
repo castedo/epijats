@@ -7,6 +7,7 @@ from lxml.html import HtmlElement, tostring
 from lxml.html.builder import E
 
 from . import baseprint as bp
+from .biblio import CiteprocBiblioFormatter
 from .tree import Element, MixedContent
 from .xml import ElementFormatter
 
@@ -82,11 +83,21 @@ class HtmlGenerator(ElementFormatter):
             ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
         return ret
 
-    def references(self, src: bp.BiblioRefList) -> Iterable[str | HtmlElement]:
+    def _references(self, src: bp.BiblioRefList) -> Iterable[str | HtmlElement]:
         ret: list[str | HtmlElement] = []
         if src.title:
             h = E('h2')
             self._copy_content(src.title, h)
             h.tail = '\n'
             ret.append(h)
+        formatter = CiteprocBiblioFormatter()
+        ol = formatter.to_element(src.references)
+        ol.tail = "\n"
+        ret.append(ol)
         return ret
+
+    def html_body_content(self, src: bp.Baseprint) -> str:
+        frags = list(self._proto_section_content(src.body))
+        if src.ref_list:
+            frags += self._references(src.ref_list)
+        return html_content_to_str(frags)

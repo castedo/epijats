@@ -43,8 +43,8 @@ while also having the option to discover newer versions.</p>
     </sec>
     <sec id="document-succession-identifiers">
       <title>Document Succession Identifiers</title>
-      <p>A Document Succession Identifier (DSI) <xref rid="ref-DSI_spec" ref-type="bibr">4</xref>
-  is an <ext-link ext-link-type="uri" xlink:href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</ext-link> <xref rid="ref-intrinsic_extrinsic_identifiers" ref-type="bibr">5</xref> of a Baseprint document succession.
+      <p>A Document Succession Identifier (DSI) <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
+  is an <ext-link ext-link-type="uri" xlink:href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</ext-link> <xref rid="ref-intrinsic_extrinsic_identifiers" ref-type="bibr">4</xref> of a Baseprint document succession.
   It is a textual identifier similar to a
   <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>
   or a web address URL.
@@ -57,7 +57,7 @@ while also having the option to discover newer versions.</p>
   Similar to textbooks and preprints,
   Baseprint document successions contain multiple editions (or versions) of a Baseprint document,
   each encoded as a
-  <ext-link ext-link-type="uri" xlink:href="https://baseprints.singlesource.pub">Baseprint document snapshot</ext-link> <xref rid="ref-what_is_baseprint" ref-type="bibr">6</xref>.
+  <ext-link ext-link-type="uri" xlink:href="https://baseprints.singlesource.pub">Baseprint document snapshot</ext-link> <xref rid="ref-what_is_baseprint" ref-type="bibr">5</xref>.
   A base DSI identifies all the editions of a document added to a Baseprint succession.
   Usually, readers are interested in the latest edition in the Baseprint succession.</p>
       <p>An edition number can follow a <italic>base DSI</italic> to identify a specific static edition.
@@ -100,14 +100,24 @@ while also having the option to discover newer versions.</p>
   <back>
     <ref-list>
       <title>References</title>
-      <ref id="ref-enwikiU003Ajats">
-        <element-citation publication-type="webpage">
+      <ref id="ref-enwikiU003Agit">
+        <element-citation>
           <person-group person-group-type="author">
             <string-name>Wikipedia contributors</string-name>
           </person-group>
-          <article-title>Journal article tag suite &#8212; Wikipedia, the free encyclopedia</article-title>
+          <article-title>Git &#8212; Wikipedia, the free encyclopedia</article-title>
           <year>2023</year>
-          <uri>https://en.wikipedia.org/w/index.php?title=Journal_Article_Tag_Suite&amp;oldid=1172109468</uri>
+          <uri>https://en.wikipedia.org/w/index.php?title=Git&amp;oldid=1177307938</uri>
+        </element-citation>
+      </ref>
+      <ref id="ref-enwikiU003Adoi">
+        <element-citation>
+          <person-group person-group-type="author">
+            <string-name>Wikipedia contributors</string-name>
+          </person-group>
+          <article-title>Digital object identifier &#8212; Wikipedia, the free encyclopedia</article-title>
+          <year>2023</year>
+          <uri>https://en.wikipedia.org/w/index.php?title=Digital_object_identifier&amp;oldid=1177404866</uri>
         </element-citation>
       </ref>
       <ref id="ref-DSI_spec">
@@ -121,6 +131,29 @@ while also having the option to discover newer versions.</p>
           <article-title>Document succession identifiers</article-title>
           <year>2024</year>
           <uri>https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo/2</uri>
+        </element-citation>
+      </ref>
+      <ref id="ref-intrinsic_extrinsic_identifiers">
+        <element-citation>
+          <person-group person-group-type="author">
+            <string-name>Software Heritage</string-name>
+          </person-group>
+          <article-title>Intrinsic and extrinsic identifiers</article-title>
+          <year>2020</year>
+          <uri>https://web.archive.org/web/20221019201056/https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/</uri>
+        </element-citation>
+      </ref>
+      <ref id="ref-what_is_baseprint">
+        <element-citation publication-type="webpage">
+          <person-group person-group-type="author">
+            <name>
+              <surname>Ellerman</surname>
+              <given-names>E. Castedo</given-names>
+            </name>
+          </person-group>
+          <article-title>What is a baseprint?</article-title>
+          <year>2023</year>
+          <uri>https://perm.pub/HKSI5NPzMFmgRlb4Vboi71OTKYo/1</uri>
         </element-citation>
       </ref>
     </ref-list>

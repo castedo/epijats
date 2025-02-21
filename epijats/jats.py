@@ -36,7 +36,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     gen = HtmlGenerator()
     ret = Webstract()
     if "EPIJATS_NO_PANDOC" in os.environ:
-        ret['body'] = gen.proto_section_to_str(bp.body)
+        ret['body'] = gen.html_body_content(bp)
     else:
         ret['body'] = pandoc_jats_to_webstract(jats_src)
     ret['source'] = Source(path=src)

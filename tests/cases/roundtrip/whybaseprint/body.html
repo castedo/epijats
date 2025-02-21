@@ -1,0 +1,94 @@
+<h2 id="summary">Summary</h2>
+<p>Baseprint document successions are preserved in
+  <a href="https://en.wikipedia.org/wiki/Git">Git</a>-compatible <a href="#ref-enwikiU003Agit">1</a> repositories and archives.
+  Three such examples are the <a href="https://softwareheritage.org/">Software Heritage Archive</a>,
+  <a href="https://github.com">GitHub</a>, and <a href="https://gitlab.org">GitLab</a>.
+  See the <a href="#relationship-to-git">Relationship to Git</a> section for more details.
+  The data archived is the machine-readable content of a document, separated from
+  how it is visually presented.
+  The benefits of this separation are discussed in the <a href="#diversity-of-reading-venues">Diversity of Reading Venues</a> section.
+  A key component to making this separation possible is discussed in the
+  <a href="#document-succession-identifiers">Document Succession Identifiers</a> section.
+  These identifiers can be used for bibliographic references similar to a
+  <a href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</a> <a href="#ref-enwikiU003Adoi">2</a>.
+  This extends one of the great features of traditional academic publishing,
+  namely, the ability of researchers to reference
+  a static archived document long into the future.</p>
+<h2 id="document-succession-identifiers">Document Succession Identifiers</h2>
+<p>A Document Succession Identifier (DSI) <a href="#ref-DSI_spec">3</a>
+  is an <a href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</a> <a href="#ref-intrinsic_extrinsic_identifiers">4</a> of a Baseprint document succession.
+  It is a textual identifier similar to a
+  <a href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</a> <a href="#ref-enwikiU003Adoi">2</a>
+  or a web address URL.
+  This document itself is archived as a Baseprint document succession with DSI:</p>
+<p>
+  <pre>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc</pre>
+  </p>
+<p>This is a <em>base DSI</em>, which identifies all snapshots within a Baseprint document succession,
+  both current and future.
+  Similar to textbooks and preprints,
+  Baseprint document successions contain multiple editions (or versions) of a Baseprint document,
+  each encoded as a
+  <a href="https://baseprints.singlesource.pub">Baseprint document snapshot</a> <a href="#ref-what_is_baseprint">5</a>.
+  A base DSI identifies all the editions of a document added to a Baseprint succession.
+  Usually, readers are interested in the latest edition in the Baseprint succession.</p>
+<p>An edition number can follow a <em>base DSI</em> to identify a specific static edition.
+  For instance:</p>
+<p>
+  <pre>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc/1.1</pre>
+  </p>
+<h2 id="conclusion">Conclusion</h2>
+<p>As of late 2023, Baseprint successions have been
+  implemented and used by the author for over a year.
+  Authors interested in publishing Baseprint successions can visit
+  <a href="https://try.perm.pub/">try.perm.pub</a> to get started.</p>
+<p>For technical details on how DSIs are implemented, see the <a href="https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo">Document Succession
+  Identifier Specification</a> <a href="#ref-DSI_spec">4</a>
+  or the software library at
+  <a href="https://gitlab.com/perm.pub/hidos">gitlab.com/perm.pub/hidos</a>.</p>
+<h2 id="acknowledgments">Acknowledgments</h2>
+<p>This document was copyedited using
+  <a href="https://copyaid.it">CopyAid.it</a>, which uses OpenAI GPT-4.</p>
+<h2 id="changes">Changes</h2>
+<h3 id="from-edition-1.1-to-2.1">From Edition 1.1 to 2.1</h3>
+<p>
+    <ul>
+    <li>
+      <p>The “digital succession” terminology has been update to “Baseprint document succession”
+        terminology.</p>
+    </li>
+  </ul>
+  </p>
+<h2>References</h2>
+<ol>
+<li id="ref-enwikiU003Agit">
+Wikipedia contributors.
+<i>Git — Wikipedia, the free encyclopedia</i>.
+2023,
+<a href="https://en.wikipedia.org/w/index.php?title=Git&amp;oldid=1177307938">https://en.wikipedia.org/w/index.php?title=Git&amp;oldid=1177307938</a>.
+</li>
+<li id="ref-enwikiU003Adoi">
+Wikipedia contributors.
+<i>Digital object identifier — Wikipedia, the free encyclopedia</i>.
+2023,
+<a href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier&amp;oldid=1177404866">https://en.wikipedia.org/w/index.php?title=Digital_object_identifier&amp;oldid=1177404866</a>.
+</li>
+<li id="ref-DSI_spec">
+Ellerman, E. Castedo.
+<i>Document succession identifiers</i>.
+2024,
+<a href="https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo/2">https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo/2</a>.
+</li>
+<li id="ref-intrinsic_extrinsic_identifiers">
+Software Heritage.
+<i>Intrinsic and extrinsic identifiers</i>.
+2020,
+<a href="https://web.archive.org/web/20221019201056/https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">https://web.archive.org/web/20221019201056/https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/</a>.
+</li>
+<li id="ref-what_is_baseprint">
+Ellerman, E. Castedo.
+<i>What is a baseprint?</i>.
+2023,
+<a href="https://perm.pub/HKSI5NPzMFmgRlb4Vboi71OTKYo/1">https://perm.pub/HKSI5NPzMFmgRlb4Vboi71OTKYo/1</a>.
+</li>
+</ol>
