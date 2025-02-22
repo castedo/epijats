@@ -29,6 +29,16 @@
       <term name="ordinal-13">th</term>
     </terms>
   </locale>
+  <macro name="title">
+    <choose>
+      <if variable="container-title">
+        <text variable="title" quotes="true"/>
+      </if>
+      <else>
+        <text variable="title" font-style="italic"/>
+      </else>
+    </choose>
+  </macro>
   <citation>
     <layout>
       <text value=""/>
@@ -40,7 +50,7 @@
         <names variable="author">
           <name name-as-sort-order="first" delimiter=",&#x0A;" and="text" delimiter-precedes-last="always"/>
         </names>
-        <text variable="title" font-style="italic"/>
+        <text macro="title"/>
         <group delimiter=",&#x0A;">
           <text variable="container-title" font-style="italic"/>
           <group delimiter=" ">
