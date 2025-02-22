@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from pathlib import Path
 from collections.abc import Sequence
 from importlib import resources
 from html import escape
@@ -45,7 +44,7 @@ def hyperlink(html_content: str, prepend: str | None = None) -> str:
     if prepend:
         url = prepend + url
     element = html.builder.A(url, href=url)
-    return html.tostring(element, encoding='unicode')    
+    return html.tostring(element, encoding='unicode')
 
 
 class CsljsonItem(dict[str, JSONType]):
@@ -144,7 +143,7 @@ def divs_from_citeproc_bibliography(
 ) -> list[HtmlElement]:
     ret = []
     for item in biblio.bibliography():
-        s = str(item).replace("..\n", ".\n")
+        s = str(item).replace("..\n", ".\n").strip()
         frags = html.fragments_fromstring(s)
         div = html.builder.DIV(*frags)
         put_tags_on_own_lines(div)
@@ -154,13 +153,12 @@ def divs_from_citeproc_bibliography(
 
 
 class CiteprocBiblioFormatter(BiblioFormatter):
-    def __init__(self, csl: Path | None = None):
-        if csl is None:
-            r = resources.files(__package__) / "csl/full-preview.csl"
-            with resources.as_file(r) as csl_file:
-                self._style = citeproc.CitationStylesStyle(csl_file, validate=False)
-        else:
-            self._style = citeproc.CitationStylesStyle(Path(csl))
+    def __init__(self, abridged: bool = False):
+        self._abridged = abridged
+        filename = "abridged.csl" if abridged else "full-preview.csl"
+        r = resources.files(__package__) / f"csl/{filename}"
+        with resources.as_file(r) as csl_file:
+            self._style = citeproc.CitationStylesStyle(csl_file, validate=False)
 
     def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> HtmlElement:
         csljson = [CsljsonItem.from_ref_item(r).hyperlinkize() for r in refs]
@@ -180,10 +178,11 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             li.attrib['id'] = refs[i].id
             li.text = "\n"
             li.append(divs[i])
-            if comment := refs[i].biblio_fields.get('comment'):
-                div2 = html.builder.DIV(comment)
-                div2.tail = "\n"
-                li.append(div2)
+            if not self._abridged:
+                if comment := refs[i].biblio_fields.get('comment'):
+                    div2 = html.builder.DIV(comment)
+                    div2.tail = "\n"
+                    li.append(div2)
             li.tail = "\n"
             ret.append(li)
         return ret

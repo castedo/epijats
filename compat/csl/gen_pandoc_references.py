@@ -7,6 +7,7 @@ from pathlib import Path
 STYLES = [
   Path(__file__).parent / "../../epijats/csl/full-preview.csl",
   'modern-language-association.csl',
+  Path(__file__).parent / "../../epijats/csl/abridged.csl",
   'vancouver.csl',
   'ieee.csl',
   'iso690-numeric-en.csl',
@@ -24,6 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("csldir", type=Path, help="path to CSL files")
     args = parser.parse_args()
 
+    sys.stdout.write("<hthml>\n<head></head>\n<body>\n")
     for s in STYLES:
         sys.stdout.write(f"<h2>{s}</h2>\n")
         sys.stdout.flush()
@@ -34,3 +36,4 @@ if __name__ == "__main__":
             '--csl', str(args.csldir / s)
         ]
         subprocess.run(cmd, check=True)
+    sys.stdout.write("</body>\n</html>\n")

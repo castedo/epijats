@@ -70,32 +70,32 @@ def test_csljson(case):
     assert got == expect
 
 
+def check_html_match(html_path, ref_item, abridged: bool):
+    if html_path.exists():
+        with open(html_path, "r") as f:
+            expect = f.read()
+        bf = biblio.CiteprocBiblioFormatter(abridged)
+        assert bf.to_str([ref_item]) == expect
+
+
 @pytest.mark.parametrize("case", os.listdir(PMC_REF_CASE))
 def test_pmc_ref(case):
-    path = PMC_REF_CASE / case / "csl.json"
-    with open(path, "r") as f:
+    case_path = PMC_REF_CASE / case
+    with open(case_path / "csl.json", "r") as f:
         expect = json.load(f)[0]
     ref_item = parse_pmc_ref(PMC_REF_CASE / case / "jats.xml")
     got = biblio.CsljsonItem.from_ref_item(ref_item)
     assert got == expect
-    html_path = PMC_REF_CASE / case / "full.html"
-    if html_path.exists():
-        with open(html_path, "r") as f:
-            expect = f.read()
-        bf = biblio.CiteprocBiblioFormatter()
-        assert bf.to_str([ref_item]) == expect
+    check_html_match(case_path / "full.html", ref_item, False)
+    check_html_match(case_path / "abridged.html", ref_item, True)
 
 
 @pytest.mark.parametrize("case", os.listdir(REF_ITEM_CASE))
 def test_biblio_ref_html(case):
-    path = REF_ITEM_CASE / case / "full.html"
-    if not path.exists():
-        return
-    with open(path, "r") as f:
-        expect = f.read()
-    ref_item = parse_clean_ref_item(REF_ITEM_CASE / case / "jats.xml")
-    bf = biblio.CiteprocBiblioFormatter()
-    assert bf.to_str([ref_item]) == expect
+    case_path = REF_ITEM_CASE / case
+    ref_item = parse_clean_ref_item(case_path / "jats.xml")
+    check_html_match(case_path / "full.html", ref_item, False)
+    check_html_match(case_path / "abridged.html", ref_item, True)
 
 
 def test_csl_valid():

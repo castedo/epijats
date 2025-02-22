@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <style xmlns="http://purl.org/net/xbiblio/csl" version="1.0" class="in-text" default-locale="en">
   <info>
-    <title>Epijats Full Preview</title>
-    <id>epijats-full</id>
+    <title>Epijats Abridged</title>
+    <id>epijats-abridged</id>
     <link href="https://gitlab.com/perm.pub/epijats" rel="documentation"/>
     <author>
       <name>E. Castedo Ellerman</name>
@@ -29,62 +29,79 @@
       <term name="ordinal-13">th</term>
     </terms>
   </locale>
-  <macro name="title">
-    <choose>
-      <if variable="container-title">
-        <text variable="title" quotes="true"/>
-      </if>
-      <else>
-        <text variable="title" font-style="italic"/>
-      </else>
-    </choose>
-  </macro>
   <macro name="edition">
     <group delimiter=" ">
       <number variable="edition" form="ordinal"/>
       <text term="edition" form="short"/>
     </group>
   </macro>
-  <macro name="subreference">
-    <group delimiter=",&#x0A;">
-      <group delimiter=" ">
-        <text term="volume" form="short"/>
+  <macro name="non-journal-style">
+      <group delimiter=" " suffix=".&#x0A;">
+        <text term="volume" form="short" text-case="capitalize-first"/>
         <text variable="volume"/>
       </group>
-      <group delimiter=" ">
-        <text term="issue" form="short"/>
+      <group delimiter=" " suffix=".&#x0A;">
+        <text term="issue" form="short" text-case="capitalize-first"/>
         <text variable="issue"/>
       </group>
-      <group delimiter=": ">
+      <group delimiter=": " suffix=";&#x0A;">
         <text variable="publisher-place"/>
         <text variable="publisher"/>
       </group>
-      <date variable="issued" form="text"/>
-      <group delimiter=" ">
+      <date variable="issued" form="text" suffix=".&#x0A;"/>
+      <group delimiter=" " suffix=".&#x0A;">
         <label variable="page" form="short"/>
         <text variable="page"/>
       </group>
+  </macro>
+  <macro name="journal-style">
+    <group delimiter=";" suffix=".&#x0A;">
+      <date variable="issued" form="text"/>
+      <group delimiter=":">
+        <group>
+          <text variable="volume"/>
+          <text variable="issue" prefix="(" suffix=")"/>
+        </group>
+        <text variable="page"/>
+      </group>
     </group>
+  </macro>
+  <macro name="subreference">
+    <choose>
+      <if variable="edition publisher publisher-place" match="none">
+        <choose>
+          <if variable="issued volume page">
+            <text macro="journal-style"/>
+          </if>
+          <else>
+            <text macro="non-journal-style"/>
+          </else>
+        </choose>
+      </if>
+      <else>
+        <text macro="non-journal-style"/>
+      </else>
+    </choose>
   </macro>
   <citation>
     <layout>
       <text value=""/>
     </layout>
   </citation>
-  <bibliography>
+  <bibliography et-al-min="7" et-al-use-first="6">
     <layout>
-      <group delimiter=".&#x0A;" suffix=".">
+      <group delimiter=".&#x0A;" suffix=".&#x0A;">
         <names variable="author">
-          <name name-as-sort-order="first" delimiter=",&#x0A;" and="text" delimiter-precedes-last="always"/>
+          <name sort-separator=" " initialize-with="" name-as-sort-order="all" delimiter=",&#x0A;" delimiter-precedes-last="always"/>
         </names>
-        <text macro="title"/>
-        <group delimiter=",&#x0A;">
-          <text variable="container-title" font-style="italic"/>
-          <text macro="edition"/>
-          <text macro="subreference"/>
-          <text variable="DOI"/>
-          <text variable="URL"/>
-        </group>
+        <text variable="title"/>
+        <text variable="container-title"/>
+        <text macro="edition"/>
+      </group>
+      <text macro="subreference"/>
+      <group delimiter=".&#x0A;" suffix=".&#x0A;">
+        <text variable="DOI"/>
+        <text variable="URL"/>
       </group>
     </layout>
   </bibliography>
