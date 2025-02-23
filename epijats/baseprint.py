@@ -165,6 +165,13 @@ class Abstract(ProtoSection):
     pass
 
 
+@dataclass
+class Date:
+    year: int
+    month: int | None = None
+    day: int | None = None
+
+
 class PubIdType(StrEnum):
     DOI = 'doi'
     PMID = 'pmid'
@@ -174,12 +181,11 @@ class PubIdType(StrEnum):
 class BiblioRefItem:
     id: str
     authors: list[PersonName | str]
-    year: int | None
-    month: int | None
-    day: int | None
     article_title: str | None
     source: str | None
     edition: int | None
+    date: Date | None
+    access_date: Date | None
     biblio_fields: dict[str, str]
     pub_ids: dict[PubIdType, str]
 
@@ -199,12 +205,11 @@ class BiblioRefItem:
     def __init__(self) -> None:
         self.id = ""
         self.authors = []
-        self.year = None
-        self.month = None
-        self.day = None
         self.article_title = None
         self.source = None
         self.edition = None
+        self.date = None
+        self.access_date = None
         self.biblio_fields = {}
         self.pub_ids = {}
 

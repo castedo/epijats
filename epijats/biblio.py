@@ -47,6 +47,15 @@ def hyperlink(html_content: str, prepend: str | None = None) -> str:
     return html.tostring(element, encoding='unicode')
 
 
+def date_parts(src: bp.Date) -> JSONType:
+    parts: list[JSONType] = [src.year]
+    if src.month:
+        parts.append(src.month)
+        if src.day:
+            parts.append(src.day)
+    return {'date-parts': [parts]}
+
+
 class CsljsonItem(dict[str, JSONType]):
     def __init__(self) -> None:
         self['type'] = ''
@@ -86,15 +95,6 @@ class CsljsonItem(dict[str, JSONType]):
         else:
             self.set_str('title', src.source)
 
-    def assign_dates(self, src: bp.BiblioRefItem) -> None:
-        if src.year:
-            parts: list[JSONType] = [src.year]
-            if src.month:
-                parts.append(src.month)
-                if src.day:
-                    parts.append(src.day)
-            self['issued'] = {'date-parts': [parts]}
-
     @staticmethod
     def from_ref_item(src: bp.BiblioRefItem) -> CsljsonItem:
         ret = CsljsonItem()
@@ -103,7 +103,10 @@ class CsljsonItem(dict[str, JSONType]):
             if csl_key := JATS_TO_CSL_VAR.get(jats_key):
                 ret.set_str(csl_key, value)
         ret.assign_csjson_titles(src)
-        ret.assign_dates(src)
+        if src.date:
+            ret['issued'] = date_parts(src.date)
+        if src.access_date:
+            ret['accessed'] = date_parts(src.access_date)
         for person in src.authors:
             ret.append_author(person)
         ret.set_str('edition', src.edition)

@@ -1,0 +1,49 @@
+[
+  {
+    "DOI": "10.1371/journal.pcbi.1007128",
+    "author": [
+      {
+        "family": "Himmelstein",
+        "given": "Daniel S."
+      },
+      {
+        "family": "Rubinetti",
+        "given": "Vincent"
+      },
+      {
+        "family": "Slochower",
+        "given": "David R."
+      },
+      {
+        "family": "Hu",
+        "given": "Dongbo"
+      },
+      {
+        "family": "Malladi",
+        "given": "Venkat S."
+      },
+      {
+        "family": "Greene",
+        "given": "Casey S."
+      },
+      {
+        "family": "Gitter",
+        "given": "Anthony"
+      }
+    ],
+    "container-title": "PLOS Computational Biology",
+    "id": "ref-Himmelstein_Rubinetti_Slochower_Hu_Malladi_Greene_Gitter_2019U002F06U002F24",
+    "issue": "6",
+    "issued": {
+      "date-parts": [
+        [
+          2019
+        ]
+      ]
+    },
+    "page": "e1007128",
+    "title": "Open collaborative writing with Manubot",
+    "type": "",
+    "volume": "15"
+  }
+]

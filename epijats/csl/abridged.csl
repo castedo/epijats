@@ -15,9 +15,9 @@
   </info>
   <locale xml:lang="en">
     <date form="text">
-      <date-part name="day" suffix=" "/>
-      <date-part name="month" suffix=" " form="short"/>
       <date-part name="year"/>
+      <date-part name="month" form="short" strip-periods="true" prefix=" "/>
+      <date-part name="day" prefix=" "/>
     </date>
     <terms>
       <term name="ordinal">th</term>
@@ -35,6 +35,16 @@
       <text term="edition" form="short"/>
     </group>
   </macro>
+  <macro name="accessed-date">
+    <choose>
+      <if variable="URL">
+        <group prefix="[" suffix="]" delimiter=" ">
+          <text term="cited" text-case="lowercase"/>
+          <date variable="accessed" form="text"/>
+        </group>
+      </if>
+    </choose>
+  </macro>
   <macro name="non-journal-style">
       <group delimiter=" " suffix=".&#x0A;">
         <text term="volume" form="short" text-case="capitalize-first"/>
@@ -48,7 +58,10 @@
         <text variable="publisher-place"/>
         <text variable="publisher"/>
       </group>
-      <date variable="issued" form="text" suffix=".&#x0A;"/>
+      <group delimiter=" " suffix=".&#x0A;">
+        <date variable="issued" form="text"/>
+        <text macro="accessed-date"/>
+      </group>
       <group delimiter=" " suffix=".&#x0A;">
         <label variable="page" form="short"/>
         <text variable="page"/>

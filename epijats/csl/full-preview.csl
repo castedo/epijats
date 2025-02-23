@@ -82,6 +82,7 @@
           <text variable="container-title" font-style="italic"/>
           <text macro="edition"/>
           <text macro="subreference"/>
+          <date variable="accessed" form="text"/>
           <text variable="DOI"/>
           <text variable="URL"/>
         </group>

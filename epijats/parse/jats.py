@@ -427,6 +427,41 @@ class IntModel(TagModelBase[int]):
         return ret
 
 
+class DateBuilder:
+    def __init__(self, cp: ContentParser):
+        self.year = cp.one(tag_model('year', kit.load_int))
+        self.month = cp.one(IntModel('month', 12))
+        self.day = cp.one(IntModel('day', 31))
+
+    def build(self) -> bp.Date | None:
+        ret = None
+        if self.year.out:
+            ret = bp.Date(self.year.out)
+            if self.month.out:
+                ret.month = self.month.out
+                if self.day.out:
+                    ret.day = self.day.out
+        return ret
+
+
+class AccessDateModel(TagModelBase[bp.Date]):
+    """<date-in-citation> Date within a Citation
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/date-in-citation.html
+    """
+    def __init__(self) -> None:
+        super().__init__('date-in-citation')
+
+    def load(self, log: IssueCallback, e: etree._Element) -> bp.Date | None:
+        kit.check_no_attrib(log, e, ['content-type'])
+        if e.attrib.get('content-type') != 'access-date':
+            return None
+        cp = ContentParser(log)
+        date = DateBuilder(cp)
+        cp.parse_array_content(e)
+        return date.build()
+
+
 def read_pub_id(
     log: IssueCallback, e: etree._Element, dest: dict[bp.PubIdType, str]
 ) -> bool:
@@ -457,10 +492,9 @@ def read_element_citation(
     source = cp.one(tag_model('source', kit.load_string))
     title = cp.one(tag_model('article-title', kit.load_string))
     authors = cp.one(RefAuthorsModel())
-    year = cp.one(tag_model('year', kit.load_int))
-    month = cp.one(IntModel('month', 12))
-    day = cp.one(IntModel('day', 31))
     edition = cp.one(tag_model('edition', kit.load_int))
+    date = DateBuilder(cp)
+    access_date = cp.one(AccessDateModel())
     fields = {}
     for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
         fields[key] = cp.one(tag_model(key, kit.load_string))
@@ -470,12 +504,9 @@ def read_element_citation(
     dest.article_title = title.out
     if authors.out:
         dest.authors = authors.out
-    dest.year = year.out
-    if dest.year:
-        dest.month = month.out
-        if dest.month:
-            dest.day = day.out
     dest.edition = edition.out
+    dest.date = date.build()
+    dest.access_date = access_date.out
     for key, parser in fields.items():
         if parser.out:
             dest.biblio_fields[key] = parser.out

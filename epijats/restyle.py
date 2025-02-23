@@ -93,6 +93,18 @@ def abstract(src: baseprint.Abstract) -> DataElement:
     return proto_section('abstract', src)
 
 
+def append_date_parts(src: baseprint.Date | None, dest: DataElement) -> None:
+    if src is not None:
+        y = str(src.year)
+        dest.append(MarkupElement('year', y))
+        if src.month is not None:
+            m = str(src.month)
+            dest.append(MarkupElement('month', m))
+            if src.day is not None:
+                d = str(src.day)
+                dest.append(MarkupElement('day', d))
+
+
 def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
     stag = StartTag('element-citation')
     ec = DataElement(stag)
@@ -110,15 +122,11 @@ def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
         ec.append(MarkupElement('source', src.source))
     if src.edition is not None:
         ec.append(MarkupElement('edition', str(src.edition)))
-    if src.year is not None:
-        y = str(src.year)
-        ec.append(MarkupElement('year', y))
-        if src.month is not None:
-            m = str(src.month)
-            ec.append(MarkupElement('month', m))
-            if src.day is not None:
-                d = str(src.day)
-                ec.append(MarkupElement('day', d))
+    append_date_parts(src.date, ec)
+    if src.access_date:
+        ad = DataElement(StartTag('date-in-citation', {'content-type': 'access-date'}))
+        append_date_parts(src.access_date, ad)
+        ec.append(ad)
     for key, value in src.biblio_fields.items():
         ec.append(MarkupElement(key, value))
     for pub_id_type, value in src.pub_ids.items():
