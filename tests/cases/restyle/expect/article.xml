@@ -1,0 +1,32 @@
+<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>!</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>!</surname>
+          </name>
+        </contrib>
+      </contrib-group>
+      <abstract>
+        <p>!</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <p>!</p>
+  </body>
+  <back>
+    <ref-list>
+      <ref id="ref-1">
+        <element-citation>
+          <year>1969</year>
+          <pub-id pub-id-type="doi">10.1111/j.1558-5646.1969.tb03496.x</pub-id>
+        </element-citation>
+      </ref>
+    </ref-list>
+  </back>
+</article>

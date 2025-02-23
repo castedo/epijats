@@ -113,6 +113,14 @@ class InvalidOrcid(ElementFormatCondition):
     """Invalid ORCID"""
 
 
+class InvalidDoi(ElementFormatCondition):
+    """Invalid DOI"""
+
+
+class InvalidPmid(ElementFormatCondition):
+    """Invalid PMID"""
+
+
 class InvalidInteger(ElementFormatCondition):
     """Invalid integer"""
 

@@ -479,7 +479,23 @@ def read_pub_id(
     kit.check_no_attrib(log, e, ['pub-id-type'])
     value = kit.load_string_content(log, e)
     if not value:
+        log(fc.MissingContent.issue(e))
         return False
+    match pub_id_type:
+        case bp.PubIdType.DOI:
+            if not value.startswith("10."):
+                log(fc.InvalidDoi.issue(e, "DOIs begin with '10.'"))
+                https_prefix = "https://doi.org/"
+                if value.startswith(https_prefix):
+                    value = value[len(https_prefix):]
+                else:
+                    return False
+        case bp.PubIdType.PMID:
+            try:
+                int(value)
+            except ValueError as ex:
+                log(fc.InvalidPmid.issue(e, str(ex)))
+                return False
     dest[pub_id_type] = value
     return True
 

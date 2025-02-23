@@ -15,6 +15,7 @@ from epijats.tree import Element, make_paragraph
 from epijats.xml import xml_element
 
 
+TEST_CASES = Path(__file__).parent / "cases"
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
 ROUNDTRIP_CASE = Path(__file__).parent / "cases" / "roundtrip"
 
@@ -260,6 +261,21 @@ def test_abstract_restyle():
 <p>OK</p>
 """
     assert HTML.proto_section_to_str(bdom) == expect_html
+
+
+def test_restyle():
+    case_dir = TEST_CASES / "restyle"
+    issues = []
+    bp = parse_baseprint(case_dir / "orig/", issues.append)
+    assert bp is not None, issues
+    with open(case_dir / "expect/article.xml", "r") as f:
+        expect = f.read().rstrip()
+    xe = xml_element(restyle.article(bp))
+    assert etree.tostring(xe).decode() == expect
+    assert {i.condition for i in issues} == {
+        fc.InvalidDoi('pub-id', 'element-citation'),
+        fc.InvalidPmid('pub-id', 'element-citation'),
+    }
 
 
 def test_minimal_with_issues():
