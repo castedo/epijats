@@ -96,7 +96,7 @@ def test_roundtrip(case):
     bp = parse_baseprint(xml_path, issues.append)
     assert bp is not None, issues
     xe = xml_element(restyle.article(bp))
-    assert etree.tostring(xe).decode() == expect
+    assert etree.tostring(xe, encoding="unicode") == expect
     assert not issues
 
 

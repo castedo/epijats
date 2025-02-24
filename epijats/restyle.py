@@ -175,4 +175,4 @@ def write_baseprint(src: baseprint.Baseprint, dest: Path) -> None:
     root.tail = "\n"
     os.makedirs(dest, exist_ok=True)
     with open(dest / "article.xml", "wb") as f:
-        etree.ElementTree(root).write(f)
+        etree.ElementTree(root).write(f, encoding="utf-8")

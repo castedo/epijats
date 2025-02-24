@@ -29,6 +29,7 @@ from .tree import (
     TextElementModel,
     parse_mixed_content,
 )
+from .math import disp_formula_model, inline_formula_model, math_model
 
 
 class ExtLinkModel(TagElementModelBase):
@@ -286,6 +287,7 @@ def base_hypertext_model() -> EModel:
     hypertext = UnionModel[Element]()
     hypertext |= ExtLinkModel(formatted_text_model())
     hypertext |= CrossReferenceModel(formatted_text_model())
+    hypertext |= inline_formula_model()
     hypertext |= formatted_text_model(hypertext)
     return hypertext
 
@@ -295,7 +297,7 @@ def p_elements_model() -> EModel:
 
     Similar to JATS def, but using more restrictive base hypertext model.
     """
-    hypertext = base_hypertext_model()  # TODO: add xref as hyperlink element
+    hypertext = base_hypertext_model()
     # NOTE: open issue whether xref should be allowed in preformatted
     preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
 
@@ -303,6 +305,8 @@ def p_elements_model() -> EModel:
     # %p-elements
     p_elements = UnionModel[Element]()
     p_elements |= hypertext
+    p_elements |= math_model()
+    p_elements |= disp_formula_model()
     p_elements |= preformatted
     p_elements |= ListModel(p_elements)
     return p_elements
@@ -329,6 +333,7 @@ def p_level_model(p_elements: EModel) -> EModel:
     hypertext = base_hypertext_model()
     p_level = UnionModel[Element]()
     p_level |= TextElementModel({'p': 'p'}, p_elements)
+    p_level |= disp_formula_model()
     p_level |= TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
     p_level |= ListModel(p_elements)
     p_level |= table_wrap_model(p_elements)
