@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import cast
 
 from lxml.builder import ElementMaker
+from lxml.etree import CDATA, _Element
 
-if TYPE_CHECKING:
-    from lxml.etree import _Element
-
-from .tree import Element, MarkupElement, MixedContent
+from .tree import CdataElement, Element, MarkupElement, MixedContent
 
 
 class ElementFormatter(ABC):
@@ -18,6 +16,8 @@ class ElementFormatter(ABC):
     def copy_content(self, src: Element, dest: _Element, level: int) -> None:
         if isinstance(src, MarkupElement):
             self._markup_content(src.content, dest, level)
+        elif isinstance(src, CdataElement):
+            dest.text = cast(str, CDATA(src.content))
         else:
             self._data_content(src, dest, level)
 

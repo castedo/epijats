@@ -79,6 +79,16 @@ class MarkupElement(Element):
     def content(self) -> MixedContent:
         return self._content
 
+
+@dataclass
+class CdataElement(Element):
+    content: str
+
+    def __init__(self, xml_tag: str | StartTag, content: str):
+        super().__init__(xml_tag)
+        self.content = content
+
+
 @dataclass
 class DataElement(Element):
     _array: list[Element]

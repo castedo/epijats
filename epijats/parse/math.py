@@ -4,8 +4,9 @@ from typing import Iterable
 
 from lxml import etree
 
-from ..tree import Element, MarkupElement, StartTag
+from ..tree import CdataElement, Element, MarkupElement, StartTag
 
+from . import kit
 from .kit import (
     IssueCallback,
 )
@@ -67,6 +68,15 @@ class AnyMathmlModel(ElementModelBase):
         return ret
 
 
+class TexMathElementModel(TagElementModelBase):
+    def __init__(self) -> None:
+        super().__init__('tex-math')
+
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        tex = kit.load_string_content(log, e)
+        return CdataElement(self.tag, tex)
+
+
 class MathmlElementModel(TagElementModelBase):
     def __init__(self, mathml_tag: str):
         super().__init__(MATHML_NAMESPACE_PREFIX + mathml_tag)
@@ -94,7 +104,7 @@ def inline_formula_model() -> EModel:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/inline-formula.html
     """
     mathml = MathmlElementModel('math')
-    alts = HtmlDataElementModel('alternatives', mathml)
+    alts = HtmlDataElementModel('alternatives', mathml | TexMathElementModel())
     return HtmlDataElementModel('inline-formula', mathml | alts)
 
 
@@ -104,5 +114,5 @@ def disp_formula_model() -> EModel:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-formula.html
     """
     mathml = MathmlElementModel('math')
-    alts = HtmlDataElementModel('alternatives', mathml)
+    alts = HtmlDataElementModel('alternatives', mathml | TexMathElementModel())
     return HtmlDataElementModel('disp-formula', mathml | alts)
