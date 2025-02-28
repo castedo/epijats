@@ -202,6 +202,29 @@ bar.</p>
     assert str_from_element(subel) == expect
 
 
+def test_def_list_rountrip():
+    expect = """\
+<def-list>
+  <def-item>
+    <term>Base DSI of this specification:</term>
+    <def>
+      <p><monospace>1wFGhvmv8XZfPx0O5Hya2e9AyXo</monospace></p>
+    </def>
+  </def-item>
+  <def-item>
+    <term>DSI of the first edition:</term>
+    <def>
+      <p><monospace>1wFGhvmv8XZfPx0O5Hya2e9AyXo/1</monospace></p>
+    </def>
+  </def-item>
+</def-list>"""
+    issues = []
+    model = _.def_list_model(_.p_elements_model())
+    subel = model.load(issues.append, lxml_element_from_str(expect))
+    assert len(list(subel)) == 2
+    assert str_from_element(subel) == expect
+
+
 def test_author_restyle():
     expect = """\
 <contrib-group>

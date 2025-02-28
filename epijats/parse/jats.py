@@ -74,6 +74,15 @@ class CrossReferenceModel(TagElementModelBase):
         return ret
 
 
+def disp_quote_mode(p_elements: EModel) -> EModel:
+    """<disp-quote> Quote, Displayed
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-quote.html
+    """
+    p = TextElementModel({'p': 'p'}, p_elements)
+    return HtmlDataElementModel('disp-quote', p, 'blockquote')
+
+
 class ListModel(TagElementModelBase):
     def __init__(self, p_elements_model: EModel):
         super().__init__('list')
@@ -91,6 +100,41 @@ class ListModel(TagElementModelBase):
         ret = bp.List(list_type)
         self._list_content_model.bind(log, ret.append).parse_array_content(e)
         return ret
+
+
+def def_term_model() -> EModel:
+    """<term> Definition List: Term
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
+    """
+    return TextElementModel({'term': 'dt'}, base_hypertext_model())
+
+
+def def_def_model(p_elements: EModel) -> EModel:
+    """<def> Definition List: Definition
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
+    """
+    p = TextElementModel({'p': 'p'}, p_elements)
+    return HtmlDataElementModel('def', p, 'dd')
+
+
+def def_item_model(p_elements: EModel) -> EModel:
+    """<def-item> Definition List: Definition Item
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
+    """
+    content_model = def_term_model() | def_def_model(p_elements)
+    return DataElementModel('def-item', content_model)
+
+
+def def_list_model(p_elements: EModel) -> EModel:
+    """<def-list> Definition List
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-list.html
+    """
+    content_model = def_item_model(p_elements)
+    return HtmlDataElementModel('def-list', content_model, 'dl')
 
 
 class TableCellModel(TagElementModelBase):
@@ -308,7 +352,9 @@ def p_elements_model() -> EModel:
     p_elements |= math_model()
     p_elements |= disp_formula_model()
     p_elements |= preformatted
+    p_elements |= disp_quote_model(p_elements)
     p_elements |= ListModel(p_elements)
+    p_elements |= def_list_model(p_elements)
     return p_elements
 
 
