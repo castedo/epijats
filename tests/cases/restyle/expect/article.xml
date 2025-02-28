@@ -27,6 +27,26 @@
           <pub-id pub-id-type="doi">10.1111/j.1558-5646.1969.tb03496.x</pub-id>
         </element-citation>
       </ref>
+      <ref id="ref-hartl_essential_2006">
+        <element-citation>
+          <person-group person-group-type="author">
+            <name>
+              <surname>Hartl</surname>
+              <given-names>Daniel L.</given-names>
+            </name>
+            <name>
+              <surname>Jones</surname>
+              <given-names>Elizabeth W.</given-names>
+            </name>
+          </person-group>
+          <source>Essential genetics: A genomics perspective</source>
+          <edition>4</edition>
+          <year>2006</year>
+          <publisher-name>Jones; Bartlett Publishers</publisher-name>
+          <publisher-loc>Boston</publisher-loc>
+          <isbn>978-0-7637-3527-2</isbn>
+        </element-citation>
+      </ref>
     </ref-list>
   </back>
 </article>

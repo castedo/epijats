@@ -551,6 +551,25 @@ def read_pub_id(
     return True
 
 
+def load_edition(log: IssueCallback, e: etree._Element) -> int | None:
+    for s in e:
+        log(fc.UnsupportedElement.issue(s))
+        if s.tail and s.tail.strip():
+            log(fc.IgnoredText.issue(e))
+    text = e.text or ""
+    if text.endswith('.'):
+        text = text[:-1]
+    if text.endswith((' Ed', ' ed')):
+        text = text[:-3]
+    if text.endswith(('st', 'nd', 'rd', 'th')):
+        text = text[:-2]
+    try:
+        return int(text)
+    except ValueError:
+        log(fc.InvalidInteger.issue(e, text))
+        return None
+
+
 def read_element_citation(
     log: IssueCallback, e: etree._Element, dest: bp.BiblioRefItem
 ) -> bool:
@@ -559,7 +578,7 @@ def read_element_citation(
     source = cp.one(tag_model('source', kit.load_string))
     title = cp.one(tag_model('article-title', kit.load_string))
     authors = cp.one(RefAuthorsModel())
-    edition = cp.one(tag_model('edition', kit.load_int))
+    edition = cp.one(tag_model('edition', load_edition))
     date = DateBuilder(cp)
     access_date = cp.one(AccessDateModel())
     fields = {}
