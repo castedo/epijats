@@ -98,11 +98,11 @@ def append_date_parts(src: baseprint.Date | None, dest: DataElement) -> None:
         y = str(src.year)
         dest.append(MarkupElement('year', y))
         if src.month is not None:
-            m = str(src.month)
-            dest.append(MarkupElement('month', m))
+            # zero padding is more common in PMC citations
+            # some JATS parsers (like pandoc) expect zero padding
+            dest.append(MarkupElement('month', f"{src.month:02}"))
             if src.day is not None:
-                d = str(src.day)
-                dest.append(MarkupElement('day', d))
+                dest.append(MarkupElement('day', f"{src.day:02}"))
 
 
 def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
