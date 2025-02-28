@@ -6,6 +6,7 @@ from pathlib import Path
 from lxml import etree
 
 from . import baseprint
+from . import baseprint as bp
 from .tree import DataElement, MarkupElement, MixedContent, StartTag
 from .xml import xml_element
 
@@ -105,17 +106,23 @@ def append_date_parts(src: baseprint.Date | None, dest: DataElement) -> None:
                 dest.append(MarkupElement('day', f"{src.day:02}"))
 
 
-def biblio_ref_item(src: baseprint.BiblioRefItem) -> DataElement:
+def biblio_person_group(group_type: str, src: list[bp.PersonName | str]) -> DataElement:
+    ret = DataElement(StartTag('person-group', {'person-group-type': group_type}))
+    for person in src:
+        if isinstance(person, bp.PersonName):
+            ret.append(person_name(person))
+        else:
+            ret.append(MarkupElement('string-name', person))
+    return ret
+
+
+def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
     stag = StartTag('element-citation')
     ec = DataElement(stag)
     if src.authors:
-        pg = DataElement(StartTag('person-group', {'person-group-type': 'author'}))
-        for a in src.authors:
-            if isinstance(a, baseprint.PersonName):
-                pg.append(person_name(a))
-            else:
-                pg.append(MarkupElement('string-name', a))
-        ec.append(pg)
+        ec.append(biblio_person_group('author', src.authors))
+    if src.editors:
+        ec.append(biblio_person_group('editor', src.editors))
     if src.article_title:
         ec.append(MarkupElement('article-title', src.article_title))
     if src.source:

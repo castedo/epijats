@@ -8,6 +8,7 @@ from ..tree import Element, MixedContent, StartTag, make_paragraph
 
 from . import kit
 from .kit import (
+    AttribView,
     TagModelBase,
     Binder,
     ContentParser,
@@ -247,8 +248,8 @@ class AutoCorrectParser(Parser):
         correction.content.append(parsed_p_element)
         self.dest(correction)
 
-    def match(self, tag: str) -> kit.ParseFunc | None:
-        return self._parser.match(tag)
+    def match(self, tag: str, attrib: AttribView) -> kit.ParseFunc | None:
+        return self._parser.match(tag, attrib)
 
 
 class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
@@ -289,13 +290,13 @@ class SectionModel(TagModelBase[bp.Section]):
         return ret
 
 
-class RefAuthorsModel(TagModelBase[list[bp.PersonName | str]]):
+class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
     """<person-group> Person Group for a Cited Publication
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/person-group.html
     """
 
-    def __init__(self) -> None:
-        super().__init__('person-group')
+    def __init__(self, group_type: str) -> None:
+        super().__init__('person-group', {'person-group-type': group_type})
 
     def load(
         self, log: IssueCallback, e: etree._Element
@@ -303,10 +304,6 @@ class RefAuthorsModel(TagModelBase[list[bp.PersonName | str]]):
         ret: list[bp.PersonName | str] = []
         k = 'person-group-type'
         kit.check_no_attrib(log, e, [k])
-        v = e.attrib.get(k, "")
-        if v != 'author':
-            log(fc.UnsupportedAttributeValue.issue(e, k, v))
-            return None
         cp = ContentParser(log)
         cp.bind(tag_model('name', load_person_name), ret.append)
         cp.bind(tag_model('string-name', kit.load_string), ret.append)
@@ -577,7 +574,8 @@ def read_element_citation(
     cp = ContentParser(log)
     source = cp.one(tag_model('source', kit.load_string))
     title = cp.one(tag_model('article-title', kit.load_string))
-    authors = cp.one(RefAuthorsModel())
+    authors = cp.one(PersonGroupModel('author'))
+    editors = cp.one(PersonGroupModel('editor'))
     edition = cp.one(tag_model('edition', load_edition))
     date = DateBuilder(cp)
     access_date = cp.one(AccessDateModel())
@@ -590,6 +588,8 @@ def read_element_citation(
     dest.article_title = title.out
     if authors.out:
         dest.authors = authors.out
+    if editors.out:
+        dest.editors = editors.out
     dest.edition = edition.out
     dest.date = date.build()
     dest.access_date = access_date.out

@@ -10,6 +10,7 @@ from ..tree import DataElement, Element, MarkupElement, MixedContent, StartTag
 
 from . import kit
 from .kit import (
+    AttribView,
     ReaderBinderParser,
     Binder,
     IssueCallback,
@@ -45,7 +46,8 @@ class ElementModelBase(Model[Element]):
         ...
 
     def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
-        return ReaderBinderParser(log, dest, self.tags, self.read)
+        stags = [StartTag(tag) for tag in self.tags]
+        return ReaderBinderParser(log, dest, stags, self.read)
 
     def read(self, log: IssueCallback, e: etree._Element, dest: Sink[Element]) -> bool:
         parsed = self.load(log, e)
@@ -119,7 +121,7 @@ class MixedContentParser(Parser):
         self.model = model
         self.tag = tag
 
-    def match(self, tag: str) -> kit.ParseFunc | None:
+    def match(self, tag: str, attrib: AttribView) -> kit.ParseFunc | None:
         return self._parse if tag == self.tag else None
 
     def _parse(self, e: etree._Element) -> bool:

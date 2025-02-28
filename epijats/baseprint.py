@@ -181,6 +181,7 @@ class PubIdType(StrEnum):
 class BiblioRefItem:
     id: str
     authors: list[PersonName | str]
+    editors: list[PersonName | str]
     article_title: str | None
     source: str | None
     edition: int | None
@@ -205,6 +206,7 @@ class BiblioRefItem:
     def __init__(self) -> None:
         self.id = ""
         self.authors = []
+        self.editors = []
         self.article_title = None
         self.source = None
         self.edition = None

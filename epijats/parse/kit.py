@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Generic, Protocol, Sequence, TypeAlias, TypeVar
+from typing import Generic, Protocol, TypeAlias, TypeVar
 
 from lxml import etree
 
 from .. import condition as fc
+from ..tree import StartTag
 
 
 IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
 EnumT = TypeVar('EnumT', bound=StrEnum)
+AttribView: TypeAlias = etree._Attrib
 
 
 def issue(
@@ -92,19 +94,19 @@ ParseFunc: TypeAlias = Callable[[etree._Element], bool]
 
 class Parser(Validator):
     @abstractmethod
-    def match(self, tag: str) -> ParseFunc | None: ...
+    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None: ...
 
     def parse_element(self, e: etree._Element) -> bool:
         if not isinstance(e.tag, str):
             return False
-        fun = self.match(e.tag)
+        fun = self.match(e.tag, e.attrib)
         return False if fun is None else fun(e)
 
     def parse_array_content(self, e: etree._Element) -> None:
         prep_array_elements(self.log, e)
         for s in e:
             if isinstance(s.tag, str):
-                fun = self.match(s.tag)
+                fun = self.match(s.tag, s.attrib)
                 if fun is not None:
                     fun(s)
                     continue
@@ -116,9 +118,9 @@ class UnionParser(Parser):
         super().__init__(log)
         self._parsers = list(parsers)
 
-    def match(self, tag: str) -> ParseFunc | None:
+    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
         for p in self._parsers:
-            fun = p.match(tag)
+            fun = p.match(tag, attrib)
             if fun is not None:
                 return fun
         return None
@@ -130,7 +132,7 @@ class SingleElementParser(Parser):
         self.tag = tag
         self.content_parser = content_parser
 
-    def match(self, tag: str) -> ParseFunc | None:
+    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
         return self._parse if tag == self.tag else None
 
     def _parse(self, e: etree._Element) -> bool:
@@ -232,16 +234,22 @@ class ReaderBinderParser(Parser, Generic[DestT]):
         self,
         log: IssueCallback,
         dest: DestT,
-        tag: str | Iterable[str],
+        stag: StartTag | Iterable[StartTag],
         reader: Reader[DestT],
     ):
         super().__init__(log)
         self.dest = dest
-        self._tags = [tag] if isinstance(tag, str) else list(tag)
+        self._stags = [stag] if isinstance(stag, StartTag) else list(stag)
         self._reader = reader
 
-    def match(self, tag: str) -> ParseFunc | None:
-        return self._parse if tag in self._tags else None
+    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
+        for good in self._stags:
+            if tag == good.tag: 
+                for key, value in good.attrib.items():
+                    if attrib.get(key) != value:
+                        return None
+                return self._parse
+        return None
 
     def _parse(self, e: etree._Element) -> bool:
         return self._reader(self.log, e, self.dest)
@@ -253,7 +261,8 @@ class ReaderBinder(Binder[DestT]):
         self._reader = reader
 
     def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        return ReaderBinderParser(log, dest, self.tag, self._reader)
+        stag = StartTag(self.tag)
+        return ReaderBinderParser(log, dest, stag, self._reader)
 
 
 Sink: TypeAlias = Callable[[ParsedT], None]
@@ -262,14 +271,16 @@ UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
 
 
 class TagModelBase(Model[ParsedT]):
-    def __init__(self, tag: str):
+    def __init__(self, tag: str, attrib: Mapping[str, str] = {}):
         self.tag = tag
+        self.attrib = dict(attrib)
 
     @abstractmethod
     def load(self, log: IssueCallback, e: etree._Element) -> ParsedT | None: ...
 
     def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
-        return ReaderBinderParser(log, dest, self.tag, LoaderReader(self.load))
+        stag = StartTag(self.tag, self.attrib)
+        return ReaderBinderParser(log, dest, stag, LoaderReader(self.load))
 
 
 class LoaderReader(Reader[Sink[ParsedT]]):
@@ -295,14 +306,14 @@ class OnlyOnceParser(Parser):
         self._parser = parser
         self._parse_done = False
 
-    def match(self, tag: str) -> ParseFunc | None:
-        fun = self._parser.match(tag)
+    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
+        fun = self._parser.match(tag, attrib)
         return None if fun is None else self._parse
 
     def _parse(self, e: etree._Element) -> bool:
         if not isinstance(e.tag, str):
             return False
-        parse_func = self._parser.match(e.tag)
+        parse_func = self._parser.match(e.tag, e.attrib)
         if parse_func is None:
             return False
         if not self._parse_done:
