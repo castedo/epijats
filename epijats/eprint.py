@@ -7,6 +7,7 @@ import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
+from warnings import warn
 
 # WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
 # file has relative URLs in anchor hrefs.
@@ -17,13 +18,20 @@ HACK_WEASY_PATH = Path(tempfile.gettempdir()) / "mZ3iBmnGae1f4Wcgt2QstZn9VYx"
 
 class EprinterConfig:
     def __init__(
-        self, *, dsi_base_url: str | None = None, math_css_url: str | None = None
+        self,
+        *,
+        dsi_domain: str | None = None,
+        dsi_base_url: str | None = None,
+        math_css_url: str | None = None,
     ):
-        self.urls = dict(
-            dsi_base_url=(dsi_base_url.rstrip("/") if dsi_base_url else None),
-            math_css_url=(math_css_url or "static/katex/katex.css"),
-        )
-        self.article_style = 'lyon'
+        self.urls = dict(math_css_url=(math_css_url or "static/katex/katex.css"))
+        if dsi_base_url:
+            warn("use dsi_domain instead of dsi_base_url", DeprecationWarning)
+            if not dsi_domain:
+                assert dsi_base_url.startswith('https://perm.pub')
+                dsi_domain = "perm.pub" 
+        if dsi_domain:
+            self.urls['dsi_domain'] = dsi_domain
         self.embed_web_fonts = True
         self.show_pdf_icon = False
 
@@ -39,7 +47,6 @@ class Eprint:
             config = EprinterConfig()
         self._tmp = Path(tmp)
         self._html_ctx: dict[str, str | bool | None] = dict(config.urls)
-        self._html_ctx["article_style"] = config.article_style
         self._html_ctx["embed_web_fonts"] = config.embed_web_fonts
         self._html_ctx["show_pdf_icon"] = config.show_pdf_icon
         self.webstract = webstract

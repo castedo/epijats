@@ -1,9 +1,4 @@
 {% extends 'epijats/_common.html.jinja' %}
-{% set fake_base_dsi =  '0123456789abcdefghijklmnopq' %}
-{% set fake_edid = '1' %}
-{% set fake_dsi = fake_base_dsi ~ '/' ~ fake_edid %}
-{% set permpub_missing = permpub_missing or false %}
-
 
 {% macro article_main_css_style(static_dir="static") %}
   {{- pandoc_class_css() }}
@@ -11,9 +6,8 @@
   <link href="{{ static_dir }}/article.css" rel="stylesheet">
 {% endmacro %}
 
-
 {% macro dsi_html_code(doc) -%}
-<code><span class="base64">{{ doc.base_dsi or fake_base_dsi }}</span>/{{ doc.edid or fake_edid }}</code>
+<code><span class="base64">{{ doc.base_dsi }}</span>/{{ doc.edid }}</code>
 {%- endmacro %}
 
 {% macro dsi_html(doc) -%}
@@ -21,20 +15,20 @@
 {%- endmacro %}
 
 {% macro https_dsi_html(doc, dsi_base_url) -%}
-<span class="dsi-url"><span class="before-dsi"><span class="base-url">{{ dsi_base_url }}/</span><span class="uri-scheme">dsi:</span></span><wbr>{{ dsi_html_code(doc) }}</span>
+<span class="dsi-url"><span class="base-url">{{ dsi_base_url }}/</span><wbr>{{ dsi_html_code(doc) }}</span>
 {%- endmacro %}
 
-{% macro citation(doc, dsi_base_url) %}
+{% macro citation(doc, dsi_domain) %}
   {% for contributor in doc.contributors %}
     {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
   {% endfor %}
   ({{ doc.date.year or '20??' }})
   "{{ doc.title }}"
-  perm.pub
-  {{ https_dsi_html(doc, dsi_base_url) }}
+  {{ dsi_doman }}
+  {{ https_dsi_html(doc, "https://" ~ dsi_domain) }}
 {% endmacro %}
 
-{% macro article_layout(doc, dsi_base_url, website_hooks=none) %}
+{% macro article_layout(doc, dsi_domain, website_hooks=none) %}
 {% set static_dir = website_hooks.static_dir if website_hooks else 'static' %}
   <header>
     <div class="page-left">
@@ -43,21 +37,25 @@
     </div>
     <div class="page-center"></div>
     <div class="page-right">
-        {% if not permpub_missing %}
+      {% if doc.dsi %}
+        {% if dsi_domain %}
         <div class="article-dsi">
-          <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
-            <span class="logotype">perm.pub</span><code>/</code><wbr>{{ dsi_html(doc) }}
+          <a href="https://{{ dsi_domain }}/{{ doc.dsi }}">
+            <span class="logotype">{{ dsi_domain }}</span><code>/</code><wbr><span class="uri">{{ dsi_html_code(doc) }}</span>
           </a>
           <div class="online-msg">Additional formats and editions available online.</div>
         </div>
         {% endif %}
+      {% else %}
+        <div class="draft-msg">WORKING DRAFT</div>
+      {% endif %}
     </div>
   </header>
 
   <footer>
     <div class="page-left">
       <div class="article-swhid">
-        Archived baseprint
+        Baseprint snapshot
         <a class="uri" href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
           <span class="uri-scheme">{{ doc.hash_scheme }}</span><code>{{ doc.hexhash }}</code>
         </a>
@@ -68,14 +66,14 @@
   </footer>
 
   <header>
-  {% if not permpub_missing %}
+  {% if doc.dsi and dsi_domain %}
     <div class="page-left">
       <span class="online-msg">Additional formats and editions available online.</span>
     </div>
     <div class="page-center"></div>
     <div class="page-right">
-      <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
-        {{ https_dsi_html(doc, dsi_base_url) }}
+      <a href="https://{{ dsi_domain }}/{{ doc.dsi }}">
+        {{ https_dsi_html(doc, dsi_domain) }}
       </a>
     </div>
   {% endif %}
@@ -84,13 +82,17 @@
   <div class="aside-rack article-header webpaper-only">
     <div class="aside-shelf">
       <div>
-        {% if not permpub_missing %}
+       {% if doc.dsi %}
+        {% if dsi_domain %}
         <div class="article-dsi">
-          <a href="{{ dsi_base_url }}/{{ doc.dsi or fake_dsi }}">
+          <a href="https://{{ dsi_domain }}/{{ doc.dsi }}">
             {{ dsi_html(doc) }}
           </a>
         </div>
         {% endif %}
+       {% else %}
+        <div class="draft-msg">WORKING DRAFT</div>
+       {% endif %}
       </div>
       <aside>
         <div class="webpaper-logos">
@@ -136,11 +138,11 @@
       </div>
       <aside class="article-two-column-only">
         <dl>
-          {% if not website_hooks and not permpub_missing %}
+          {% if not website_hooks and dsi_domain and doc.dsi %}
             <dt>Citation</dt>
             <dd>
               <p>
-                {{ citation(doc, dsi_base_url) -}}
+                {{ citation(doc, dsi_domain) -}}
               </p>
             </dd>
           {% endif %}
@@ -158,9 +160,9 @@
 
     <div class="article-footer webpaper-only">
       <dl class="article-one-column-only">
-        {% if not website_hooks and not permpub_missing %}
+        {% if not website_hooks and dsi_domain and doc.dsi %}
           <dt>Citation</dt>
-          <dd>{{ citation(doc, dsi_base_url) -}}</dd>
+          <dd>{{ citation(doc, dsi_domain) -}}</dd>
         {% endif %}
         <dt>Copyright</dt>
         <dd>
@@ -168,7 +170,7 @@
         </dd>
       </dl>
       <div class="article-swhid">
-        Archived baseprint
+        Baseprint snapshot
         <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
           <span class="uri">
             <span class="uri-scheme"

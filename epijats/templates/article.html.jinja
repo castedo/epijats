@@ -1,7 +1,7 @@
 {% extends 'base.html.jinja' %}
-{% import 'epijats/' ~ article_style ~ '.html.jinja' as style %}
+{% import 'epijats/lyon.html.jinja' as style %}
 
-{% macro article_preview(doc, dsi_base_url, show_pdf_icon) %}
+{% macro article_preview(doc, dsi_domain, show_pdf_icon) %}
 <div class="page-content-pillar">
   <div class="eprint">
 
@@ -17,7 +17,7 @@
       {% endif %}
     </nav>
 
-    {{- style.article_layout(doc, dsi_base_url) }}
+    {{- style.article_layout(doc, dsi_domain) }}
 
   </div><!-- eprint -->
 </div><!-- page-content-pillar -->
@@ -95,5 +95,5 @@
 {% endblock head_content %}
 
 {% block body_content %}
-{{article_preview(doc, dsi_base_url, show_pdf_icon)-}}
+{{article_preview(doc, dsi_domain, show_pdf_icon)-}}
 {% endblock body_content %}

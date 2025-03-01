@@ -188,6 +188,7 @@
 .eprint .webpaper-logos img.logo {
   height: 2rem;
   margin-right: 0.75rem;
+  margin-top: 0.75rem;
 }
 .eprint header:first-of-type .article-dsi {
   padding-bottom: 1.125rem;
@@ -204,6 +205,13 @@
 .eprint header:first-of-type .article-dsi .online-msg {
   margin-top: 0.5rem;
   font-size: 0.9em;
+}
+.eprint .draft-msg {
+  font-size: 4em;
+  font-weight: normal;
+  color: lightgrey;
+  text-align: center;
+  margin-bottom: 1rem;
 }
 
 .eprint footer > div {
@@ -326,9 +334,6 @@
 .eprint .dsi-url code,
 .eprint .uri code {
   color: inherit;
-  display: inline-block;
-}
-.eprint .before-dsi {
   display: inline-block;
 }
 @media print {
