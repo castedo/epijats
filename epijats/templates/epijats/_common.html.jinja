@@ -46,18 +46,30 @@
 {% endmacro %}
 
 
-{% macro copyright(doc) %}
+{% macro copyright(doc) +%}
+  {% set cc_license = {
+      "cc0license": "CC0",
+      "ccbylicense": "CC BY",
+      "ccbysalicense": "CC BY-SA",
+      "ccbynclicense": "CC BY-NC",
+      "ccbyncsalicense": "CC BY-NC-SA",
+      "ccbyndlicense": "CC BY-ND",
+      "ccbyncndlicense": "CC BY-NC-ND",
+  }
+  %}
+  <p>{{ doc.copyright }}</p>
+  {% if doc.license_ref %}
   <p>
-    <a href="http://creativecommons.org/licenses/by/4.0/" rel="nofollow">
-      creativecommons.org/licenses/by/4.0/
-    </a>
+     <a href="{{ doc.license_ref }}" rel="nofollow">
+       {{ cc_license[doc.cc_license_type] }}
+       License
+     </a>
   </p>
-  <p>
-    {{ doc.date.year }} © The Authors.
-    This document is distributed under a Creative Commons Attribution 4.0 International
-    license.
-  </p>
-{% endmacro %}
+  {% endif %}
+  {% if doc.license_p %}
+  <p>{{ doc.license_p }}</p>
+  {%- endif %}
+{%- endmacro %}
 
 
 {% macro contributors_list(contributors, show_email=True) %}

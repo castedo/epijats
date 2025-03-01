@@ -28,12 +28,18 @@
   {{ https_dsi_html(doc, "https://" ~ dsi_domain) }}
 {% endmacro %}
 
+{% macro access_logos(doc, static_dir) +%}
+  {% if doc.cc_license_type %}
+  <img class="logo logo-cc" src="{{ static_dir }}/cc.svg">
+  <img class="logo logo-oa" src="{{ static_dir }}/Open_Access_logo_PLoS_transparent.svg">
+  {%- endif %}
+{%- endmacro %}
+
 {% macro article_layout(doc, dsi_domain, website_hooks=none) %}
 {% set static_dir = website_hooks.static_dir if website_hooks else 'static' %}
   <header>
     <div class="page-left">
-      <img class="logo logo-cc" src="{{ static_dir }}/cc.svg">
-      <img class="logo logo-oa" src="{{ static_dir }}/Open_Access_logo_PLoS_transparent.svg">
+      {{- access_logos(doc, static_dir) | indent }}
     </div>
     <div class="page-center"></div>
     <div class="page-right">
@@ -96,8 +102,7 @@
       </div>
       <aside>
         <div class="webpaper-logos">
-          <img class="logo logo-cc" src="{{ static_dir }}/cc.svg">
-          <img class="logo logo-oa" src="{{ static_dir }}/Open_Access_logo_PLoS_transparent.svg">
+          {{- access_logos(doc, static_dir) | indent(8) }}
         </div>
       </aside>
     </div>
@@ -146,8 +151,12 @@
               </p>
             </dd>
           {% endif %}
+          {% if doc.copyright %}
           <dt>Copyright</dt>
-          <dd>{{ copyright(doc) }}</dd>
+          <dd>
+            {{- copyright(doc) }}
+          </dd>
+          {% endif %}
         </dl>
       </aside>
     </div>
@@ -164,10 +173,12 @@
           <dt>Citation</dt>
           <dd>{{ citation(doc, dsi_domain) -}}</dd>
         {% endif %}
+        {% if doc.copyright %}
         <dt>Copyright</dt>
         <dd>
           {{- copyright(doc) }}
         </dd>
+        {% endif %}
       </dl>
       <div class="article-swhid">
         Baseprint snapshot

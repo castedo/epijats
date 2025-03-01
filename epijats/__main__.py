@@ -58,7 +58,7 @@ class Main:
 
         self.parser.parse_args(cmd_line_args, self)
 
-        self.config = EprinterConfig(dsi_base_url="https://perm.pub")
+        self.config = EprinterConfig(dsi_domain="perm.pub")
         self.config.embed_web_fonts = not self.no_web_fonts
 
     def run(self) -> int:

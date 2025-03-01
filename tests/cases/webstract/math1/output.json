@@ -13,5 +13,9 @@
         }
     ],
     "source": "swh:1:dir:ed560a61176193d4f5b7330e211895758261427a",
+    "copyright": "© 2022, Ellerman et al",
+    "cc_license_type": "ccbylicense",
+    "license_ref": "https://creativecommons.org/licenses/by/4.0/",
+    "license_p": "This document is distributed under a Creative Commons\nAttribution 4.0 International license.",
     "title": "Definitions of F<sub>ST</sub>"
 }

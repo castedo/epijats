@@ -59,4 +59,13 @@ def webstract_from_jats(src: Path | str) -> Webstract:
             d['orcid'] = a.orcid.as_19chars()
         ret['contributors'].append(d)
     ret['issues'] = [i.as_pod() for i in issues]
+    if bp.permissions:
+        if bp.permissions.license:
+            if bp.permissions.license.license_ref:
+                ret['license_ref'] = bp.permissions.license.license_ref
+            ret['license_p'] = gen.content_to_str(bp.permissions.license.license_p)
+            if bp.permissions.license.cc_license_type:
+                ret['cc_license_type'] = str(bp.permissions.license.cc_license_type)
+        if bp.permissions.copyright:
+            ret['copyright'] = gen.content_to_str(bp.permissions.copyright.statement)
     return ret
