@@ -319,7 +319,7 @@ def formatted_text_model(sub_model: EModel | None = None) -> EModel:
         'sub': 'sub',
         'sup': 'sup',
     }
-    content_model = True if sub_model is None else sub_model
+    content_model: EModel | bool = True if sub_model is None else sub_model
     return TextElementModel(formatted_text_tags, content_model)
 
 

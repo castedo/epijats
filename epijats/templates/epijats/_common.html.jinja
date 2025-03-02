@@ -85,9 +85,6 @@
       <dd><a href="mailto:{{ contributor.email[0] | escape }}">{{ contributor.email | join(', ') | escape }}</a></dd>
     {% endif %}
   {% endfor %}
-  {% if not contributors %}
-    <dt>Author who?</dt>
-  {% endif %}
 </dl>
 {% endmacro %}
 
