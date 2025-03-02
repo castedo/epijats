@@ -1,0 +1,19 @@
+{% extends 'base.html.jinja' %}
+
+{% block body_content %}
+{% if not doc.issues %}
+There are no Baseprint document format issues.
+{% else %}
+There are {{ doc.issues | length }} Baseprint document format issues in <code>article.xml</code>.
+<ol>
+{% for issue in doc.issues %}
+<li>
+<code>{{ issue.condition | tojson }}</code>
+{% if issue.sourceline %}
+(line {{ issue.sourceline }})
+{% endif %}
+</li>
+{% endfor %}
+</ol>
+{% endif %}
+{% endblock body_content %}

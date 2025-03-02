@@ -60,6 +60,7 @@ class Eprint:
         ctx = dict(doc=self.webstract.facade, has_math=True, **self._html_ctx)
         assert self._gen
         self._gen.render_file("article.html.jinja", ret, ctx)
+        self._gen.render_file("issues.html.jinja", target / "issues.html", ctx)
         Eprint._clone_static_dir(target / "static")
         self.webstract.source.copy_resources(target)
         return ret
