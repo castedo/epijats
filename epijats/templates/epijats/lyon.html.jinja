@@ -35,7 +35,7 @@
   {%- endif %}
 {%- endmacro %}
 
-{% macro article_layout(doc, dsi_domain, website_hooks=none) %}
+{% macro article_layout(doc, args, website_hooks=none) %}
 {% set static_dir = website_hooks.static_dir if website_hooks else 'static' %}
   <header>
     <div class="page-left">
@@ -44,16 +44,16 @@
     <div class="page-center"></div>
     <div class="page-right">
       {% if doc.dsi %}
-        {% if dsi_domain %}
+        {% if args.dsi_domain %}
         <div class="article-dsi">
-          <a href="https://{{ dsi_domain }}/{{ doc.dsi }}">
-            <span class="logotype">{{ dsi_domain }}</span><code>/</code><wbr><span class="uri">{{ dsi_html_code(doc) }}</span>
+          <a href="https://{{ args.dsi_domain }}/{{ doc.dsi }}">
+            <span class="logotype">{{ args.dsi_domain }}</span><code>/</code><wbr><span class="uri">{{ dsi_html_code(doc) }}</span>
           </a>
           <div class="online-msg">Additional formats and editions available online.</div>
         </div>
         {% endif %}
-      {% else %}
-        <div class="draft-msg">WORKING DRAFT</div>
+      {% elif args.header_banner_msg %}
+        <div class="header-banner-msg">{{ args.header_banner_msg }}</div>
       {% endif %}
     </div>
   </header>
@@ -72,14 +72,14 @@
   </footer>
 
   <header>
-  {% if doc.dsi and dsi_domain %}
+  {% if doc.dsi and args.dsi_domain %}
     <div class="page-left">
       <span class="online-msg">Additional formats and editions available online.</span>
     </div>
     <div class="page-center"></div>
     <div class="page-right">
-      <a href="https://{{ dsi_domain }}/{{ doc.dsi }}">
-        {{ https_dsi_html(doc, dsi_domain) }}
+      <a href="https://{{ args.dsi_domain }}/{{ doc.dsi }}">
+        {{ https_dsi_html(doc, args.dsi_domain) }}
       </a>
     </div>
   {% endif %}
@@ -89,15 +89,15 @@
     <div class="aside-shelf">
       <div>
        {% if doc.dsi %}
-        {% if dsi_domain %}
+        {% if args.dsi_domain %}
         <div class="article-dsi">
-          <a href="https://{{ dsi_domain }}/{{ doc.dsi }}">
+          <a href="https://{{ args.dsi_domain }}/{{ doc.dsi }}">
             {{ dsi_html(doc) }}
           </a>
         </div>
         {% endif %}
-       {% else %}
-        <div class="draft-msg">WORKING DRAFT</div>
+       {% elif args.header_banner_msg %}
+        <div class="header-banner-msg">{{ args.header_banner_msg }}</div>
        {% endif %}
       </div>
       <aside>
@@ -143,11 +143,11 @@
       </div>
       <aside class="article-two-column-only">
         <dl>
-          {% if not website_hooks and dsi_domain and doc.dsi %}
+          {% if not website_hooks and args.dsi_domain and doc.dsi %}
             <dt>Citation</dt>
             <dd>
               <p>
-                {{ citation(doc, dsi_domain) -}}
+                {{ citation(doc, args.dsi_domain) -}}
               </p>
             </dd>
           {% endif %}
@@ -169,9 +169,9 @@
 
     <div class="article-footer webpaper-only">
       <dl class="article-one-column-only">
-        {% if not website_hooks and dsi_domain and doc.dsi %}
+        {% if not website_hooks and args.dsi_domain and doc.dsi %}
           <dt>Citation</dt>
-          <dd>{{ citation(doc, dsi_domain) -}}</dd>
+          <dd>{{ citation(doc, args.dsi_domain) -}}</dd>
         {% endif %}
         {% if doc.copyright %}
         <dt>Copyright</dt>

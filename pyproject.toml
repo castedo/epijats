@@ -22,7 +22,7 @@ authors = [
 dependencies = [
   "citeproc",
   "dulwich",
-  "hidos >= 2.0",
+  "hidos >= 2.1",
   "jinja2",
   "lxml",
 ]

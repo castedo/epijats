@@ -2,28 +2,6 @@
 {% import 'epijats/lyon.html.jinja' as style %}
 
 {% macro article_preview(doc, dsi_domain, show_pdf_icon) %}
-<div class="page-content-pillar">
-  <div class="eprint">
-
-    <nav class="preview-mode">
-      {% if doc.issues %}
-      <a class="btn-issues" href="issues.html" target="_blank">Issues</a>
-      {% endif %}
-      <button class="btn-switch webpaper-none" onclick="window.location.search = '?webpaper';">
-        Switch to webpaper
-      </button>
-      <button class="btn-switch webpaper-only" onclick="window.location.search = '';">
-        Switch to print preview
-      </button>
-      {% if show_pdf_icon %}
-      <a class="pdf-link" href="article.pdf"><img src="static/PDF_file_icon.svg"></a>
-      {% endif %}
-    </nav>
-
-    {{- style.article_layout(doc, dsi_domain) }}
-
-  </div><!-- eprint -->
-</div><!-- page-content-pillar -->
 {% endmacro %}
 
 {% block head_content %}
@@ -106,5 +84,27 @@
 {% endblock head_content %}
 
 {% block body_content %}
-{{article_preview(doc, dsi_domain, show_pdf_icon)-}}
+{% set args = {'dsi_domain': dsi_domain, 'header_banner_msg': header_banner_msg} %}
+<div class="page-content-pillar">
+  <div class="eprint">
+
+    <nav class="preview-mode">
+      {% if doc.issues %}
+      <a class="btn-issues" href="issues.html" target="_blank">Issues</a>
+      {% endif %}
+      <button class="btn-switch webpaper-none" onclick="window.location.search = '?webpaper';">
+        Switch to webpaper
+      </button>
+      <button class="btn-switch webpaper-only" onclick="window.location.search = '';">
+        Switch to print preview
+      </button>
+      {% if show_pdf_icon %}
+      <a class="pdf-link" href="article.pdf"><img src="static/PDF_file_icon.svg"></a>
+      {% endif %}
+    </nav>
+
+    {{- style.article_layout(doc, args) }}
+
+  </div><!-- eprint -->
+</div><!-- page-content-pillar -->
 {% endblock body_content %}
