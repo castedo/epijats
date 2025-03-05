@@ -20,7 +20,7 @@ authors = [
   { name="Castedo Ellerman", email = "castedo@castedo.com" },
 ]
 dependencies = [
-  "citeproc",
+  "citeproc-py >= 0.7",
   "dulwich",
   "hidos >= 2.1",
   "jinja2",
