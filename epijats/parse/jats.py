@@ -61,6 +61,9 @@ class CrossReferenceModel(TagElementModelBase):
         self.content_model = content_model
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        alt = e.attrib.get("alt")
+        if alt == e.text and not len(e):
+            del e.attrib["alt"]
         kit.check_no_attrib(log, e, ["rid", "ref-type"])
         rid = e.attrib.get("rid")
         if rid is None:
