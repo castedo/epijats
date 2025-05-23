@@ -4,7 +4,7 @@ from lxml import etree
 
 from .. import baseprint as bp
 from .. import condition as fc
-from ..tree import Element, MixedContent, StartTag, make_paragraph
+from ..tree import Element, MarkupElement, MixedContent, StartTag, make_paragraph
 
 from . import kit
 from .kit import (
@@ -55,22 +55,65 @@ class ExtLinkModel(TagElementModelBase):
             return ret
 
 
+class UniCitationModel(TagElementModelBase):
+    def __init__(self) -> None:
+        super().__init__(StartTag('xref', {'ref-type': 'bibr'}))
+
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        assert e.attrib["ref-type"] == "bibr"
+        alt = e.attrib.get("alt")
+        if alt == e.text and not len(e):
+            del e.attrib["alt"]
+        rid = e.attrib.get("rid")
+        if rid is None:
+            log(fc.MissingAttribute.issue(e, "rid"))
+            return None
+        ret = bp.CrossReference(rid, "bibr")
+        ret.content.append_text(e.text)
+        for s in e:
+            log(fc.UnsupportedElement.issue(s))
+        return ret
+
+
+class MultiCitationModel(TagElementModelBase):
+    def __init__(self) -> None:
+        super().__init__('sup')
+        self._submodel = UniCitationModel()
+
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        assert e.tag == 'sup'
+        kit.check_no_attrib(log, e)
+        if not any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in e):
+          return None
+        delim = e.text.strip() if e.text else ''
+        if delim not in ['', '[', '(']:
+            log(fc.IgnoredText.issue(e))
+        for child in e:
+            delim = child.tail.strip() if child.tail else ''
+            if delim not in ['', ',', ';', ']', ')']:
+                log(fc.IgnoredText.issue(e))
+        ret = MarkupElement('sup')
+        eparser = self._submodel.bind(log, ret.content.append)
+        for child in e:
+            if not eparser.parse_element(child):
+                log(fc.UnsupportedElement.issue(child))
+        return ret
+
+
 class CrossReferenceModel(TagElementModelBase):
     def __init__(self, content_model: EModel):
         super().__init__('xref')
         self.content_model = content_model
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        alt = e.attrib.get("alt")
-        if alt == e.text and not len(e):
-            del e.attrib["alt"]
         kit.check_no_attrib(log, e, ["rid", "ref-type"])
         rid = e.attrib.get("rid")
         if rid is None:
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
         ref_type = e.attrib.get("ref-type")
-        if ref_type and ref_type != "bibr":
+        if ref_type:
+            # ref_type == "bibr" should be handled by UniCitationModel
             log(fc.UnsupportedAttributeValue.issue(e, "ref-type", ref_type))
             return None
         ret = bp.CrossReference(rid, ref_type)
@@ -348,6 +391,8 @@ def p_elements_model() -> EModel:
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     # %p-elements
     p_elements = UnionModel[Element]()
+    p_elements |= UniCitationModel()
+    p_elements |= MultiCitationModel()
     p_elements |= hypertext
     p_elements |= math_model()
     p_elements |= disp_formula_model()

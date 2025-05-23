@@ -61,9 +61,12 @@ class ElementModelBase(Model[Element]):
 
 
 class TagElementModelBase(ElementModelBase):
-    def __init__(self, tag: str):
-        self.tag = tag
-        self.stag = StartTag(tag)
+    def __init__(self, stag: str | StartTag):
+        self.stag = StartTag(stag)
+
+    @property
+    def tag(self) -> str:
+        return self.stag.tag
 
     @property
     def stags(self) -> Iterable[StartTag]:
