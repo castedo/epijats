@@ -331,3 +331,9 @@ def test_minimal_with_issues():
 </article>"""
     xe = xml_element(restyle.article(bp))
     assert etree.tostring(xe).decode() == expect
+
+
+def test_no_issues():
+    issues = []
+    got = parse_baseprint(SNAPSHOT_CASE / "whybaseprint", issues.append)
+    assert not issues

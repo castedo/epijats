@@ -39,15 +39,17 @@ def parse_mixed_content(
 class ElementModelBase(Model[Element]):
     @property
     @abstractmethod
-    def tags(self) -> Iterable[str]: ...
+    def stags(self) -> Iterable[StartTag]: ...
+
+    @property
+    def tags(self) -> Iterable[str]:
+        return (s.tag for s in self.stags)
 
     @abstractmethod
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        ...
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
 
     def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
-        stags = [StartTag(tag) for tag in self.tags]
-        return ReaderBinderParser(log, dest, stags, self.read)
+        return ReaderBinderParser(log, dest, self.stags, self.read)
 
     def read(self, log: IssueCallback, e: etree._Element, dest: Sink[Element]) -> bool:
         parsed = self.load(log, e)
@@ -61,10 +63,11 @@ class ElementModelBase(Model[Element]):
 class TagElementModelBase(ElementModelBase):
     def __init__(self, tag: str):
         self.tag = tag
+        self.stag = StartTag(tag)
 
     @property
-    def tags(self) -> Iterable[str]:
-        return [self.tag]
+    def stags(self) -> Iterable[StartTag]:
+        return (self.stag,)
 
 
 class DataElementModel(TagElementModelBase):
@@ -99,8 +102,8 @@ class TextElementModel(ElementModelBase):
             self.content_model = self if content_model == True else content_model
 
     @property
-    def tags(self) -> Iterable[str]:
-        return self.tagmap.keys()
+    def stags(self) -> Iterable[StartTag]:
+        return (StartTag(tag) for tag in self.tagmap)
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None

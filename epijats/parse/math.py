@@ -53,16 +53,17 @@ MATHML_TAGS = [
     'munderover',
 ]
 
+
 class AnyMathmlModel(ElementModelBase):
     @property
-    def tags(self) -> Iterable[str]:
-        return [MATHML_NAMESPACE_PREFIX + tag for tag in MATHML_TAGS]
+    def stags(self) -> Iterable[StartTag]:
+        return (StartTag(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS)
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None
         if isinstance(e.tag, str) and e.tag.startswith(MATHML_NAMESPACE_PREFIX):
             ret = MarkupElement(StartTag(e.tag, dict(e.attrib)))
-            mathml_tag = e.tag[len(MATHML_NAMESPACE_PREFIX):]
+            mathml_tag = e.tag[len(MATHML_NAMESPACE_PREFIX) :]
             ret.html = StartTag(mathml_tag, ret.xml.attrib)
             parse_mixed_content(log, e, self, ret.content)
         return ret
