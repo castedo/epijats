@@ -124,6 +124,7 @@ class MultiCitationModel(TagElementModelBase):
             if delim not in ['', ',', ';', ']', ')']:
                 log(fc.IgnoredText.issue(e))
         ret = MarkupElement('sup')
+        ret.html = StartTag('sup')
         eparser = self._submodel.bind(log, ret.content.append)
         for child in e:
             if not eparser.parse_element(child):

@@ -52,11 +52,11 @@ def test_editions(case):
 
                 edition_path = CASES_DIR / "succession" / case / str(edition.edid)
                 expect = Webstract.load_json(edition_path / "output.json")
-                if not hasattr(edition, 'date'):
-                    got['date'] = expect['date']  # don't test date with hidos 1.x
                 if 'issues' not in expect:
                     del got['issues']
                 assert got == expect
+                for v in got.values():
+                  assert isinstance(v, (int, str, list, dict))
 
 
 def test_hash_file():

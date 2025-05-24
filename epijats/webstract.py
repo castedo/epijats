@@ -1,34 +1,33 @@
 from __future__ import annotations
 
-import json, os, shutil
+import datetime, json, os, shutil, tempfile
 from pathlib import Path
 from datetime import date
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 from warnings import warn
 
 from hidos import Edition, EditionId
 
 from .util import copytree_nostat, swhid_from_files
 
+if TYPE_CHECKING:
+    from .typeshed import StrPath
 
-SWHID_SCHEME_LENGTH = len("shw:1:abc:")
+
+SWHID_SCHEME_LENGTH = len("swh:1:abc:")
 
 
-class Source:
+class _Source:
     def __init__(self, *, swhid: str | None = None, path: Path | None = None):
-        self._swhid = swhid
-        self.path = None if path is None else Path(path)
-        if self._swhid is None and self.path is None:
+        if swhid is None and path is None:
             raise ValueError("SWHID or path must be specified")
-
-    @property
-    def swhid(self) -> str:
-        if self._swhid is None:
-            assert self.path is not None
-            self._swhid = swhid_from_files(self.path)
-            if not self._swhid.startswith("swh:1:"):
-                raise ValueError("Source not identified by SWHID v1")
-        return self._swhid
+        if swhid is None:
+            assert path is not None
+            swhid = swhid_from_files(path)
+        if not swhid.startswith("swh:1:"):
+            raise ValueError("Source not identified by SWHID v1")
+        self.swhid = swhid
+        self.path = None if path is None else Path(path)
 
     @property
     def hash_scheme(self) -> str:
@@ -44,11 +43,6 @@ class Source:
     def __repr__(self) -> str:
         return str(dict(swhid=self._swhid, path=self.path))
 
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, Source):
-            return self.swhid == other.swhid
-        return False
-
     def copy_resources(self, dest: Path) -> None:
         os.makedirs(dest, exist_ok=True)
         for srcentry in os.scandir(self.path):
@@ -60,6 +54,17 @@ class Source:
                 copytree_nostat(srcentry, dstentry)
             elif srcentry.name != "article.xml":
                 shutil.copy(srcentry, dstentry)
+
+
+class Source(_Source):
+    def __init__(self, *, swhid: str | None = None, path: Path | None = None):
+        super().__init__(swhid=swhid, path=path)
+        warn("Stop using webstract.Source", DeprecationWarning)
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, Source):
+            return self.swhid == other.swhid
+        return False
 
 
 class Webstract(dict[str, Any]):
@@ -87,9 +92,10 @@ class Webstract(dict[str, Any]):
         for key, value in init.items():
             self[key] = value
         self._facade = WebstractFacade(self)
+        self._source: _Source | None = None
 
     @staticmethod
-    def from_edition(ed: Edition, cache_subdir: Path) -> Webstract:
+    def from_edition(ed: Edition, cache_subdir: StrPath) -> Webstract:
         cache_subdir = Path(cache_subdir)
         cached = cache_subdir / "webstract.json"
         snapshot = cache_subdir / "snapshot"
@@ -108,7 +114,7 @@ class Webstract(dict[str, Any]):
             if latest and latest.edid > ed.edid:
                 edidata["newer_edid"] = str(latest.edid)
             ret['edition'] = edidata
-            ret['date'] = ed.date
+            ret['date'] = str(ed.date)
             ret.dump_json(cached)
         return ret
 
@@ -117,17 +123,20 @@ class Webstract(dict[str, Any]):
         return self._facade
 
     @property
-    def source(self) -> Source:
-        ret = self.get("source")
-        if not isinstance(ret, Source):
+    def source(self) -> _Source:
+        if not isinstance(self._source, _Source):
             raise ValueError("Webstract source missing.")
-        return ret
+        return self._source
 
     @property
     def date(self) -> date | None:
-        ret = self.get("date")
-        assert isinstance(ret, (date, type(None)))
-        return ret
+        s = self.get("date")
+        return date.fromisoformat(s) if s else None
+
+    @property
+    def archive_date(self) -> datetime.date | None:
+        s = self.get("archive_date")
+        return date.fromisoformat(s) if s else None
 
     def __setitem__(self, key: str, value: Any) -> None:
         if key not in self.KEYS:
@@ -137,14 +146,24 @@ class Webstract(dict[str, Any]):
             return
         elif key == "source":
             if isinstance(value, Path):
-                value = Source(path=value)
-            elif not isinstance(value, Source):
-                value = Source(swhid=value)
-        elif key == "date" and not isinstance(value, date):
-            value = date.fromisoformat(value)
-        elif key == "archive_date" and not isinstance(value, date):
-            value = date.fromisoformat(value)
+                warn("call set_source_from_path", DeprecationWarning)
+                self._source = _Source(path=value)
+            elif isinstance(value, _Source):
+                warn("stop assigning Source", DeprecationWarning)
+                self._source = value
+                value = self._source.swhid
+            else:
+                self._source = _Source(swhid=value)
+                assert value == self._source.swhid
+        elif key in ["date", "archive_date"]:
+            if not isinstance(value, (str, type(None))):
+              warn("Assign dates as ISO strings", DeprecationWarning)
+              value = str(value)
         super().__setitem__(key, value)
+
+    def set_source_from_path(self, src: StrPath) -> None:
+        self._source = _Source(path=Path(src))
+        super().__setitem__('source', self._source.swhid)
 
     def dump_json(self, path: Path | str) -> None:
         """Write JSON to path."""
@@ -246,3 +265,9 @@ class WebstractFacade:
             return self._edidata.get("newer_edid")
         else:
             return self.edid
+
+
+def webstract_pod_from_edition(ed: Edition) -> dict[str, Any]:
+    os.environ["EPIJATS_NO_PANDOC"] = "1"
+    with tempfile.TemporaryDirectory() as tempdir:
+      return dict(Webstract.from_edition(ed, tempdir))

@@ -5,7 +5,7 @@ from typing import Any, Iterable
 
 from .parse import parse_baseprint
 from .html import HtmlGenerator
-from .webstract import Webstract, Source
+from .webstract import Webstract
 from .condition import FormatIssue
 from . import restyle
 
@@ -44,7 +44,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
                 restyle.write_baseprint(bp, Path(tempdir))
                 jats_src = Path(tempdir) / "article.xml"
             ret['body'] = pandoc_jats_to_webstract(jats_src)
-    ret['source'] = Source(path=src)
+    ret.set_source_from_path(src)
     ret['title'] = gen.content_to_str(bp.title)
     ret['contributors'] = list()
     if bp.abstract :

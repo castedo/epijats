@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 
 from lxml import etree
 from lxml.etree import QName
 
 if TYPE_CHECKING:
-    JSONType: TypeAlias = None | str | int | float | list['JSONType'] | dict[str, 'JSONType']
+    from .typeshed import JSONType
 
 
 @dataclass(frozen=True)

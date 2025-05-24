@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from warnings import warn
 if TYPE_CHECKING:
-    from _typeshed import StrPath  # (os.PathLike[str] | str)
+    from .typeshed import StrPath
 
 import dulwich.objects
 

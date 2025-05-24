@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib import resources
 from html import escape
-from typing import TypeAlias, cast
+from typing import TYPE_CHECKING, cast
 
 import citeproc
 from lxml import html
@@ -12,10 +12,9 @@ from lxml.html import HtmlElement
 
 from . import baseprint as bp
 
+if TYPE_CHECKING:
+    from .typeshed import JSONType
 
-JSONType: TypeAlias = (
-    None | str | int | float | list['JSONType'] | dict[str, 'JSONType']
-)
 
 JATS_TO_CSL_VAR = {
     'comment': 'note',
@@ -56,7 +55,7 @@ def date_parts(src: bp.Date) -> JSONType:
     return {'date-parts': [parts]}
 
 
-class CsljsonItem(dict[str, JSONType]):
+class CsljsonItem(dict[str, 'JSONType']):
     def __init__(self) -> None:
         self['type'] = ''
 
@@ -76,7 +75,7 @@ class CsljsonItem(dict[str, JSONType]):
         return self
 
     def append_author(self, src: bp.PersonName | str) -> None:
-        authors = cast(list[JSONType], self.setdefault('author', []))
+        authors = cast(list['JSONType'], self.setdefault('author', []))
         a: dict[str, JSONType] = {}
         if isinstance(src, bp.PersonName):
             if src.surname:
