@@ -55,30 +55,61 @@ class ExtLinkModel(TagElementModelBase):
             return ret
 
 
+class BiblioRefPool:
+    def __init__(self, avail: list[bp.BiblioRefItem]):
+        self._avail = avail
+        self.used: list[bp.BiblioRefItem] = []
+
+    def cite(self, rid: str)-> int:
+        """Cite a reference in the bibliography.
+
+        Returns:
+            Zero if no reference found, otherwise 1 to N for bibliography entry.
+        """
+
+        for i, ref in enumerate(self.used):
+            if rid == ref.id:
+                return i + 1
+        for ref in self._avail:
+            if rid == ref.id:
+                self.used.append(ref)
+                return len(self.used) 
+        return 0
+
+
 class UniCitationModel(TagElementModelBase):
-    def __init__(self) -> None:
+    def __init__(self, biblio: BiblioRefPool):
         super().__init__(StartTag('xref', {'ref-type': 'bibr'}))
+        self._biblio = biblio
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         assert e.attrib["ref-type"] == "bibr"
         alt = e.attrib.get("alt")
-        if alt == e.text and not len(e):
+        if alt and alt == e.text and not len(e):
             del e.attrib["alt"]
         rid = e.attrib.get("rid")
         if rid is None:
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
         ret = bp.CrossReference(rid, "bibr")
-        ret.content.append_text(e.text)
+        i = self._biblio.cite(rid)
+        if i:
+            text = str(i)
+            if e.text and e.text.strip() != text:
+                log(fc.IgnoredText.issue(e))
+            ret.content.append_text(text)
+        else:
+            log(fc.InvalidCitation.issue(e))
+            ret.content.append_text(e.text)
         for s in e:
             log(fc.UnsupportedElement.issue(s))
         return ret
 
 
 class MultiCitationModel(TagElementModelBase):
-    def __init__(self) -> None:
+    def __init__(self, biblio: BiblioRefPool):
         super().__init__('sup')
-        self._submodel = UniCitationModel()
+        self._submodel = UniCitationModel(biblio)
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         assert e.tag == 'sup'
@@ -379,7 +410,7 @@ def base_hypertext_model() -> EModel:
     return hypertext
 
 
-def p_elements_model() -> EModel:
+def p_elements_model(biblio: BiblioRefPool | None = None) -> EModel:
     """Paragraph Elements
 
     Similar to JATS def, but using more restrictive base hypertext model.
@@ -391,8 +422,9 @@ def p_elements_model() -> EModel:
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     # %p-elements
     p_elements = UnionModel[Element]()
-    p_elements |= UniCitationModel()
-    p_elements |= MultiCitationModel()
+    if biblio:
+        p_elements |= UniCitationModel(biblio)
+        p_elements |= MultiCitationModel(biblio)
     p_elements |= hypertext
     p_elements |= math_model()
     p_elements |= disp_formula_model()
@@ -692,10 +724,14 @@ def load_article(log: IssueCallback, e: etree._Element) -> bp.Baseprint | None:
     if back is not None:
         ret.ref_list = kit.load_single_sub_element(log, back, RefListModel())
         e.remove(back)
+    biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
     cp = ContentParser(log)
     cp.bind(ReaderBinder('front', read_article_front), ret)
-    cp.bind(proto_section_binder('body', p_elements_model()), ret.body)
+    cp.bind(proto_section_binder('body', p_elements_model(biblio)), ret.body)
     cp.parse_array_content(e)
+    if ret.ref_list:
+        assert biblio
+        ret.ref_list.references = biblio.used
     if ret.title.blank():
         log(fc.FormatIssue(fc.MissingContent('article-title', 'title-group')))
     if not len(ret.authors):

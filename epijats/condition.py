@@ -125,6 +125,10 @@ class InvalidInteger(ElementFormatCondition):
     """Invalid integer"""
 
 
+class InvalidCitation(ElementFormatCondition):
+    """Invalid citation"""
+
+
 @dataclass(frozen=True)
 class UnsupportedAttribute(FormatCondition):
     """Unsupported XML attribute"""

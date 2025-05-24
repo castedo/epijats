@@ -18,6 +18,8 @@
   </front>
   <body>
     <p>!<xref rid="ref-1" ref-type="bibr">1</xref></p>
+    <p>Two<sup><xref rid="ref-himmelstein_open_2019" ref-type="bibr">2</xref></sup></p>
+    <p>Three<sup><xref rid="ref-hartl_essential_2006" ref-type="bibr">3</xref></sup></p>
   </body>
   <back>
     <ref-list>
@@ -25,26 +27,6 @@
         <element-citation>
           <year>1969</year>
           <pub-id pub-id-type="doi">10.1111/j.1558-5646.1969.tb03496.x</pub-id>
-        </element-citation>
-      </ref>
-      <ref id="ref-hartl_essential_2006">
-        <element-citation>
-          <person-group person-group-type="author">
-            <name>
-              <surname>Hartl</surname>
-              <given-names>Daniel L.</given-names>
-            </name>
-            <name>
-              <surname>Jones</surname>
-              <given-names>Elizabeth W.</given-names>
-            </name>
-          </person-group>
-          <source>Essential genetics: A genomics perspective</source>
-          <edition>4</edition>
-          <year>2006</year>
-          <publisher-name>Jones; Bartlett Publishers</publisher-name>
-          <publisher-loc>Boston</publisher-loc>
-          <isbn>978-0-7637-3527-2</isbn>
         </element-citation>
       </ref>
       <ref id="ref-himmelstein_open_2019">
@@ -100,6 +82,26 @@
           <issn>1553-7358</issn>
           <uri>https://dx.plos.org/10.1371/journal.pcbi.1007128</uri>
           <pub-id pub-id-type="doi">10.1371/journal.pcbi.1007128</pub-id>
+        </element-citation>
+      </ref>
+      <ref id="ref-hartl_essential_2006">
+        <element-citation>
+          <person-group person-group-type="author">
+            <name>
+              <surname>Hartl</surname>
+              <given-names>Daniel L.</given-names>
+            </name>
+            <name>
+              <surname>Jones</surname>
+              <given-names>Elizabeth W.</given-names>
+            </name>
+          </person-group>
+          <source>Essential genetics: A genomics perspective</source>
+          <edition>4</edition>
+          <year>2006</year>
+          <publisher-name>Jones; Bartlett Publishers</publisher-name>
+          <publisher-loc>Boston</publisher-loc>
+          <isbn>978-0-7637-3527-2</isbn>
         </element-citation>
       </ref>
     </ref-list>

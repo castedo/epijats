@@ -73,7 +73,7 @@ while also having the option to discover newer versions.</p>
   Authors interested in publishing Baseprint successions can visit
   <ext-link ext-link-type="uri" xlink:href="https://try.perm.pub/">try.perm.pub</ext-link> to get started.</p>
       <p>For technical details on how DSIs are implemented, see the <ext-link ext-link-type="uri" xlink:href="https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo">Document Succession
-  Identifier Specification</ext-link> <xref rid="ref-DSI_spec" ref-type="bibr">4</xref>
+  Identifier Specification</ext-link> <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
   or the software library at
   <ext-link ext-link-type="uri" xlink:href="https://gitlab.com/perm.pub/hidos">gitlab.com/perm.pub/hidos</ext-link>.</p>
     </sec>
