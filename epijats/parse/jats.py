@@ -4,7 +4,9 @@ from lxml import etree
 
 from .. import baseprint as bp
 from .. import condition as fc
-from ..tree import Element, MarkupElement, MixedContent, StartTag, make_paragraph
+from ..tree import (
+    Citation, CitationTuple, Element, MixedContent, StartTag, make_paragraph
+)
 
 from . import kit
 from .kit import (
@@ -77,7 +79,7 @@ class BiblioRefPool:
         return 0
 
 
-class UniCitationModel(TagElementModelBase):
+class CitationModel(TagElementModelBase):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__(StartTag('xref', {'ref-type': 'bibr'}))
         self._biblio = biblio
@@ -91,25 +93,24 @@ class UniCitationModel(TagElementModelBase):
         if rid is None:
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
-        ret = bp.CrossReference(rid, "bibr")
-        i = self._biblio.cite(rid)
-        if i:
-            text = str(i)
-            if e.text and e.text.strip() != text:
-                log(fc.IgnoredText.issue(e))
-            ret.content.append_text(text)
-        else:
-            log(fc.InvalidCitation.issue(e))
-            ret.content.append_text(e.text)
         for s in e:
             log(fc.UnsupportedElement.issue(s))
-        return ret
+        i = self._biblio.cite(rid)
+        if i:
+            if e.text and e.text.strip() != str(i):
+                log(fc.IgnoredText.issue(e))
+            return Citation(rid, i)
+        else:
+            log(fc.InvalidCitation.issue(e))
+            ret = bp.CrossReference(rid, "bibr")
+            ret.content.append_text(e.text)
+            return ret
 
 
-class MultiCitationModel(TagElementModelBase):
+class CitationTupleModel(TagElementModelBase):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__('sup')
-        self._submodel = UniCitationModel(biblio)
+        self._submodel = CitationModel(biblio)
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         assert e.tag == 'sup'
@@ -123,10 +124,10 @@ class MultiCitationModel(TagElementModelBase):
             delim = child.tail.strip() if child.tail else ''
             if delim not in ['', ',', ';', ']', ')']:
                 log(fc.IgnoredText.issue(e))
-        ret = MarkupElement('sup')
-        ret.html = StartTag('sup')
-        eparser = self._submodel.bind(log, ret.content.append)
+        ret = CitationTuple()
+        eparser = self._submodel.bind(log, ret.append)
         for child in e:
+            child.tail = None
             if not eparser.parse_element(child):
                 log(fc.UnsupportedElement.issue(child))
         return ret
@@ -145,7 +146,7 @@ class CrossReferenceModel(TagElementModelBase):
             return None
         ref_type = e.attrib.get("ref-type")
         if ref_type:
-            # ref_type == "bibr" should be handled by UniCitationModel
+            # ref_type == "bibr" should be handled by CitationModel
             log(fc.UnsupportedAttributeValue.issue(e, "ref-type", ref_type))
             return None
         ret = bp.CrossReference(rid, ref_type)
@@ -424,8 +425,8 @@ def p_elements_model(biblio: BiblioRefPool | None = None) -> EModel:
     # %p-elements
     p_elements = UnionModel[Element]()
     if biblio:
-        p_elements |= UniCitationModel(biblio)
-        p_elements |= MultiCitationModel(biblio)
+        p_elements |= CitationModel(biblio)
+        p_elements |= CitationTupleModel(biblio)
     p_elements |= hypertext
     p_elements |= math_model()
     p_elements |= disp_formula_model()

@@ -6,7 +6,7 @@ from typing import cast
 from lxml.builder import ElementMaker
 from lxml.etree import CDATA, _Element
 
-from .tree import CdataElement, Element, MarkupElement, MixedContent
+from .tree import CdataElement, CitationTuple, Element, MarkupElement, MixedContent
 
 
 class ElementFormatter(ABC):
@@ -18,6 +18,8 @@ class ElementFormatter(ABC):
             self._markup_content(src.content, dest, level)
         elif isinstance(src, CdataElement):
             dest.text = cast(str, CDATA(src.content))
+        elif isinstance(src, CitationTuple):
+            self._citation_tuple(src, dest, level)
         else:
             self._data_content(src, dest, level)
 
@@ -38,6 +40,19 @@ class ElementFormatter(ABC):
             sub = self.start_element(it)
             self.copy_content(it, sub, level + 1)
             sub.tail = presub
+            dest.append(sub)
+        if sub is not None:
+            sub.tail = dest.text
+            dest.text = presub
+
+    def _citation_tuple(self, src: Element, dest: _Element, level: int) -> None:
+        dest.text = "\n" + "  " * level
+        presub = "\n" + ("  " * (level + 1))
+        sub: _Element | None = None
+        for it in src:
+            sub = self.start_element(it)
+            self.copy_content(it, sub, level + 1)
+            sub.tail = "," + presub
             dest.append(sub)
         if sub is not None:
             sub.tail = dest.text

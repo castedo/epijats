@@ -108,6 +108,30 @@ class DataElement(Element):
         self._array.append(e)
 
 
+@dataclass
+class Citation(MarkupElement):
+    def __init__(self, rid: str, rord: int):
+        super().__init__(StartTag('xref', {'rid': rid, 'ref-type': 'bibr'}))
+        self.html = StartTag('a', {'href': '#' + rid})
+        self.content.append_text(str(rord))
+
+
+@dataclass
+class CitationTuple(Element):
+    _citations: list[Element]
+
+    def __init__(self) -> None:
+        super().__init__('sup')
+        self.html = StartTag('sup')
+        self._citations = []
+
+    def __iter__(self) -> Iterator[Element]:
+        return iter(self._citations)
+
+    def append(self, c: Element) -> None:
+        self._citations.append(c)
+
+
 def make_paragraph(text: str) -> MarkupElement:
     ret = MarkupElement('p', text)
     ret.html = StartTag('p')

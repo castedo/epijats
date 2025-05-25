@@ -225,6 +225,54 @@ def test_def_list_rountrip():
     assert str_from_element(subel) == expect
 
 
+def mock_biblio_pool() -> _.BiblioRefPool:
+    r1 = bp.BiblioRefItem()
+    r1.id = "R1"
+    r2 = bp.BiblioRefItem()
+    r2.id = "R2"
+    return _.BiblioRefPool([r1, r2])
+
+
+def verify_roundtrip_citation(
+    log: _.IssueCallback, start: str, expected: str,
+) -> Element:
+    model = _.CitationTupleModel(mock_biblio_pool())
+    subel1 = model.load(log, lxml_element_from_str(start))
+    assert subel1
+    got = str_from_element(subel1)
+    assert got == expected
+    subel2 = model.load(log, lxml_element_from_str(got))
+    assert subel2 == subel1
+    return subel2
+
+
+def test_citation_roundtrip():
+    issues = []
+    el = verify_roundtrip_citation(
+        issues.append,
+        """<sup><xref rid="R1" ref-type="bibr">1</xref></sup>""",
+        """\
+<sup>
+  <xref ref-type="bibr" rid="R1">1</xref>
+</sup>""")
+    assert not issues
+    assert len(list(el)) == 1
+
+
+def test_citation_tuple_roundtrip():
+    issues = []
+    el = verify_roundtrip_citation(
+        issues.append,
+        """<sup><xref rid="R1" ref-type="bibr">1</xref>,<xref rid="R2" ref-type="bibr">2</xref></sup>""",
+        """\
+<sup>
+  <xref ref-type="bibr" rid="R1">1</xref>,
+  <xref ref-type="bibr" rid="R2">2</xref>
+</sup>""")
+    assert not issues
+    assert len(list(el)) == 2
+
+
 def test_author_restyle():
     expect = """\
 <contrib-group>
