@@ -17,7 +17,9 @@
     </article-meta>
   </front>
   <body>
-    <p>!<xref rid="ref-1" ref-type="bibr">1</xref></p>
+    <p>!<sup>
+        <xref rid="ref-1" ref-type="bibr">1</xref>
+      </sup></p>
     <p>Two<sup>
         <xref rid="ref-himmelstein_open_2019" ref-type="bibr">2</xref>
       </sup></p>

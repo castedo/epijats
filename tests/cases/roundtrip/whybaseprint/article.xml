@@ -26,7 +26,9 @@ while also having the option to discover newer versions.</p>
     <sec id="summary">
       <title>Summary</title>
       <p>Baseprint document successions are preserved in
-  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/wiki/Git">Git</ext-link>-compatible <xref rid="ref-enwikiU003Agit" ref-type="bibr">1</xref> repositories and archives.
+  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/wiki/Git">Git</ext-link>-compatible <sup>
+          <xref rid="ref-enwikiU003Agit" ref-type="bibr">1</xref>
+        </sup> repositories and archives.
   Three such examples are the <ext-link ext-link-type="uri" xlink:href="https://softwareheritage.org/">Software Heritage Archive</ext-link>,
   <ext-link ext-link-type="uri" xlink:href="https://github.com">GitHub</ext-link>, and <ext-link ext-link-type="uri" xlink:href="https://gitlab.org">GitLab</ext-link>.
   See the <xref rid="relationship-to-git">Relationship to Git</xref> section for more details.
@@ -36,17 +38,25 @@ while also having the option to discover newer versions.</p>
   A key component to making this separation possible is discussed in the
   <xref rid="document-succession-identifiers">Document Succession Identifiers</xref> section.
   These identifiers can be used for bibliographic references similar to a
-  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>.
+  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <sup>
+          <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>
+        </sup>.
   This extends one of the great features of traditional academic publishing,
   namely, the ability of researchers to reference
   a static archived document long into the future.</p>
     </sec>
     <sec id="document-succession-identifiers">
       <title>Document Succession Identifiers</title>
-      <p>A Document Succession Identifier (DSI) <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
-  is an <ext-link ext-link-type="uri" xlink:href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</ext-link> <xref rid="ref-intrinsic_extrinsic_identifiers" ref-type="bibr">4</xref> of a Baseprint document succession.
+      <p>A Document Succession Identifier (DSI) <sup>
+          <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
+        </sup>
+  is an <ext-link ext-link-type="uri" xlink:href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</ext-link> <sup>
+          <xref rid="ref-intrinsic_extrinsic_identifiers" ref-type="bibr">4</xref>
+        </sup> of a Baseprint document succession.
   It is a textual identifier similar to a
-  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>
+  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <sup>
+          <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>
+        </sup>
   or a web address URL.
   This document itself is archived as a Baseprint document succession with DSI:</p>
       <p>
@@ -57,7 +67,9 @@ while also having the option to discover newer versions.</p>
   Similar to textbooks and preprints,
   Baseprint document successions contain multiple editions (or versions) of a Baseprint document,
   each encoded as a
-  <ext-link ext-link-type="uri" xlink:href="https://baseprints.singlesource.pub">Baseprint document snapshot</ext-link> <xref rid="ref-what_is_baseprint" ref-type="bibr">5</xref>.
+  <ext-link ext-link-type="uri" xlink:href="https://baseprints.singlesource.pub">Baseprint document snapshot</ext-link> <sup>
+          <xref rid="ref-what_is_baseprint" ref-type="bibr">5</xref>
+        </sup>.
   A base DSI identifies all the editions of a document added to a Baseprint succession.
   Usually, readers are interested in the latest edition in the Baseprint succession.</p>
       <p>An edition number can follow a <italic>base DSI</italic> to identify a specific static edition.
@@ -73,7 +85,9 @@ while also having the option to discover newer versions.</p>
   Authors interested in publishing Baseprint successions can visit
   <ext-link ext-link-type="uri" xlink:href="https://try.perm.pub/">try.perm.pub</ext-link> to get started.</p>
       <p>For technical details on how DSIs are implemented, see the <ext-link ext-link-type="uri" xlink:href="https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo">Document Succession
-  Identifier Specification</ext-link> <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
+  Identifier Specification</ext-link> <sup>
+          <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
+        </sup>
   or the software library at
   <ext-link ext-link-type="uri" xlink:href="https://gitlab.com/perm.pub/hidos">gitlab.com/perm.pub/hidos</ext-link>.</p>
     </sec>

@@ -107,6 +107,19 @@ class CitationModel(TagElementModelBase):
             return ret
 
 
+class AutoCorrectCitationModel(CitationModel):
+    def __init__(self, biblio: BiblioRefPool):
+        super().__init__(biblio)
+
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        citation = super().load(log, e)
+        if not citation:
+            return None
+        ret = CitationTuple()
+        ret.append(citation)
+        return ret
+
+
 class CitationTupleModel(TagElementModelBase):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__('sup')
@@ -425,7 +438,7 @@ def p_elements_model(biblio: BiblioRefPool | None = None) -> EModel:
     # %p-elements
     p_elements = UnionModel[Element]()
     if biblio:
-        p_elements |= CitationModel(biblio)
+        p_elements |= AutoCorrectCitationModel(biblio)
         p_elements |= CitationTupleModel(biblio)
     p_elements |= hypertext
     p_elements |= math_model()

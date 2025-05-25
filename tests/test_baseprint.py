@@ -273,6 +273,21 @@ def test_citation_tuple_roundtrip():
     assert len(list(el)) == 2
 
 
+def test_bare_citation():
+    issues = []
+    model = _.AutoCorrectCitationModel(mock_biblio_pool())
+    start = """<xref rid="R1" ref-type="bibr">1</xref>"""
+    el = model.load(issues.append, lxml_element_from_str(start))
+    assert not issues
+    assert el
+    assert len(list(el)) == 1
+    expect = """\
+<sup>
+  <xref ref-type="bibr" rid="R1">1</xref>
+</sup>"""
+    assert str_from_element(el) == expect
+
+
 def test_author_restyle():
     expect = """\
 <contrib-group>
