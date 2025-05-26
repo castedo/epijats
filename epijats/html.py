@@ -8,7 +8,7 @@ from lxml.html.builder import E
 
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
-from .tree import Element, MixedContent
+from .tree import CitationTuple, Element, MixedContent
 from .xml import (
     Delimiters, CommonContentFormatter, ElementFormatter, ContentFormatter, MarkupContentFormatter
 )
@@ -22,11 +22,14 @@ def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
 class HtmlFormatter(ElementFormatter):
     def __init__(self) -> None:
         self.table_cell = TableCellHtmlizer(self)
+        self.citation_tuple = CitationTupleHtmlizer(self)
         self.common = CommonContentFormatter(self)
 
     def __call__(self, src: Element, level: int) -> HtmlElement:
         if isinstance(src, bp.TableCell):
             return self.table_cell.htmlize(src, level)
+        if isinstance(src, CitationTuple):
+            return self.citation_tuple.htmlize(src, level)
         if src.xml.tag == 'table-wrap':
             ret = E('div', {'class': "table-wrap"})
         elif src.html is None:
@@ -49,6 +52,17 @@ class TableCellHtmlizer:
             attrib['style'] = f"text-align: {align};"
         ret = E(src.xml.tag, attrib)
         self.markup.format_content(src, ret, level)
+        return ret
+
+
+class CitationTupleHtmlizer:
+    def __init__(self, form: ElementFormatter):
+        self.content = ContentFormatter(form, Delimiters(sep=",", open="[", close="]"))
+
+    def htmlize(self, src: CitationTuple, level: int) -> HtmlElement:
+        assert src.xml.tag == 'sup'
+        ret = E('span', {'class': "citation-tuple"})
+        self.content.format_content(src, ret, level)
         return ret
 
 
