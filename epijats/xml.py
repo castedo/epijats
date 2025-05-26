@@ -1,70 +1,89 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import cast
 
 from lxml.builder import ElementMaker
 from lxml.etree import CDATA, _Element
 
-from .tree import CdataElement, CitationTuple, Element, MarkupElement, MixedContent
+from .tree import CdataElement, CitationTuple, Element, MarkupElement
 
 
 class ElementFormatter(ABC):
     @abstractmethod
-    def start_element(self, src: Element) -> _Element: ...
+    def __call__(self, src: Element, level: int) -> _Element: ...
 
-    def copy_content(self, src: Element, dest: _Element, level: int) -> None:
-        if isinstance(src, MarkupElement):
-            self._markup_content(src.content, dest, level)
-        elif isinstance(src, CdataElement):
-            dest.text = cast(str, CDATA(src.content))
-        elif isinstance(src, CitationTuple):
-            self._citation_tuple(src, dest, level)
-        else:
-            self._data_content(src, dest, level)
 
-    def _markup_content(self, src: MixedContent, dest: _Element, level: int) -> None:
-        dest.text = src.text
+@dataclass
+class Delimiters:
+    sep: str = ''
+    open: str = ''
+    close: str = ''
+
+
+class ContentFormatter:
+    def __init__(self, sub: ElementFormatter, delims: Delimiters):
+        self.subformat = sub
+        self.delims = delims
+
+    def format_content(self, src: Element, dest: _Element, level: int) -> None:
+        last_newline = "\n" + "  " * level
+        presub = "\n" + ("  " * (level + 1))
+        sub: _Element | None = None
         for it in src:
-            sub = self.start_element(it)
+            sub = self.subformat(it, level + 1)
+            sub.tail = self.delims.sep + presub
+            dest.append(sub)
+        dest.text = self.delims.open
+        if sub is None:
+            dest.text += last_newline
+            dest.text += self.delims.close
+        else:
+            dest.text += presub
+            sub.tail = last_newline + self.delims.close
+
+
+class CommonContentFormatter:
+    def __init__(self, sub: ElementFormatter) -> None:
+        self.markup = MarkupContentFormatter(sub)
+        self.default = ContentFormatter(sub, Delimiters())
+
+    def format_content(self, src: Element, dest: _Element, level: int) -> None:
+        if isinstance(src, MarkupElement):
+            self.markup.format_content(src, dest, level)
+        else:
+            self.default.format_content(src, dest, level)
+
+
+class MarkupContentFormatter:
+    def __init__(self, sub: ElementFormatter):
+        self.subformat = sub
+
+    def format_content(self, src: MarkupElement, dest: _Element, level: int) -> None:
+        dest.text = src.content.text
+        for it in src.content:
             sublevel = level if isinstance(it, MarkupElement) else level + 1
-            self.copy_content(it, sub, sublevel)
+            sub = self.subformat(it, sublevel)
             sub.tail = it.tail
             dest.append(sub)
-
-    def _data_content(self, src: Element, dest: _Element, level: int) -> None:
-        dest.text = "\n" + "  " * level
-        presub = "\n" + ("  " * (level + 1))
-        sub: _Element | None = None
-        for it in src:
-            sub = self.start_element(it)
-            self.copy_content(it, sub, level + 1)
-            sub.tail = presub
-            dest.append(sub)
-        if sub is not None:
-            sub.tail = dest.text
-            dest.text = presub
-
-    def _citation_tuple(self, src: Element, dest: _Element, level: int) -> None:
-        dest.text = "\n" + "  " * level
-        presub = "\n" + ("  " * (level + 1))
-        sub: _Element | None = None
-        for it in src:
-            sub = self.start_element(it)
-            self.copy_content(it, sub, level + 1)
-            sub.tail = "," + presub
-            dest.append(sub)
-        if sub is not None:
-            sub.tail = dest.text
-            dest.text = presub
 
 
 class XmlFormatter(ElementFormatter):
     def __init__(self, *, nsmap: dict[str, str]):
         self.EM = ElementMaker(nsmap=nsmap)
+        self.citation = ContentFormatter(self, Delimiters(sep=","))
+        self.common = CommonContentFormatter(self)
 
-    def start_element(self, src: Element) -> _Element:
-        return self.EM(src.xml.tag, **src.xml.attrib)
+    def __call__(self, src: Element, level: int) -> _Element:
+        ret = self.EM(src.xml.tag, src.xml.attrib)
+        if isinstance(src, CdataElement):
+            ret.text = cast(str, CDATA(src.content))
+        elif isinstance(src, CitationTuple):
+            self.citation.format_content(src, ret, level)
+        else:
+            self.common.format_content(src, ret, level)
+        return ret
 
 
 XML = XmlFormatter(
@@ -77,6 +96,4 @@ XML = XmlFormatter(
 
 
 def xml_element(src: Element) -> _Element:
-    ret = XML.start_element(src)
-    XML.copy_content(src, ret, 0)
-    return ret
+    return XML(src, 0)

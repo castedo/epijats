@@ -9,7 +9,9 @@ from lxml.html.builder import E
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .tree import Element, MixedContent
-from .xml import ElementFormatter
+from .xml import (
+    Delimiters, CommonContentFormatter, ElementFormatter, ContentFormatter, MarkupContentFormatter
+)
 
 
 def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
@@ -17,23 +19,47 @@ def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
     return "".join(ss)
 
 
-class HtmlGenerator(ElementFormatter):
-    def start_element(self, src: Element) -> HtmlElement:
-        if isinstance(src, bp.TableCell):
-            return self.table_cell(src)
-        if src.xml.tag == 'table-wrap':
-            return E('div', {'class': "table-wrap"})
-        if src.html is None:
-            warn(f"Unknown XML {src.xml.tag}")
-            return E('div', {'class': f"unknown-xml xml-{src.xml.tag}"})
-        return E(src.html.tag, **src.html.attrib)
+class HtmlFormatter(ElementFormatter):
+    def __init__(self) -> None:
+        self.table_cell = TableCellHtmlizer(self)
+        self.common = CommonContentFormatter(self)
 
-    def table_cell(self, src: bp.TableCell) -> HtmlElement:
+    def __call__(self, src: Element, level: int) -> HtmlElement:
+        if isinstance(src, bp.TableCell):
+            return self.table_cell.htmlize(src, level)
+        if src.xml.tag == 'table-wrap':
+            ret = E('div', {'class': "table-wrap"})
+        elif src.html is None:
+            warn(f"Unknown XML {src.xml.tag}")
+            ret = E('div', {'class': f"unknown-xml xml-{src.xml.tag}"})
+        else:
+            ret = E(src.html.tag, src.html.attrib)
+        self.common.format_content(src, ret, level)
+        return ret
+
+
+class TableCellHtmlizer:
+    def __init__(self, sub: ElementFormatter):
+        self.markup = MarkupContentFormatter(sub)
+
+    def htmlize(self, src: bp.TableCell, level: int) -> HtmlElement:
         attrib = {}
         align = src.xml.attrib.get('align')
         if align:
             attrib['style'] = f"text-align: {align};"
-        return E(src.xml.tag, attrib)
+        ret = E(src.xml.tag, attrib)
+        self.markup.format_content(src, ret, level)
+        return ret
+
+
+class HtmlGenerator:
+    def __init__(self) -> None:
+        self._html = HtmlFormatter()
+
+    def tailed_html_element(self, src: Element) -> HtmlElement:
+        ret = self._html(src, 0)
+        ret.tail = src.tail
+        return ret
 
     def content_to_str(self, src: MixedContent) -> str:
         ss: list[str | HtmlElement] = [src.text]
@@ -43,16 +69,6 @@ class HtmlGenerator(ElementFormatter):
 
     def proto_section_to_str(self, src: bp.ProtoSection) -> str:
         return html_content_to_str(self._proto_section_content(src))
-
-    def html_element(self, src: Element) -> HtmlElement:
-        ret = self.start_element(src)
-        self.copy_content(src, ret, 0)
-        return ret
-
-    def tailed_html_element(self, src: Element) -> HtmlElement:
-        ret = self.html_element(src)
-        ret.tail = src.tail
-        return ret
 
     def _copy_content(self, src: MixedContent, dest: HtmlElement) -> None:
         dest.text = src.text
@@ -77,7 +93,7 @@ class HtmlGenerator(ElementFormatter):
             h.tail = "\n"
             ret.append(h)
         for p in src.presection:
-            ret.append(self.html_element(p))
+            ret.append(self._html(p, 0))
             ret.append("\n")
         for ss in src.subsections:
             ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
