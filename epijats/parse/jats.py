@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from warnings import warn
+
 from lxml import etree
 
 from .. import baseprint as bp
@@ -85,10 +87,11 @@ class CitationModel(TagElementModelBase):
         self._biblio = biblio
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        assert e.attrib["ref-type"] == "bibr"
+        assert e.attrib.get("ref-type") == "bibr"
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
             del e.attrib["alt"]
+        kit.check_no_attrib(log, e, ["rid", "ref-type"])
         rid = e.attrib.get("rid")
         if rid is None:
             log(fc.MissingAttribute.issue(e, "rid"))
@@ -152,16 +155,17 @@ class CrossReferenceModel(TagElementModelBase):
         self.content_model = content_model
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        kit.check_no_attrib(log, e, ["rid", "ref-type"])
+        alt = e.attrib.get("alt")
+        if alt and alt == e.text and not len(e):
+            del e.attrib["alt"]
+        kit.check_no_attrib(log, e, ["rid"])
         rid = e.attrib.get("rid")
         if rid is None:
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
         ref_type = e.attrib.get("ref-type")
-        if ref_type:
-            # ref_type == "bibr" should be handled by CitationModel
-            log(fc.UnsupportedAttributeValue.issue(e, "ref-type", ref_type))
-            return None
+        if ref_type == "bibr":
+            warn("CitationModel not handling xref ref-type bibr")
         ret = bp.CrossReference(rid, ref_type)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
