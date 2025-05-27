@@ -214,11 +214,11 @@ class WebstractFacade:
 
     @property
     def hash_scheme(self):
-        return self._webstract._source.hash_scheme
+        return self._webstract.source.hash_scheme
 
     @property
     def hexhash(self):
-        return self._webstract._source.hexhash
+        return self._webstract.source.hexhash
 
     @property
     def obsolete(self) -> bool:
