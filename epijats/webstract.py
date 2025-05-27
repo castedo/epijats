@@ -101,7 +101,7 @@ class Webstract(dict[str, Any]):
         snapshot = cache_subdir / "snapshot"
         if cached.exists():
             ret = Webstract.load_json(cached)
-            ret.source.path = snapshot
+            ret.set_source_from_path(snapshot)
         else:
             from . import jats
 
