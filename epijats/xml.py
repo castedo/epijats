@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import cast
 
 from lxml.builder import ElementMaker
@@ -15,39 +14,30 @@ class ElementFormatter(ABC):
     def __call__(self, src: Element, level: int) -> _Element: ...
 
 
-@dataclass
-class Delimiters:
-    sep: str = ''
-    open: str = ''
-    close: str = ''
-
-
 class ContentFormatter:
-    def __init__(self, sub: ElementFormatter, delims: Delimiters):
+    def __init__(self, sub: ElementFormatter, sep: str = ''):
         self.subformat = sub
-        self.delims = delims
+        self.sep = sep
 
     def format_content(self, src: Element, dest: _Element, level: int) -> None:
         last_newline = "\n" + "  " * level
-        presub = "\n" + ("  " * (level + 1))
+        newline = "\n" + ("  " * (level + 1))
         sub: _Element | None = None
         for it in src:
             sub = self.subformat(it, level + 1)
-            sub.tail = self.delims.sep + presub
+            sub.tail = self.sep + newline 
             dest.append(sub)
-        dest.text = self.delims.open
         if sub is None:
-            dest.text += last_newline
-            dest.text += self.delims.close
+            dest.text = last_newline
         else:
-            dest.text += presub
-            sub.tail = last_newline + self.delims.close
+            dest.text = newline
+            sub.tail = last_newline
 
 
 class CommonContentFormatter:
     def __init__(self, sub: ElementFormatter) -> None:
         self.markup = MarkupContentFormatter(sub)
-        self.default = ContentFormatter(sub, Delimiters())
+        self.default = ContentFormatter(sub)
 
     def format_content(self, src: Element, dest: _Element, level: int) -> None:
         if isinstance(src, MarkupElement):
@@ -72,7 +62,7 @@ class MarkupContentFormatter:
 class XmlFormatter(ElementFormatter):
     def __init__(self, *, nsmap: dict[str, str]):
         self.EM = ElementMaker(nsmap=nsmap)
-        self.citation = ContentFormatter(self, Delimiters(sep=","))
+        self.citation = ContentFormatter(self, sep=",")
         self.common = CommonContentFormatter(self)
 
     def __call__(self, src: Element, level: int) -> _Element:

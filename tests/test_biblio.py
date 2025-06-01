@@ -36,6 +36,7 @@ KNOWN_PMC_NO_SUPPORT = {
     fc.UnsupportedAttributeValue(
         tag='pub-id', attribute='pub-id-type', value='medline'
     ),
+    fc.UnsupportedAttribute('element-citation', 'publication-type'),
 }
 
 def parse_pmc_ref(p: Path):

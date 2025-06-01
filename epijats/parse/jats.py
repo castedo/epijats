@@ -623,7 +623,6 @@ def read_pub_id(
     if pub_id_type in dest:
         log(fc.ExcessElement.issue(e))
         return False
-    kit.check_no_attrib(log, e, ['pub-id-type'])
     value = kit.load_string_content(log, e)
     if not value:
         log(fc.MissingContent.issue(e))
@@ -669,7 +668,7 @@ def load_edition(log: IssueCallback, e: etree._Element) -> int | None:
 def read_element_citation(
     log: IssueCallback, e: etree._Element, dest: bp.BiblioRefItem
 ) -> bool:
-    kit.check_no_attrib(log, e, ['publication-type'])
+    kit.check_no_attrib(log, e)
     cp = ContentParser(log)
     source = cp.one(tag_model('source', kit.load_string))
     title = cp.one(tag_model('article-title', kit.load_string))

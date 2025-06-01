@@ -361,6 +361,7 @@ def test_restyle():
     assert {i.condition for i in issues} == {
         fc.InvalidDoi('pub-id', 'element-citation'),
         fc.InvalidPmid('pub-id', 'element-citation'),
+        fc.UnsupportedAttribute('element-citation', 'publication-type'),
     }
 
 
