@@ -10,7 +10,7 @@ from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .tree import CitationTuple, Element, MixedContent
 from .xml import (
-    Delimiters, CommonContentFormatter, ElementFormatter, ContentFormatter, MarkupContentFormatter
+    CommonContentFormatter, ElementFormatter, MarkupContentFormatter
 )
 
 
@@ -56,13 +56,23 @@ class TableCellHtmlizer:
 
 
 class CitationTupleHtmlizer:
-    def __init__(self, form: ElementFormatter):
-        self.content = ContentFormatter(form, Delimiters(sep=",", open="[", close="]"))
+    def __init__(self, form: HtmlFormatter):
+        self.form = form
 
     def htmlize(self, src: CitationTuple, level: int) -> HtmlElement:
         assert src.xml.tag == 'sup'
         ret = E('span', {'class': "citation-tuple"})
-        self.content.format_content(src, ret, level)
+        ret.text = " ["
+        sub: HtmlElement | None = None
+        for it in src:
+            sub = self.form(it, level + 1)
+            sub.tail = ","
+            ret.append(sub)
+        if sub is None:
+            warn("Citation tuple is empty")
+            ret.text += "]"
+        else:
+            sub.tail = "]"
         return ret
 
 

@@ -36,7 +36,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
         raise ValueError()
     gen = HtmlGenerator()
     ret = Webstract()
-    if "EPIJATS_NO_PANDOC" in os.environ:
+    if "EPIJATS_NO_PANDOC" in os.environ and "EPIJATS_USE_PANDOC" not in os.environ:
         ret['body'] = gen.html_body_content(bp)
     else:
         with tempfile.TemporaryDirectory() as tempdir:
