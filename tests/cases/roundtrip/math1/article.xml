@@ -24,12 +24,10 @@
           <p>"<inline-formula>
               <alternatives>
                 <tex-math><![CDATA[\operatorname{dom}f]]></tex-math>
-                <mml:math display="inline"><mml:mrow><mml:mo>dom</mml:mo><mml:mi>f</mml:mi></mml:mrow></mml:math>
               </alternatives>
             </inline-formula>" denotes the domain of function <inline-formula>
               <alternatives>
                 <tex-math><![CDATA[f]]></tex-math>
-                <mml:math display="inline"><mml:mi>f</mml:mi></mml:math>
               </alternatives>
             </inline-formula></p>
         </list-item>
@@ -37,7 +35,6 @@
           <p>"<inline-formula>
               <alternatives>
                 <tex-math><![CDATA[⟦ x \in S ⟧]]></tex-math>
-                <mml:math display="inline"><mml:mrow><mml:mo stretchy="false" form="prefix">⟦</mml:mo><mml:mi>x</mml:mi><mml:mo>∈</mml:mo><mml:mi>S</mml:mi><mml:mo stretchy="false" form="postfix">⟧</mml:mo></mml:mrow></mml:math>
               </alternatives>
             </inline-formula>" is Iverson bracket notation for the indicator function of <inline-formula>
               <alternatives>
@@ -52,7 +49,6 @@
                     1 & \text{if } x \in S  \\
                     0 & \text{otherwise.}
                   \end{cases}]]></tex-math>
-                <mml:math display="block"><mml:mrow><mml:mo stretchy="false" form="prefix">⟦</mml:mo><mml:mi>x</mml:mi><mml:mo>∈</mml:mo><mml:mi>S</mml:mi><mml:mo stretchy="false" form="postfix">⟧</mml:mo><mml:mo>=</mml:mo><mml:mrow><mml:mo stretchy="true" form="prefix">{</mml:mo><mml:mtable><mml:mtr><mml:mtd columnalign="left" style="text-align: left"><mml:mn>1</mml:mn></mml:mtd><mml:mtd columnalign="left" style="text-align: left"><mml:mrow><mml:mtext mathvariant="normal">if </mml:mtext><mml:mspace width="0.333em"></mml:mspace></mml:mrow><mml:mi>x</mml:mi><mml:mo>∈</mml:mo><mml:mi>S</mml:mi></mml:mtd></mml:mtr><mml:mtr><mml:mtd columnalign="left" style="text-align: left"><mml:mn>0</mml:mn></mml:mtd><mml:mtd columnalign="left" style="text-align: left"><mml:mtext mathvariant="normal">otherwise.</mml:mtext></mml:mtd></mml:mtr></mml:mtable></mml:mrow></mml:mrow></mml:math>
               </alternatives>
             </disp-formula></p>
         </list-item>

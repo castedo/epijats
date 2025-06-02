@@ -45,15 +45,3 @@ Installation
 python3 -m pip install epijats[pdf]
 ```
 with the `[pdf]` suffix optional and only needed of PDF generation.
-
-
-### Non-Python requirements
-
-If you are converting from JATS, the following dependencies must be installed:
-
-<ul>
-  <li> <a href="https://pandoc.org">pandoc</a>
-  <li> pandoc-katex-filter Node.js NPM package
-</ul>
-
-All other dependencies will be automatically installed by `pip`.
