@@ -251,7 +251,9 @@ def mixed_element_model(tag: str) -> Model[MixedContent]:
     return tag_model(tag, MixedContentLoader(base_hypertext_model()))
 
 
-title_model = mixed_element_model
+def title_model(tag: str) -> Model[MixedContent]:
+    content_model = base_hypertext_model() | break_model()
+    return tag_model(tag, MixedContentLoader(content_model))
 
 
 def hypertext_element_binder(tag: str) -> Binder[MixedContent]:
@@ -407,6 +409,13 @@ class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
         return ret
 
 
+def break_model() -> EModel:
+    """<break> Line Break
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
+    """
+    return TextElementModel({'break': 'br'}, False)
+
+
 def formatted_text_model(sub_model: EModel | None = None) -> EModel:
     formatted_text_tags = {
         'bold': 'strong',
@@ -455,8 +464,9 @@ def p_elements_model(biblio: BiblioRefPool | None = None) -> EModel:
 
 
 def table_wrap_model(p_elements: EModel) -> EModel:
-    th = TableCellModel(p_elements, header=True)
-    td = TableCellModel(p_elements, header=False)
+    br = break_model()
+    th = TableCellModel(p_elements | br, header=True)
+    td = TableCellModel(p_elements | br, header=False)
     tr = HtmlDataElementModel('tr', th | td)
     thead = HtmlDataElementModel('thead', tr)
     tbody = HtmlDataElementModel('tbody', tr)
