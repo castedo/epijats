@@ -363,9 +363,15 @@ class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
         return ret
 
 
-def proto_section_binder(tag: str, p_elements: EModel) -> Binder[bp.ProtoSection]:
-    p_level = TextElementModel({'p': 'p'}, p_elements)
-    return kit.SingleElementBinder(tag, ProtoSectionContentBinder(p_elements, p_level))
+def abstract_binder() -> Binder[bp.ProtoSection]:
+    """<abstract> Abstract
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
+    """
+    p_child = p_child_model()
+    just_para = TextElementModel({'p': 'p'}, p_child)
+    content = ProtoSectionContentBinder(p_child, just_para)
+    return kit.SingleElementBinder('abstract', content)
 
 
 class SectionModel(TagModelBase[bp.Section]):
@@ -438,10 +444,10 @@ def base_hypertext_model() -> EModel:
     return hypertext
 
 
-def p_elements_model(biblio: BiblioRefPool | None = None) -> EModel:
+def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     """Paragraph Elements
 
-    Similar to JATS def, but using more restrictive base hypertext model.
+    Similar to JATS def, but using more restrictive.
     """
     hypertext = base_hypertext_model()
     # NOTE: open issue whether xref should be allowed in preformatted
@@ -535,20 +541,23 @@ def load_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | 
     statement = ap.one(mixed_element_model('copyright-statement'))
     license = ap.one(tag_model("license", load_license))
     ap.parse_array_content(e)
-    if license.out is None or statement.out is None or statement.out.blank():
+    if license.out is None:
         return None
-    return bp.Permissions(license.out, bp.Copyright(statement.out))
+    if statement.out and not statement.out.blank():
+        copyright = bp.Copyright(statement.out)
+    else:
+        copyright = None
+    return bp.Permissions(license.out, copyright)
 
 
 def read_article_meta(
     log: IssueCallback, e: etree._Element, dest: bp.Baseprint
 ) -> bool:
     kit.check_no_attrib(log, e)
-    p_elements = p_elements_model()
     cp = ContentParser(log)
     title = cp.one(title_group_model())
     authors = cp.one(tag_model('contrib-group', load_author_group))
-    cp.bind(proto_section_binder('abstract', p_elements).once(), dest.abstract)
+    cp.bind(abstract_binder().once(), dest.abstract)
     permissions = cp.one(tag_model('permissions', load_permissions))
     cp.parse_array_content(e)
     if title.out:
@@ -568,6 +577,16 @@ def read_article_front(
     cp.bind(ReaderBinder('article-meta', read_article_meta).once(), dest)
     cp.parse_array_content(e)
     return True
+
+
+def body_binder(biblio: BiblioRefPool | None) -> Binder[bp.ProtoSection]:
+    """<body> Body of the Document
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/body.html
+    """
+    p_child = p_child_model(biblio)
+    p_level = p_level_model(p_child)
+    return kit.SingleElementBinder('body', ProtoSectionContentBinder(p_child, p_level))
 
 
 class IntModel(TagModelBase[int]):
@@ -755,7 +774,7 @@ def load_article(log: IssueCallback, e: etree._Element) -> bp.Baseprint | None:
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
     cp = ContentParser(log)
     cp.bind(ReaderBinder('front', read_article_front), ret)
-    cp.bind(proto_section_binder('body', p_elements_model(biblio)), ret.body)
+    cp.bind(body_binder(biblio), ret.body)
     cp.parse_array_content(e)
     if ret.ref_list:
         assert biblio

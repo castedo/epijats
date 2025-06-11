@@ -70,7 +70,7 @@ def assert_bdom_roundtrip(expect: Baseprint):
 def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
     issues: list[fc.FormatIssue] = []
     ret = Abstract()
-    binder = _.proto_section_binder('abstract', _.p_elements_model())
+    binder = _.abstract_binder()
     p = binder.bind(issues.append, ret)
     p.parse_element(e)
     return (ret, issues)
@@ -176,7 +176,7 @@ bar.</p>
   </list-item>
 </list>"""
     issues = []
-    model = _.ListModel(_.p_elements_model())
+    model = _.ListModel(_.p_child_model())
     subel = model.load(issues.append, lxml_element_from_str(expect))
     assert isinstance(subel, List)
     assert len(list(subel)) == 3
@@ -195,7 +195,7 @@ bar.</p>
   </list-item>
 </list>"""
     issues = []
-    model = _.ListModel(_.p_elements_model())
+    model = _.ListModel(_.p_child_model())
     subel = model.load(issues.append, lxml_element_from_str(expect))
     assert isinstance(subel, List)
     assert len(list(subel)) == 2
@@ -219,7 +219,7 @@ def test_def_list_rountrip():
   </def-item>
 </def-list>"""
     issues = []
-    model = _.def_list_model(_.p_elements_model())
+    model = _.def_list_model(_.p_child_model())
     subel = model.load(issues.append, lxml_element_from_str(expect))
     assert len(list(subel)) == 2
     assert str_from_element(subel) == expect
