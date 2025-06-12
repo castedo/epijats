@@ -1,4 +1,5 @@
 from .util import copytree_nostat
+from .jats import webstract_from_jats
 from .jinja import PackagePageGenerator
 from .webstract import Webstract
 
@@ -112,6 +113,11 @@ class Eprint:
         html_path = self.make_html_dir(html_target)
         Eprint.stable_html_to_pdf(html_path, pdf_target, self._source_date_epoch())
 
+    def make(self, html_target: Path, pdf_target: Path | None = None) -> None:
+        html_path = self.make_html_dir(html_target)
+        if pdf_target:
+            Eprint.stable_html_to_pdf(html_path, pdf_target, self._source_date_epoch())
+
     def _source_date_epoch(self) -> dict[str, str]:
         ret = dict()
         if self.webstract.date is not None:
@@ -121,3 +127,17 @@ class Eprint:
             if source_mtime:
                 ret["SOURCE_DATE_EPOCH"] = "{:.0f}".format(source_mtime)
         return ret
+
+
+def eprint_dir(
+    config: EprinterConfig,
+    src: Path | str,
+    target_dir: Path | str,
+    pdf_target: Path | str | None = None,
+) -> None:
+    target_dir = Path(target_dir)
+    pdf_target = Path(pdf_target) if pdf_target else None
+    with tempfile.TemporaryDirectory() as tmpdir:
+        webstract = webstract_from_jats(src)
+        eprint = Eprint(webstract, Path(tmpdir), config)
+        eprint.make(target_dir, pdf_target)

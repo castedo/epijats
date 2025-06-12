@@ -123,21 +123,21 @@ class HtmlGenerator:
             ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
         return ret
 
-    def _references(self, src: bp.BiblioRefList) -> Iterable[str | HtmlElement]:
-        ret: list[str | HtmlElement] = []
+    def html_references(
+        self, src: bp.BiblioRefList, abridged: bool = False,
+    ) -> str:
+        frags: list[str | HtmlElement] = []
         if src.title:
             h = E('h2')
             self._copy_content(src.title, h)
             h.tail = '\n'
-            ret.append(h)
-        formatter = CiteprocBiblioFormatter()
+            frags.append(h)
+        formatter = CiteprocBiblioFormatter(abridged)
         ol = formatter.to_element(src.references)
         ol.tail = "\n"
-        ret.append(ol)
-        return ret
+        frags.append(ol)
+        return html_content_to_str(frags)
 
     def html_body_content(self, src: bp.Baseprint) -> str:
         frags = list(self._proto_section_content(src.body))
-        if src.ref_list:
-            frags += self._references(src.ref_list)
         return html_content_to_str(frags)

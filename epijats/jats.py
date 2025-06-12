@@ -38,6 +38,9 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     ret = Webstract()
     if "EPIJATS_USE_PANDOC" not in os.environ:
         ret['body'] = gen.html_body_content(bp)
+        if bp.ref_list:
+            ret['references'] = gen.html_references(bp.ref_list)
+            ret['references_abridged'] = gen.html_references(bp.ref_list, True)
     else:
         with tempfile.TemporaryDirectory() as tempdir:
             if "EPIJATS_NO_RESTYLE" not in os.environ:

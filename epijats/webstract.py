@@ -80,6 +80,8 @@ class Webstract(dict[str, Any]):
         "issues",
         "license_p",
         "license_ref",
+        "references",
+        "references_abridged",
         "source",
         "title",
     ]

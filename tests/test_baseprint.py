@@ -112,6 +112,8 @@ def test_html(case):
     assert_eq_if_exists(abstract, case_path / "abstract.html")
     body = HTML.html_body_content(bp)
     assert_eq_if_exists(body, case_path / "body.html")
+    references = HTML.html_references(bp.ref_list) if bp.ref_list else None
+    assert_eq_if_exists(references, case_path / "references.html")
 
 
 def test_minimal_html_title():
