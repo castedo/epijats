@@ -8,7 +8,8 @@ from lxml.html.builder import E
 
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
-from .tree import CitationTuple, Element, MixedContent
+from .parse.math import MathmlElement
+from .tree import Citation, CitationTuple, Element, MixedContent
 from .xml import (
     CommonContentFormatter, ElementFormatter, MarkupContentFormatter
 )
@@ -17,6 +18,28 @@ from .xml import (
 def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
     ss = [x if isinstance(x, str) else tostring(x, encoding='unicode') for x in ins]
     return "".join(ss)
+
+
+HTML_FROM_XML = {
+  'bold': 'strong',
+  'break': 'br',
+  'code': 'pre',
+  'def': 'dd',
+  'def-list': 'dl',
+  'disp-quote': 'blockquote',
+  'italic': 'em',
+  'list-item': 'li',
+  'monospace': 'tt',
+  'p': 'p',
+  'preformat': 'pre',
+  'sub': 'sub',
+  'sup': 'sup',
+  'table': 'table',
+  'tbody': 'tbody',
+  'term': 'dt',
+  'thead': 'thead',
+  'tr': 'tr',
+}
 
 
 class HtmlFormatter(ElementFormatter):
@@ -30,13 +53,24 @@ class HtmlFormatter(ElementFormatter):
             return self.table_cell.htmlize(src, level)
         if isinstance(src, CitationTuple):
             return self.citation_tuple.htmlize(src, level)
-        if src.xml.tag == 'table-wrap':
+        html_tag = HTML_FROM_XML.get(src.xml.tag)
+        if html_tag:
+            ret = E(html_tag)
+        elif isinstance(src, Citation):
+            ret = E('a', {'href': '#' + src.rid})
+        elif isinstance(src, bp.CrossReference):
+            ret = E('a', {'href': '#' + src.rid})
+        elif isinstance(src, bp.Hyperlink):
+            ret = E('a', {'href': src.href})
+        elif isinstance(src, bp.List):
+            ret = E('ol' if src.list_type == bp.ListTypeCode.ORDER else 'ul')
+        elif src.xml.tag == 'table-wrap':
             ret = E('div', {'class': "table-wrap"})
-        elif src.html is None:
+        elif isinstance(src, MathmlElement):
+            ret = E(src.html.tag, src.html.attrib)
+        else:
             warn(f"Unknown XML {src.xml.tag}")
             ret = E('div', {'class': f"unknown-xml xml-{src.xml.tag}"})
-        else:
-            ret = E(src.html.tag, src.html.attrib)
         self.common.format_content(src, ret, level)
         return ret
 

@@ -4,28 +4,28 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar
 
-from .tree import DataElement, Element, MixedContent, StartTag, MarkupElement
+from .tree import DataElement, Element, MixedContent, MarkupElement
 
 
 @dataclass
 class Hyperlink(MarkupElement):
     def __init__(self, href: str):
         super().__init__('ext-link')
+        self.href = href
         self.xml.attrib = {
             "ext-link-type": "uri",
             "{http://www.w3.org/1999/xlink}href": href,
         }
-        self.html = StartTag('a', {'href': href})
 
 
 @dataclass
 class CrossReference(MarkupElement):
-    def __init__(self, name: str, ref_type: str | None):
+    def __init__(self, rid: str, ref_type: str | None):
         super().__init__('xref')
-        self.xml.attrib = {"rid": name}
+        self.rid = rid
+        self.xml.attrib = {"rid": rid}
         if ref_type:
             self.xml.attrib['ref-type'] = ref_type
-        self.html = StartTag('a', {'href': "#" + name})
 
 
 class ListTypeCode(StrEnum):
@@ -38,12 +38,9 @@ class List(DataElement):
 
     def __init__(self, list_type: ListTypeCode | None) -> None:
         super().__init__('list')
+        self.list_type = list_type
         if list_type:
             self.xml.attrib['list-type'] = list_type
-        if list_type == ListTypeCode.ORDER:
-            self.html = StartTag('ol')
-        else:
-            self.html = StartTag('ul')
 
 
 class AlignCode(StrEnum):
@@ -57,7 +54,6 @@ class TableCell(MarkupElement):
         super().__init__('th' if header else 'td')
         if align:
             self.xml.attrib['align'] = align
-        self.html = StartTag(self.xml.tag)
 
 
 @dataclass(frozen=True)

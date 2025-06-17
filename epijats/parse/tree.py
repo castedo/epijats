@@ -85,36 +85,22 @@ class DataElementModel(TagElementModelBase):
         return ret
 
 
-class HtmlDataElementModel(DataElementModel):
-    def __init__(self, tag: str, content_model: EModel, html_tag: str | None = None):
-        super().__init__(tag, content_model)
-        self.html = StartTag(html_tag or tag)
-
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        ret = super().load(log, e)
-        if ret:
-            ret.html = self.html
-        return ret
-
-
 class TextElementModel(ElementModelBase):
-    def __init__(self, tagmap: dict[str, str], content_model: EModel | bool = True):
-        self.tagmap = tagmap
+    def __init__(self, tags: set[str], content_model: EModel | bool = True):
+        self._tags = tags
         self.content_model: EModel | None = None
         if content_model:
             self.content_model = self if content_model == True else content_model
 
     @property
     def stags(self) -> Iterable[StartTag]:
-        return (StartTag(tag) for tag in self.tagmap)
+        return (StartTag(tag) for tag in self._tags)
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None
-        if isinstance(e.tag, str) and e.tag in self.tagmap:
+        if isinstance(e.tag, str) and e.tag in self._tags:
             kit.check_no_attrib(log, e)
-            html_tag = self.tagmap[e.tag]
             ret = MarkupElement(e.tag)
-            ret.html = StartTag(html_tag)
             if self.content_model:
                 parse_mixed_content(log, e, self.content_model, ret.content)
         return ret

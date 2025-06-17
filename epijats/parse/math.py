@@ -13,7 +13,7 @@ from .kit import (
 from .tree import (
     EModel,
     ElementModelBase,
-    HtmlDataElementModel,
+    DataElementModel,
     TagElementModelBase,
     parse_mixed_content,
 )
@@ -54,6 +54,13 @@ MATHML_TAGS = [
 ]
 
 
+class MathmlElement(MarkupElement):
+    def __init__(self, xml_tag: str | StartTag):
+        super().__init__(xml_tag)
+        mathml_tag = self.xml.tag[len(MATHML_NAMESPACE_PREFIX) :]
+        self.html = StartTag(mathml_tag, self.xml.attrib)
+
+
 class AnyMathmlModel(ElementModelBase):
     @property
     def stags(self) -> Iterable[StartTag]:
@@ -62,9 +69,7 @@ class AnyMathmlModel(ElementModelBase):
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None
         if isinstance(e.tag, str) and e.tag.startswith(MATHML_NAMESPACE_PREFIX):
-            ret = MarkupElement(StartTag(e.tag, dict(e.attrib)))
-            mathml_tag = e.tag[len(MATHML_NAMESPACE_PREFIX) :]
-            ret.html = StartTag(mathml_tag, ret.xml.attrib)
+            ret = MathmlElement(StartTag(e.tag, dict(e.attrib)))
             parse_mixed_content(log, e, self, ret.content)
         return ret
 
@@ -85,8 +90,7 @@ class MathmlElementModel(TagElementModelBase):
         self.mathml_tag = mathml_tag
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        ret = MarkupElement(StartTag(self.tag, dict(e.attrib)))
-        ret.html = StartTag(self.mathml_tag, ret.xml.attrib)
+        ret = MathmlElement(StartTag(self.tag, dict(e.attrib)))
         parse_mixed_content(log, e, self._model, ret.content)
         return ret
 
@@ -105,8 +109,8 @@ def inline_formula_model() -> EModel:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/inline-formula.html
     """
     mathml = MathmlElementModel('math')
-    alts = HtmlDataElementModel('alternatives', mathml | TexMathElementModel())
-    return HtmlDataElementModel('inline-formula', mathml | alts)
+    alts = DataElementModel('alternatives', mathml | TexMathElementModel())
+    return DataElementModel('inline-formula', mathml | alts)
 
 
 def disp_formula_model() -> EModel:
@@ -115,5 +119,5 @@ def disp_formula_model() -> EModel:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-formula.html
     """
     mathml = MathmlElementModel('math')
-    alts = HtmlDataElementModel('alternatives', mathml | TexMathElementModel())
-    return HtmlDataElementModel('disp-formula', mathml | alts)
+    alts = DataElementModel('alternatives', mathml | TexMathElementModel())
+    return DataElementModel('disp-formula', mathml | alts)

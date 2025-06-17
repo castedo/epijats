@@ -21,12 +21,10 @@ class StartTag:
 @dataclass
 class Element:
     xml: StartTag
-    html: StartTag | None
     tail: str
 
     def __init__(self, xml_tag: str | StartTag):
         self.xml = StartTag(xml_tag)
-        self.html = None
         self.tail = ""
 
     def __iter__(self) -> Iterator[Element]:
@@ -112,7 +110,7 @@ class DataElement(Element):
 class Citation(MarkupElement):
     def __init__(self, rid: str, rord: int):
         super().__init__(StartTag('xref', {'rid': rid, 'ref-type': 'bibr'}))
-        self.html = StartTag('a', {'href': '#' + rid})
+        self.rid = rid
         self.content.append_text(str(rord))
 
 
@@ -122,7 +120,6 @@ class CitationTuple(Element):
 
     def __init__(self) -> None:
         super().__init__('sup')
-        self.html = StartTag('sup')
         self._citations = []
 
     def __iter__(self) -> Iterator[Element]:
@@ -133,6 +130,4 @@ class CitationTuple(Element):
 
 
 def make_paragraph(text: str) -> MarkupElement:
-    ret = MarkupElement('p', text)
-    ret.html = StartTag('p')
-    return ret
+    return MarkupElement('p', text)

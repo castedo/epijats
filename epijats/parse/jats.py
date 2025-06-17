@@ -27,7 +27,6 @@ from .kit import (
 from .tree import (
     DataElementModel,
     EModel,
-    HtmlDataElementModel,
     MixedContentBinder,
     MixedContentLoader,
     TagElementModelBase,
@@ -176,8 +175,8 @@ def disp_quote_mode(p_elements: EModel) -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-quote.html
     """
-    p = TextElementModel({'p': 'p'}, p_elements)
-    return HtmlDataElementModel('disp-quote', p, 'blockquote')
+    p = TextElementModel({'p'}, p_elements)
+    return DataElementModel('disp-quote', p)
 
 
 class ListModel(TagElementModelBase):
@@ -185,10 +184,10 @@ class ListModel(TagElementModelBase):
         super().__init__('list')
         # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
         # %list-item-model
-        p = TextElementModel({'p': 'p'}, p_elements_model)
+        p = TextElementModel({'p'}, p_elements_model)
         list_item_content = p | self
-        self._list_content_model = HtmlDataElementModel(
-            'list-item', list_item_content, 'li'
+        self._list_content_model = DataElementModel(
+            'list-item', list_item_content
         )
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
@@ -204,7 +203,7 @@ def def_term_model() -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
-    return TextElementModel({'term': 'dt'}, base_hypertext_model())
+    return TextElementModel({'term'}, base_hypertext_model())
 
 
 def def_def_model(p_elements: EModel) -> EModel:
@@ -212,8 +211,8 @@ def def_def_model(p_elements: EModel) -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
-    p = TextElementModel({'p': 'p'}, p_elements)
-    return HtmlDataElementModel('def', p, 'dd')
+    p = TextElementModel({'p'}, p_elements)
+    return DataElementModel('def', p)
 
 
 def def_item_model(p_elements: EModel) -> EModel:
@@ -231,7 +230,7 @@ def def_list_model(p_elements: EModel) -> EModel:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-list.html
     """
     content_model = def_item_model(p_elements)
-    return HtmlDataElementModel('def-list', content_model, 'dl')
+    return DataElementModel('def-list', content_model)
 
 
 class TableCellModel(TagElementModelBase):
@@ -369,7 +368,7 @@ def abstract_binder() -> Binder[bp.ProtoSection]:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
     """
     p_child = p_child_model()
-    just_para = TextElementModel({'p': 'p'}, p_child)
+    just_para = TextElementModel({'p'}, p_child)
     content = ProtoSectionContentBinder(p_child, just_para)
     return kit.SingleElementBinder('abstract', content)
 
@@ -419,16 +418,16 @@ def break_model() -> EModel:
     """<break> Line Break
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
     """
-    return TextElementModel({'break': 'br'}, False)
+    return TextElementModel({'break'}, False)
 
 
 def formatted_text_model(sub_model: EModel | None = None) -> EModel:
     formatted_text_tags = {
-        'bold': 'strong',
-        'italic': 'em',
-        'monospace': 'tt',
-        'sub': 'sub',
-        'sup': 'sup',
+        'bold',
+        'italic',
+        'monospace',
+        'sub',
+        'sup',
     }
     content_model: EModel | bool = True if sub_model is None else sub_model
     return TextElementModel(formatted_text_tags, content_model)
@@ -451,7 +450,7 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     """
     hypertext = base_hypertext_model()
     # NOTE: open issue whether xref should be allowed in preformatted
-    preformatted = TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
+    preformatted = TextElementModel({'code', 'preformat'}, hypertext)
 
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     # %p-elements
@@ -473,26 +472,25 @@ def table_wrap_model(p_elements: EModel) -> EModel:
     br = break_model()
     th = TableCellModel(p_elements | br, header=True)
     td = TableCellModel(p_elements | br, header=False)
-    tr = HtmlDataElementModel('tr', th | td)
-    thead = HtmlDataElementModel('thead', tr)
-    tbody = HtmlDataElementModel('tbody', tr)
-    table = HtmlDataElementModel('table', thead | tbody)
+    tr = DataElementModel('tr', th | td)
+    thead = DataElementModel('thead', tr)
+    tbody = DataElementModel('tbody', tr)
+    table = DataElementModel('table', thead | tbody)
     return DataElementModel('table-wrap', table)
 
 
 def disp_quote_model(p_elements: EModel) -> EModel:
-    p = TextElementModel({'p': 'p'}, p_elements)
-    ret = HtmlDataElementModel('disp-quote', p)
-    ret.html = StartTag('blockquote')
+    p = TextElementModel({'p'}, p_elements)
+    ret = DataElementModel('disp-quote', p)
     return ret
 
 
 def p_level_model(p_elements: EModel) -> EModel:
     hypertext = base_hypertext_model()
     p_level = UnionModel[Element]()
-    p_level |= TextElementModel({'p': 'p'}, p_elements)
+    p_level |= TextElementModel({'p'}, p_elements)
     p_level |= disp_formula_model()
-    p_level |= TextElementModel({'code': 'pre', 'preformat': 'pre'}, hypertext)
+    p_level |= TextElementModel({'code', 'preformat'}, hypertext)
     p_level |= ListModel(p_elements)
     p_level |= table_wrap_model(p_elements)
     p_level |= disp_quote_model(p_elements)
