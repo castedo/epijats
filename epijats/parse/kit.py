@@ -45,6 +45,13 @@ def confirm_attrib_value(
         return False
 
 
+def confirm_empty(log: IssueCallback, e: etree._Element) -> bool:
+    if len(e) or (e.text and e.text.strip()):
+        log(fc.InvalidContent.issue(e))
+        return False
+    return True
+
+
 def get_enum_value(
     log: IssueCallback, e: etree._Element, key: str, enum: type[EnumT]
 ) -> EnumT | None:

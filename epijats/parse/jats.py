@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Iterable
 from warnings import warn
 
 from lxml import etree
@@ -7,7 +8,13 @@ from lxml import etree
 from .. import baseprint as bp
 from .. import condition as fc
 from ..tree import (
-    Citation, CitationTuple, Element, MixedContent, StartTag, make_paragraph
+    Citation,
+    CitationTuple,
+    Element,
+    MarkupElement,
+    MixedContent,
+    StartTag,
+    make_paragraph,
 )
 
 from . import kit
@@ -27,6 +34,8 @@ from .kit import (
 from .tree import (
     DataElementModel,
     EModel,
+    ElementModelBase,
+    EmptyElementModel,
     MixedContentBinder,
     MixedContentLoader,
     TagElementModelBase,
@@ -418,35 +427,49 @@ def break_model() -> EModel:
     """<break> Line Break
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
     """
-    return TextElementModel({'break'}, False)
+    return EmptyElementModel({'break'})
 
 
-def formatted_text_model(sub_model: EModel | None = None) -> EModel:
-    formatted_text_tags = {
-        'bold',
-        'italic',
-        'monospace',
-        'sub',
-        'sup',
-    }
-    content_model: EModel | bool = True if sub_model is None else sub_model
-    return TextElementModel(formatted_text_tags, content_model)
+class ItalicModel(ElementModelBase):
+    def __init__(self, content_model: EModel):
+        self.content_model = content_model
+
+    @property
+    def stags(self) -> Iterable[StartTag]:
+        return [StartTag('italic')]
+
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        ret = None
+        if e.tag == 'italic':
+            kit.check_no_attrib(log, e, ('toggle',))
+            kit.confirm_attrib_value(log, e, 'toggle', ('yes', None))
+            ret = MarkupElement('italic')
+            parse_mixed_content(log, e, self.content_model, ret.content)
+        return ret
+
+
+def formatted_text_model(content: EModel) -> EModel:
+    simple_tags = {'bold', 'monospace', 'sub', 'sup'}
+    return ItalicModel(content) | TextElementModel(simple_tags, content)
 
 
 def base_hypertext_model() -> EModel:
     """Base hypertext model"""
+
+    only_formatted_text = UnionModel[Element]()
+    only_formatted_text |= formatted_text_model(only_formatted_text)
+
     hypertext = UnionModel[Element]()
-    hypertext |= ExtLinkModel(formatted_text_model())
-    hypertext |= CrossReferenceModel(formatted_text_model())
+    hypertext |= ExtLinkModel(only_formatted_text)
+    hypertext |= CrossReferenceModel(only_formatted_text)
     hypertext |= inline_formula_model()
     hypertext |= formatted_text_model(hypertext)
     return hypertext
 
 
 def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
-    """Paragraph Elements
-
-    Similar to JATS def, but using more restrictive.
+    """Paragraph (child) elements (subset of Article Authoring JATS)
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     """
     hypertext = base_hypertext_model()
     # NOTE: open issue whether xref should be allowed in preformatted
@@ -462,9 +485,10 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     p_elements |= math_model()
     p_elements |= disp_formula_model()
     p_elements |= preformatted
-    p_elements |= disp_quote_model(p_elements)
     p_elements |= ListModel(p_elements)
     p_elements |= def_list_model(p_elements)
+    p_elements |= disp_quote_model(p_elements)
+    p_elements |= table_wrap_model(p_elements)
     return p_elements
 
 
@@ -486,14 +510,17 @@ def disp_quote_model(p_elements: EModel) -> EModel:
 
 
 def p_level_model(p_elements: EModel) -> EModel:
+    """Paragraph-level elements (subset of Article Authoring JATS)
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/para-level.html
+    """
     hypertext = base_hypertext_model()
     p_level = UnionModel[Element]()
     p_level |= TextElementModel({'p'}, p_elements)
     p_level |= disp_formula_model()
     p_level |= TextElementModel({'code', 'preformat'}, hypertext)
     p_level |= ListModel(p_elements)
-    p_level |= table_wrap_model(p_elements)
     p_level |= disp_quote_model(p_elements)
+    p_level |= table_wrap_model(p_elements)
     return p_level
 
 
@@ -737,6 +764,7 @@ class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
         ret = bp.BiblioRefItem()
         kit.check_no_attrib(log, e, ['id'])
         cp = ContentParser(log)
+        cp.one(IntModel('label', 1048576))  # ignoring if it's a valid integer
         cp.bind(ReaderBinder('element-citation', read_element_citation).once(), ret)
         cp.parse_array_content(e)
         ret.id = e.attrib.get('id', "")

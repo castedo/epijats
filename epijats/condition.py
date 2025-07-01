@@ -105,6 +105,11 @@ class MissingContent(ElementFormatCondition):
 
 
 @dataclass(frozen=True)
+class InvalidContent(ElementFormatCondition):
+    """Invalid XML element content"""
+
+
+@dataclass(frozen=True)
 class IgnoredText(ElementFormatCondition):
     """Unexpected text ignored within XML element"""
 
@@ -176,14 +181,8 @@ class InvalidAttributeValue(AttributeValueCondition):
 
 
 @dataclass(frozen=True)
-class MissingElement(FormatCondition):
+class MissingElement(ElementFormatCondition):
     """Missing XML element"""
-
-    tag: str
-    parent: str
-
-    def __str__(self) -> str:
-        return "{} {!r}/{!r}".format(self.__doc__, self.parent, self.tag)
 
 
 @dataclass(frozen=True)

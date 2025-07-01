@@ -85,12 +85,27 @@ class DataElementModel(TagElementModelBase):
         return ret
 
 
-class TextElementModel(ElementModelBase):
-    def __init__(self, tags: set[str], content_model: EModel | bool = True):
+class EmptyElementModel(ElementModelBase):
+    def __init__(self, tags: set[str]):
         self._tags = tags
-        self.content_model: EModel | None = None
-        if content_model:
-            self.content_model = self if content_model == True else content_model
+
+    @property
+    def stags(self) -> Iterable[StartTag]:
+        return (StartTag(tag) for tag in self._tags)
+
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        ret = None
+        if isinstance(e.tag, str) and e.tag in self._tags:
+            kit.check_no_attrib(log, e)
+            kit.confirm_empty(log, e)
+            ret = MarkupElement(e.tag)
+        return ret
+
+
+class TextElementModel(ElementModelBase):
+    def __init__(self, tags: set[str], content_model: EModel):
+        self._tags = tags
+        self.content_model = content_model
 
     @property
     def stags(self) -> Iterable[StartTag]:
@@ -101,8 +116,7 @@ class TextElementModel(ElementModelBase):
         if isinstance(e.tag, str) and e.tag in self._tags:
             kit.check_no_attrib(log, e)
             ret = MarkupElement(e.tag)
-            if self.content_model:
-                parse_mixed_content(log, e, self.content_model, ret.content)
+            parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
 
