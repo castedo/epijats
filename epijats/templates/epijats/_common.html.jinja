@@ -57,7 +57,9 @@
       "ccbyncndlicense": "CC BY-NC-ND",
   }
   %}
+  {% if doc.copyright %}
   <p>{{ doc.copyright }}</p>
+  {% endif %}
   {% if doc.license_ref %}
   <p>
      <a href="{{ doc.license_ref }}" rel="nofollow">

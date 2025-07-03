@@ -151,7 +151,7 @@
               </p>
             </dd>
           {% endif %}
-          {% if doc.copyright %}
+          {% if doc.copyright or doc.license_ref or doc.license_p %}
           <dt>Copyright</dt>
           <dd>
             {{- copyright(doc) }}
@@ -176,7 +176,7 @@
           <dt>Citation</dt>
           <dd>{{ citation(doc, args.dsi_domain) -}}</dd>
         {% endif %}
-        {% if doc.copyright %}
+        {% if doc.copyright or doc.license_ref or doc.license_p %}
         <dt>Copyright</dt>
         <dd>
           {{- copyright(doc) }}

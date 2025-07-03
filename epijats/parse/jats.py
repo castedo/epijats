@@ -36,9 +36,9 @@ from .htmlish import (
     def_list_model,
     disp_quote_model,
     formatted_text_model,
+    table_wrap_model,
 )
 from .tree import (
-    DataElementModel,
     EModel,
     MixedContentBinder,
     MixedContentLoader,
@@ -157,19 +157,6 @@ class CrossReferenceModel(TagElementModelBase):
         if ref_type == "bibr":
             warn("CitationModel not handling xref ref-type bibr")
         ret = bp.CrossReference(rid, ref_type)
-        parse_mixed_content(log, e, self.content_model, ret.content)
-        return ret
-
-
-class TableCellModel(TagElementModelBase):
-    def __init__(self, content_model: EModel, *, header: bool):
-        super().__init__('th' if header else 'td')
-        self.content_model = content_model
-
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        kit.check_no_attrib(log, e, ['align'])
-        align = kit.get_enum_value(log, e, 'align', bp.AlignCode)
-        ret = bp.TableCell(self.tag == 'th', align)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
@@ -379,17 +366,6 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     p_elements |= disp_quote_model(p_elements)
     p_elements |= table_wrap_model(p_elements)
     return p_elements
-
-
-def table_wrap_model(p_elements: EModel) -> EModel:
-    br = break_model()
-    th = TableCellModel(p_elements | br, header=True)
-    td = TableCellModel(p_elements | br, header=False)
-    tr = DataElementModel('tr', th | td)
-    thead = DataElementModel('thead', tr)
-    tbody = DataElementModel('tbody', tr)
-    table = DataElementModel('table', thead | tbody)
-    return DataElementModel('table-wrap', table)
 
 
 def p_level_model(p_elements: EModel) -> EModel:

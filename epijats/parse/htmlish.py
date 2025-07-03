@@ -125,3 +125,38 @@ def def_list_model(term_text: EModel, p_elements: EModel) -> EModel:
     """
     content_model = def_item_model(term_text, p_elements)
     return DataElementModel('def-list', content_model)
+
+
+class TableCellModel(TagElementModelBase):
+    def __init__(self, content_model: EModel, *, header: bool):
+        super().__init__('th' if header else 'td')
+        self.content_model = content_model
+        self.attrib = {'align', 'rowspan', 'colspan'}
+
+    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+        kit.check_no_attrib(log, e, self.attrib)
+        align_attribs = {'left', 'right', 'center', 'justify', None}
+        kit.confirm_attrib_value(log, e, 'align', align_attribs)
+        assert e.tag == self.tag
+        if isinstance(e.tag, str):
+            ret = MarkupElement(e.tag)
+            for key in self.attrib:
+                if key in e.attrib:
+                    ret.xml.attrib[key] = e.attrib[key]
+        parse_mixed_content(log, e, self.content_model, ret.content)
+        return ret
+
+
+def table_wrap_model(p_elements: EModel) -> EModel:
+    col = EmptyElementModel('col', attrib={'span', 'width'})
+    colgroup = DataElementModel('colgroup', col, attrib={'span', 'width'})
+    br = break_model()
+    th = TableCellModel(p_elements | br, header=True)
+    td = TableCellModel(p_elements | br, header=False)
+    tr = DataElementModel('tr', th | td)
+    thead = DataElementModel('thead', tr)
+    tbody = DataElementModel('tbody', tr)
+    table = DataElementModel(
+        'table', colgroup | thead | tbody, attrib={'frame', 'rules'}
+    )
+    return DataElementModel('table-wrap', table)

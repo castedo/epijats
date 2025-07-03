@@ -1,0 +1,52 @@
+<table-wrap>
+  <table frame="hsides" rules="groups">
+    <colgroup width="11%" span="1">
+      <col span="1"/>
+      <col span="1"/>
+      <col span="1"/>
+      <col span="1"/>
+    </colgroup>
+    <thead>
+      <tr>
+        <th align="left" rowspan="2" colspan="1">&#xA0;</th>
+        <th colspan="3" rowspan="1">Authors (Year)</th>
+      </tr>
+      <tr>
+        <th rowspan="1" colspan="1">Gordon et al (2022)<sup>(40)</sup></th>
+        <th rowspan="1" colspan="1">Mart&#xED;nez-Al&#xE9;s et al (2022)<sup>(41)</sup></th>
+        <th rowspan="1" colspan="1">Tamminga et al (2022)<sup>(30)</sup></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="1" colspan="1">On the current schizophrenia concept</td>
+        <td align="center" rowspan="1" colspan="1">Reinforced the</td>
+        <td align="center" rowspan="1" colspan="1">Criticized the</td>
+        <td align="center" rowspan="1" colspan="1">Believes that</td>
+      </tr>
+      <tr>
+        <td rowspan="2" colspan="1">&#xA0;</td>
+        <td align="center" colspan="3" rowspan="1">
+          <bold>Authors (Year)</bold>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" rowspan="1" colspan="1">
+          <bold>Waddington et al (2022)<sup>(43)</sup></bold>
+        </td>
+        <td align="center" rowspan="1" colspan="1">
+          <bold>Kelly et al (2022)<sup>(34)</sup></bold>
+        </td>
+        <td align="center" rowspan="1" colspan="1">
+          <bold>Tandon et al (2022)<sup>(50)</sup></bold>
+        </td>
+      </tr>
+      <tr>
+        <td rowspan="1" colspan="1">Proposal</td>
+        <td align="center" rowspan="1" colspan="1">Has no</td>
+        <td align="center" rowspan="1" colspan="1">Has no</td>
+        <td align="center" rowspan="1" colspan="1">Schizophrenia as</td>
+      </tr>
+    </tbody>
+  </table>
+</table-wrap>

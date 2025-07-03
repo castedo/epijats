@@ -9,7 +9,7 @@ from lxml.html.builder import E
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .parse.math import MathmlElement
-from .tree import Citation, CitationTuple, Element, MixedContent
+from .tree import Citation, CitationTuple, Element, MarkupElement, MixedContent
 from .xml import (
     CommonContentFormatter, ElementFormatter, MarkupContentFormatter
 )
@@ -34,7 +34,6 @@ HTML_FROM_XML = {
   'preformat': 'pre',
   'sub': 'sub',
   'sup': 'sup',
-  'table': 'table',
   'tbody': 'tbody',
   'term': 'dt',
   'thead': 'thead',
@@ -49,10 +48,11 @@ class HtmlFormatter(ElementFormatter):
         self.common = CommonContentFormatter(self)
 
     def __call__(self, src: Element, level: int) -> HtmlElement:
-        if isinstance(src, bp.TableCell):
-            return self.table_cell.htmlize(src, level)
         if isinstance(src, CitationTuple):
             return self.citation_tuple.htmlize(src, level)
+        if isinstance(src, MarkupElement):
+            if src.xml.tag in ('th', 'td'):
+                return self.table_cell.htmlize(src, level)
         html_tag = HTML_FROM_XML.get(src.xml.tag)
         if html_tag:
             ret = E(html_tag)
@@ -66,6 +66,8 @@ class HtmlFormatter(ElementFormatter):
             ret = E('ol' if src.list_type == bp.ListTypeCode.ORDER else 'ul')
         elif src.xml.tag == 'table-wrap':
             ret = E('div', {'class': "table-wrap"})
+        elif src.xml.tag in ('col', 'colgroup', 'table'):
+            ret = E(src.xml.tag, dict(sorted(src.xml.attrib.items())))
         elif isinstance(src, MathmlElement):
             ret = E(src.html.tag, src.html.attrib)
         else:
@@ -79,12 +81,16 @@ class TableCellHtmlizer:
     def __init__(self, sub: ElementFormatter):
         self.markup = MarkupContentFormatter(sub)
 
-    def htmlize(self, src: bp.TableCell, level: int) -> HtmlElement:
+    def htmlize(self, src: MarkupElement, level: int) -> HtmlElement:
         attrib = {}
-        align = src.xml.attrib.get('align')
-        if align:
-            attrib['style'] = f"text-align: {align};"
-        ret = E(src.xml.tag, attrib)
+        for key, value in src.xml.attrib.items():
+            if key in {'rowspan', 'colspan'}:
+                attrib[key] = value
+            elif key == 'align':
+                    attrib['style'] = f"text-align: {value};"
+            else:
+                warn(f"Unknown table cell attribute {key}")
+        ret = E(src.xml.tag, dict(sorted(attrib.items())))
         self.markup.format_content(src, ret, level)
         return ret
 

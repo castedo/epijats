@@ -43,19 +43,6 @@ class List(DataElement):
             self.xml.attrib['list-type'] = list_type
 
 
-class AlignCode(StrEnum):
-    LEFT = 'left'
-    CENTER = 'center'
-    RIGHT = 'right'
-
-
-class TableCell(MarkupElement):
-    def __init__(self, header: bool, align: AlignCode | None):
-        super().__init__('th' if header else 'td')
-        if align:
-            self.xml.attrib['align'] = align
-
-
 @dataclass(frozen=True)
 class Orcid:
     isni: str
