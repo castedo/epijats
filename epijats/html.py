@@ -9,10 +9,8 @@ from lxml.html.builder import E
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .parse.math import MathmlElement
-from .tree import Citation, CitationTuple, Element, MarkupElement, MixedContent
-from .xml import (
-    CommonContentFormatter, ElementFormatter, MarkupContentFormatter
-)
+from .tree import Citation, CitationTuple, Element, MixedContent
+from .xml import CommonContentFormatter, ElementFormatter
 
 
 def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
@@ -43,16 +41,12 @@ HTML_FROM_XML = {
 
 class HtmlFormatter(ElementFormatter):
     def __init__(self) -> None:
-        self.table_cell = TableCellHtmlizer(self)
         self.citation_tuple = CitationTupleHtmlizer(self)
         self.common = CommonContentFormatter(self)
 
     def __call__(self, src: Element, level: int) -> HtmlElement:
         if isinstance(src, CitationTuple):
             return self.citation_tuple.htmlize(src, level)
-        if isinstance(src, MarkupElement):
-            if src.xml.tag in ('th', 'td'):
-                return self.table_cell.htmlize(src, level)
         html_tag = HTML_FROM_XML.get(src.xml.tag)
         if html_tag:
             ret = E(html_tag)
@@ -68,20 +62,17 @@ class HtmlFormatter(ElementFormatter):
             ret = E('div', {'class': "table-wrap"})
         elif src.xml.tag in ('col', 'colgroup', 'table'):
             ret = E(src.xml.tag, dict(sorted(src.xml.attrib.items())))
+        elif src.xml.tag in ('th', 'td'):
+            ret = self.table_cell(src, level)
         elif isinstance(src, MathmlElement):
             ret = E(src.html.tag, src.html.attrib)
         else:
             warn(f"Unknown XML {src.xml.tag}")
             ret = E('div', {'class': f"unknown-xml xml-{src.xml.tag}"})
-        self.common.format_content(src, ret, level)
+        self.common.format_content(src, level, ret)
         return ret
 
-
-class TableCellHtmlizer:
-    def __init__(self, sub: ElementFormatter):
-        self.markup = MarkupContentFormatter(sub)
-
-    def htmlize(self, src: MarkupElement, level: int) -> HtmlElement:
+    def table_cell(self, src: Element, level: int) -> HtmlElement:
         attrib = {}
         for key, value in src.xml.attrib.items():
             if key in {'rowspan', 'colspan'}:
@@ -90,9 +81,7 @@ class TableCellHtmlizer:
                     attrib['style'] = f"text-align: {value};"
             else:
                 warn(f"Unknown table cell attribute {key}")
-        ret = E(src.xml.tag, dict(sorted(attrib.items())))
-        self.markup.format_content(src, ret, level)
-        return ret
+        return E(src.xml.tag, dict(sorted(attrib.items())))
 
 
 class CitationTupleHtmlizer:
