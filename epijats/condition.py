@@ -105,11 +105,6 @@ class MissingContent(ElementFormatCondition):
 
 
 @dataclass(frozen=True)
-class InvalidContent(ElementFormatCondition):
-    """Invalid XML element content"""
-
-
-@dataclass(frozen=True)
 class IgnoredText(ElementFormatCondition):
     """Unexpected text ignored within XML element"""
 

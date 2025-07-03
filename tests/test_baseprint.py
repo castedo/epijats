@@ -221,7 +221,7 @@ def test_def_list_rountrip():
   </def-item>
 </def-list>"""
     issues = []
-    model = _.def_list_model(_.p_child_model())
+    model = _.def_list_model(_.base_hypertext_model(), _.p_child_model())
     subel = model.load(issues.append, lxml_element_from_str(expect))
     assert len(list(subel)) == 2
     assert str_from_element(subel) == expect

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Iterable
 from warnings import warn
 
 from lxml import etree
@@ -11,7 +10,6 @@ from ..tree import (
     Citation,
     CitationTuple,
     Element,
-    MarkupElement,
     MixedContent,
     StartTag,
     make_paragraph,
@@ -31,11 +29,17 @@ from .kit import (
     Sink,
     UnionModel,
 )
+from .htmlish import (
+    ExtLinkModel,
+    ListModel,
+    break_model,
+    def_list_model,
+    disp_quote_model,
+    formatted_text_model,
+)
 from .tree import (
     DataElementModel,
     EModel,
-    ElementModelBase,
-    EmptyElementModel,
     MixedContentBinder,
     MixedContentLoader,
     TagElementModelBase,
@@ -43,28 +47,6 @@ from .tree import (
     parse_mixed_content,
 )
 from .math import disp_formula_model, inline_formula_model, math_model
-
-
-class ExtLinkModel(TagElementModelBase):
-    def __init__(self, content_model: EModel):
-        super().__init__('ext-link')
-        self.content_model = content_model
-
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        link_type = e.attrib.get("ext-link-type")
-        if link_type and link_type != "uri":
-            log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
-            return None
-        k_href = "{http://www.w3.org/1999/xlink}href"
-        href = e.attrib.get(k_href)
-        kit.check_no_attrib(log, e, ["ext-link-type", k_href])
-        if href is None:
-            log(fc.MissingAttribute.issue(e, k_href))
-            return None
-        else:
-            ret = bp.Hyperlink(href)
-            parse_mixed_content(log, e, self.content_model, ret.content)
-            return ret
 
 
 class BiblioRefPool:
@@ -177,69 +159,6 @@ class CrossReferenceModel(TagElementModelBase):
         ret = bp.CrossReference(rid, ref_type)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
-
-
-def disp_quote_mode(p_elements: EModel) -> EModel:
-    """<disp-quote> Quote, Displayed
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-quote.html
-    """
-    p = TextElementModel({'p'}, p_elements)
-    return DataElementModel('disp-quote', p)
-
-
-class ListModel(TagElementModelBase):
-    def __init__(self, p_elements_model: EModel):
-        super().__init__('list')
-        # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
-        # %list-item-model
-        p = TextElementModel({'p'}, p_elements_model)
-        list_item_content = p | self
-        self._list_content_model = DataElementModel(
-            'list-item', list_item_content
-        )
-
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        kit.check_no_attrib(log, e, ['list-type'])
-        list_type = kit.get_enum_value(log, e, 'list-type', bp.ListTypeCode)
-        ret = bp.List(list_type)
-        self._list_content_model.bind(log, ret.append).parse_array_content(e)
-        return ret
-
-
-def def_term_model() -> EModel:
-    """<term> Definition List: Term
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
-    """
-    return TextElementModel({'term'}, base_hypertext_model())
-
-
-def def_def_model(p_elements: EModel) -> EModel:
-    """<def> Definition List: Definition
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
-    """
-    p = TextElementModel({'p'}, p_elements)
-    return DataElementModel('def', p)
-
-
-def def_item_model(p_elements: EModel) -> EModel:
-    """<def-item> Definition List: Definition Item
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
-    """
-    content_model = def_term_model() | def_def_model(p_elements)
-    return DataElementModel('def-item', content_model)
-
-
-def def_list_model(p_elements: EModel) -> EModel:
-    """<def-list> Definition List
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-list.html
-    """
-    content_model = def_item_model(p_elements)
-    return DataElementModel('def-list', content_model)
 
 
 class TableCellModel(TagElementModelBase):
@@ -423,36 +342,6 @@ class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
         return ret
 
 
-def break_model() -> EModel:
-    """<break> Line Break
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
-    """
-    return EmptyElementModel({'break'})
-
-
-class ItalicModel(ElementModelBase):
-    def __init__(self, content_model: EModel):
-        self.content_model = content_model
-
-    @property
-    def stags(self) -> Iterable[StartTag]:
-        return [StartTag('italic')]
-
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        ret = None
-        if e.tag == 'italic':
-            kit.check_no_attrib(log, e, ('toggle',))
-            kit.confirm_attrib_value(log, e, 'toggle', ('yes', None))
-            ret = MarkupElement('italic')
-            parse_mixed_content(log, e, self.content_model, ret.content)
-        return ret
-
-
-def formatted_text_model(content: EModel) -> EModel:
-    simple_tags = {'bold', 'monospace', 'sub', 'sup'}
-    return ItalicModel(content) | TextElementModel(simple_tags, content)
-
-
 def base_hypertext_model() -> EModel:
     """Base hypertext model"""
 
@@ -486,7 +375,7 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     p_elements |= disp_formula_model()
     p_elements |= preformatted
     p_elements |= ListModel(p_elements)
-    p_elements |= def_list_model(p_elements)
+    p_elements |= def_list_model(hypertext, p_elements)
     p_elements |= disp_quote_model(p_elements)
     p_elements |= table_wrap_model(p_elements)
     return p_elements
@@ -501,12 +390,6 @@ def table_wrap_model(p_elements: EModel) -> EModel:
     tbody = DataElementModel('tbody', tr)
     table = DataElementModel('table', thead | tbody)
     return DataElementModel('table-wrap', table)
-
-
-def disp_quote_model(p_elements: EModel) -> EModel:
-    p = TextElementModel({'p'}, p_elements)
-    ret = DataElementModel('disp-quote', p)
-    return ret
 
 
 def p_level_model(p_elements: EModel) -> EModel:

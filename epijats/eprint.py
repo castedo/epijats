@@ -1,6 +1,7 @@
+from typing import Any
+
 from .util import copytree_nostat
 from .jats import webstract_from_jats
-from .jinja import PackagePageGenerator
 from .webstract import Webstract
 
 #std library
@@ -40,11 +41,13 @@ class EprinterConfig:
 
 class Eprint:
 
-    _gen: PackagePageGenerator | None = None
+    _gen: Any = None
 
     def __init__(
         self, webstract: Webstract, tmp: Path, config: EprinterConfig | None = None
     ):
+        from .jinja import PackagePageGenerator
+
         if config is None:
             config = EprinterConfig()
         self._tmp = Path(tmp)
@@ -88,7 +91,8 @@ class Eprint:
     def html_to_pdf(source: Path, target: Path) -> None:
         import weasyprint
 
-        weasyprint.HTML(source).write_pdf(target)
+        options = {'presentational_hints': True, 'full_fonts': True}
+        weasyprint.HTML(source).write_pdf(target, **options)
 
     @staticmethod
     def stable_html_to_pdf(

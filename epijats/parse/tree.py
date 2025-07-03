@@ -74,32 +74,25 @@ class TagElementModelBase(ElementModelBase):
 
 
 class DataElementModel(TagElementModelBase):
-    def __init__(self, tag: str, content_model: EModel):
+    def __init__(self, tag: str, content_model: EModel, *, attrib: set[str] = set()):
         super().__init__(tag)
         self.content_model = content_model
+        self.attrib = attrib
 
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        kit.check_no_attrib(log, e)
+        kit.check_no_attrib(log, e, self.attrib)
         ret = DataElement(self.tag)
+        for key in self.attrib:
+            if key in e.attrib:
+                ret.xml.attrib[key] = e.attrib[key]
         self.content_model.bind(log, ret.append).parse_array_content(e)
         return ret
 
 
-class EmptyElementModel(ElementModelBase):
-    def __init__(self, tags: set[str]):
-        self._tags = tags
-
-    @property
-    def stags(self) -> Iterable[StartTag]:
-        return (StartTag(tag) for tag in self._tags)
-
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
-        ret = None
-        if isinstance(e.tag, str) and e.tag in self._tags:
-            kit.check_no_attrib(log, e)
-            kit.confirm_empty(log, e)
-            ret = MarkupElement(e.tag)
-        return ret
+class EmptyElementModel(DataElementModel):
+    def __init__(self, tag: str, *, attrib: set[str] = set()):
+        no_children = kit.UnionModel[Element]()
+        super().__init__(tag, no_children, attrib=attrib)
 
 
 class TextElementModel(ElementModelBase):
@@ -111,10 +104,13 @@ class TextElementModel(ElementModelBase):
     def stags(self) -> Iterable[StartTag]:
         return (StartTag(tag) for tag in self._tags)
 
+    def check(self, log: IssueCallback, e: etree._Element) -> None:
+        kit.check_no_attrib(log, e)
+
     def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
         ret = None
         if isinstance(e.tag, str) and e.tag in self._tags:
-            kit.check_no_attrib(log, e)
+            self.check(log, e)
             ret = MarkupElement(e.tag)
             parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
