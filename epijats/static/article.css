@@ -149,9 +149,18 @@
   overflow-wrap: normal;
 }
 
+.eprint div.table-wrap {
+  padding: 2em 1em;
+  margin-left: -1em;
+  margin-right: -1em;
+  border-radius: 0.25em;
+  background-color: #f5fff0;
+  border: 0.0625em solid hsl(80,58%,80%);
+}
+
 .eprint table {
   border-collapse: collapse;
-  font-size: 0.8em;
+  font-size: 0.875em;
   overflow-x: auto;
 }
 .eprint tr {
@@ -159,9 +168,8 @@
 }
 .eprint td,
 .eprint th {
-  border: 0.005in solid;
   border-color: var(--light-text-color);
-  padding: 0.5em;
+  padding: 0.25em 0.5em;
   vertical-align: top;
 }
 

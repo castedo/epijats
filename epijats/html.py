@@ -60,7 +60,9 @@ class HtmlFormatter(ElementFormatter):
             ret = E('ol' if src.list_type == bp.ListTypeCode.ORDER else 'ul')
         elif src.xml.tag == 'table-wrap':
             ret = E('div', {'class': "table-wrap"})
-        elif src.xml.tag in ('col', 'colgroup', 'table'):
+        elif src.xml.tag == 'table':
+            ret = self.table(src, level)
+        elif src.xml.tag in ('col', 'colgroup'):
             ret = E(src.xml.tag, dict(sorted(src.xml.attrib.items())))
         elif src.xml.tag in ('th', 'td'):
             ret = self.table_cell(src, level)
@@ -70,6 +72,13 @@ class HtmlFormatter(ElementFormatter):
             warn(f"Unknown XML {src.xml.tag}")
             ret = E('div', {'class': f"unknown-xml xml-{src.xml.tag}"})
         self.common.format_content(src, level, ret)
+        return ret
+
+    def table(self, src: Element, level: int) -> HtmlElement:
+        attrib = src.xml.attrib.copy()
+        attrib.setdefault('frame', 'hsides')
+        attrib.setdefault('rules', 'groups')
+        ret = E(src.xml.tag, dict(sorted(attrib.items())))
         return ret
 
     def table_cell(self, src: Element, level: int) -> HtmlElement:

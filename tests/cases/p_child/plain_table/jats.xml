@@ -1,0 +1,20 @@
+<table-wrap>
+  <table>
+    <thead>
+      <tr>
+        <th>EN</th>
+        <th>ES</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>One</td>
+        <td>Uno</td>
+      </tr>
+      <tr>
+        <td>Two</td>
+        <td>Dos</td>
+      </tr>
+    </tbody>
+  </table>
+</table-wrap>
