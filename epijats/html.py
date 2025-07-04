@@ -27,7 +27,7 @@ HTML_FROM_XML = {
   'disp-quote': 'blockquote',
   'italic': 'em',
   'list-item': 'li',
-  'monospace': 'kbd',
+  'monospace': 'samp',
   'p': 'p',
   'preformat': 'pre',
   'sub': 'sub',
