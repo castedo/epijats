@@ -1,25 +1,23 @@
 epijats
 =======
 
-`epijats` converts [baseprint](https://baseprints.singlesource.pub)
-JATS XML to PDF in three independent stages:
+`epijats` converts [Baseprint](https://baseprints.singlesource.pub)
+JATS XML to HTML/PDF in three independent stages:
 
 ```
-          JATS
+          Any JATS XML
 Stage 1:   ▼
-          "webstract" interchange format (json)
+          Baseprint JATS XML
 Stage 2:   ▼
           HTML
 Stage 3:   ▼
           PDF
 ```
 
-Using the `epijats` command line tool, you can start and stop at any stage with the
-`--from` and `--to` command line options. The output of `epijats --help` is:
+Choose `--to=jats` to restyle from any JATS XML to Baseprint JATS XML.
 
 ```
-usage: __main__.py [-h] [--from {jats,json,html}]
-                   [--to {jats,json,html,html+pdf,pdf}] [--no-web-fonts]
+usage: __main__.py [-h] [--version] [--to {jats,html,html+pdf,pdf}] [--no-web-fonts]
                    inpath outpath
 
 Eprint JATS
@@ -30,9 +28,8 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  --from {jats,json,html}
-                        format of source
-  --to {jats, json,html,html+pdf,pdf}
+  --version             show program's version number and exit
+  --to {jats,html,html+pdf,pdf}
                         format of target
   --no-web-fonts        Do not use online web fonts
 ```
