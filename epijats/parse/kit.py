@@ -4,12 +4,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Generic, Protocol, TypeAlias, TypeVar
+from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
 from lxml import etree
 
 from .. import condition as fc
 from ..tree import StartTag
+
+if TYPE_CHECKING:
+    from ..xml import XmlElement
 
 
 IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
@@ -27,7 +30,7 @@ def issue(
 
 
 def check_no_attrib(
-    log: IssueCallback, e: etree._Element, ignore: Iterable[str] = []
+    log: IssueCallback, e: XmlElement, ignore: Iterable[str] = []
 ) -> None:
     for k in e.attrib.keys():
         if k not in ignore:
@@ -35,7 +38,7 @@ def check_no_attrib(
 
 
 def confirm_attrib_value(
-    log: IssueCallback, e: etree._Element, key: str, ok: Iterable[str | None]
+    log: IssueCallback, e: XmlElement, key: str, ok: Iterable[str | None]
 ) -> bool:
     got = e.attrib.get(key)
     if got in ok:
@@ -46,7 +49,7 @@ def confirm_attrib_value(
 
 
 def get_enum_value(
-    log: IssueCallback, e: etree._Element, key: str, enum: type[EnumT]
+    log: IssueCallback, e: XmlElement, key: str, enum: type[EnumT]
 ) -> EnumT | None:
     ret: EnumT | None = None
     if got := e.attrib.get(key):
@@ -57,7 +60,7 @@ def get_enum_value(
     return ret
 
 
-def prep_array_elements(log: IssueCallback, e: etree._Element) -> None:
+def prep_array_elements(log: IssueCallback, e: XmlElement) -> None:
     if e.text and e.text.strip():
         log(fc.IgnoredText.issue(e))
     for s in e:
@@ -82,27 +85,28 @@ class Validator(ABC):
     ) -> None:
         return issue(self._log, condition, sourceline, info)
 
-    def check_no_attrib(self, e: etree._Element, ignore: Iterable[str] = ()) -> None:
+    def check_no_attrib(self, e: XmlElement, ignore: Iterable[str] = ()) -> None:
         check_no_attrib(self.log, e, ignore)
 
-    def prep_array_elements(self, e: etree._Element) -> None:
+    def prep_array_elements(self, e: XmlElement) -> None:
         prep_array_elements(self.log, e)
 
 
-ParseFunc: TypeAlias = Callable[[etree._Element], bool]
+if TYPE_CHECKING:
+    ParseFunc: TypeAlias = Callable[[XmlElement], bool]
 
 
 class Parser(Validator):
     @abstractmethod
     def match(self, tag: str, attrib: AttribView) -> ParseFunc | None: ...
 
-    def parse_element(self, e: etree._Element) -> bool:
+    def parse_element(self, e: XmlElement) -> bool:
         if not isinstance(e.tag, str):
             return False
         fun = self.match(e.tag, e.attrib)
         return False if fun is None else fun(e)
 
-    def parse_array_content(self, e: etree._Element) -> None:
+    def parse_array_content(self, e: XmlElement) -> None:
         prep_array_elements(self.log, e)
         for s in e:
             if isinstance(s.tag, str):
@@ -135,7 +139,7 @@ class SingleElementParser(Parser):
     def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
         return self._parse if tag == self.tag else None
 
-    def _parse(self, e: etree._Element) -> bool:
+    def _parse(self, e: XmlElement) -> bool:
         check_no_attrib(self.log, e)
         self.content_parser.parse_array_content(e)
         return True
@@ -147,7 +151,7 @@ DestConT = TypeVar('DestConT', contravariant=True)
 
 class Reader(Protocol, Generic[DestConT]):
     def __call__(
-        self, log: IssueCallback, e: etree._Element, dest: DestConT
+        self, log: IssueCallback, e: XmlElement, dest: DestConT
     ) -> bool: ...
 
 
@@ -156,15 +160,15 @@ ParsedCovT = TypeVar('ParsedCovT', covariant=True)
 
 
 class Loader(Protocol, Generic[ParsedCovT]):
-    def __call__(self, log: IssueCallback, e: etree._Element) -> ParsedCovT | None: ...
+    def __call__(self, log: IssueCallback, e: XmlElement) -> ParsedCovT | None: ...
 
 
-def load_string(log: IssueCallback, e: etree._Element) -> str:
+def load_string(log: IssueCallback, e: XmlElement) -> str:
     check_no_attrib(log, e)
     return load_string_content(log, e)
 
 
-def load_string_content(log: IssueCallback, e: etree._Element) -> str:
+def load_string_content(log: IssueCallback, e: XmlElement) -> str:
     frags = []
     if e.text:
         frags.append(e.text)
@@ -176,7 +180,7 @@ def load_string_content(log: IssueCallback, e: etree._Element) -> str:
     return "".join(frags)
 
 
-def load_int(log: IssueCallback, e: etree._Element) -> int | None:
+def load_int(log: IssueCallback, e: XmlElement) -> int | None:
     for s in e:
         log(fc.UnsupportedElement.issue(s))
         if s.tail and s.tail.strip():
@@ -251,7 +255,7 @@ class ReaderBinderParser(Parser, Generic[DestT]):
                 return self._parse
         return None
 
-    def _parse(self, e: etree._Element) -> bool:
+    def _parse(self, e: XmlElement) -> bool:
         return self._reader(self.log, e, self.dest)
 
 
@@ -276,7 +280,7 @@ class TagModelBase(Model[ParsedT]):
         self.attrib = dict(attrib)
 
     @abstractmethod
-    def load(self, log: IssueCallback, e: etree._Element) -> ParsedT | None: ...
+    def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None: ...
 
     def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
         stag = StartTag(self.tag, self.attrib)
@@ -288,7 +292,7 @@ class LoaderReader(Reader[Sink[ParsedT]]):
         self._loader = loader
 
     def __call__(
-        self, log: IssueCallback, e: etree._Element, dest: Sink[ParsedT]
+        self, log: IssueCallback, e: XmlElement, dest: Sink[ParsedT]
     ) -> bool:
         parsed = self._loader(log, e)
         if parsed is not None:
@@ -310,7 +314,7 @@ class OnlyOnceParser(Parser):
         fun = self._parser.match(tag, attrib)
         return None if fun is None else self._parse
 
-    def _parse(self, e: etree._Element) -> bool:
+    def _parse(self, e: XmlElement) -> bool:
         if not isinstance(e.tag, str):
             return False
         parse_func = self._parser.match(e.tag, e.attrib)
@@ -362,7 +366,7 @@ class SingleSubElementReader(Reader[DestT]):
     def __init__(self, binder: Binder[DestT]):
         self._binder = binder
 
-    def __call__(self, log: IssueCallback, e: etree._Element, dest: DestT) -> bool:
+    def __call__(self, log: IssueCallback, e: XmlElement, dest: DestT) -> bool:
         check_no_attrib(log, e)
         cp = ContentParser(log)
         cp.bind(self._binder.once(), dest)
@@ -371,7 +375,7 @@ class SingleSubElementReader(Reader[DestT]):
 
 
 def load_single_sub_element(
-    log: IssueCallback, e: etree._Element, model: Model[ParsedT]
+    log: IssueCallback, e: XmlElement, model: Model[ParsedT]
 ) -> ParsedT | None:
     reader = SingleSubElementReader(model)
     ret = Result[ParsedT]()

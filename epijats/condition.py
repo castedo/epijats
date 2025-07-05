@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-from lxml import etree
-from lxml.etree import QName
+from typing import TYPE_CHECKING, TypeAlias
 
 if TYPE_CHECKING:
     from .typeshed import JSONType
+    from .xml import XmlElement
+    import xml.etree.ElementTree, lxml.etree
+    QName: TypeAlias = xml.etree.ElementTree.QName | lxml.etree.QName
 
 
 @dataclass(frozen=True)
@@ -66,8 +66,9 @@ class ProcessingInstruction(FormatCondition):
         return "{} {}".format(self.__doc__, repr(self.text))
 
     @staticmethod
-    def issue(e: etree._Element) -> FormatIssue:
-        return FormatIssue(ProcessingInstruction(e.text), e.sourceline)
+    def issue(e: XmlElement) -> FormatIssue:
+        sourceline = getattr(e, 'sourceline', None)
+        return FormatIssue(ProcessingInstruction(e.text), sourceline)
 
 
 @dataclass(frozen=True)
@@ -80,10 +81,12 @@ class ElementFormatCondition(FormatCondition):
         return "{} {}/{!r}".format(self.__doc__, parent, self.tag)
 
     @classmethod
-    def issue(klas, e: etree._Element, info: str | None = None) -> FormatIssue:
-        parent = e.getparent()
+    def issue(klas, e: XmlElement, info: str | None = None) -> FormatIssue:
+        getparent = getattr(e, 'getparent', None)
+        parent = getparent() if getparent else None
         ptag = None if parent is None else parent.tag
-        return FormatIssue(klas(e.tag, ptag), e.sourceline, info)
+        sourceline = getattr(e, 'sourceline', None)
+        return FormatIssue(klas(e.tag, ptag), sourceline, info)
 
     def as_pod(self) -> JSONType:
         return [type(self).__name__, str(self.tag), str(self.parent)]
@@ -140,8 +143,9 @@ class UnsupportedAttribute(FormatCondition):
         return f"{self.__doc__} {self.tag!r}@{self.attribute!r}"
 
     @staticmethod
-    def issue(e: etree._Element, key: str) -> FormatIssue:
-        return FormatIssue(UnsupportedAttribute(e.tag, key), e.sourceline)
+    def issue(e: XmlElement, key: str) -> FormatIssue:
+        sourceline = getattr(e, 'sourceline', None)
+        return FormatIssue(UnsupportedAttribute(e.tag, key), sourceline)
 
     def as_pod(self) -> JSONType:
         return [type(self).__name__, str(self.tag), self.attribute]
@@ -158,8 +162,9 @@ class AttributeValueCondition(FormatCondition):
         return msg.format(self.__doc__, self.tag, self.attribute, self.value)
 
     @staticmethod
-    def issue(e: etree._Element, key: str, value: str | None) -> FormatIssue:
-        return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), e.sourceline)
+    def issue(e: XmlElement, key: str, value: str | None) -> FormatIssue:
+        sourceline = getattr(e, 'sourceline', None)
+        return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), sourceline)
 
     def as_pod(self) -> JSONType:
         return [type(self).__name__, str(self.tag), self.attribute, self.value]
@@ -191,5 +196,6 @@ class MissingAttribute(FormatCondition):
         return f"{self.__doc__} {self.tag!r}@{self.attribute!r}"
 
     @staticmethod
-    def issue(e: etree._Element, key: str) -> FormatIssue:
-        return FormatIssue(MissingAttribute(e.tag, key), e.sourceline)
+    def issue(e: XmlElement, key: str) -> FormatIssue:
+        sourceline = getattr(e, 'sourceline', None)
+        return FormatIssue(MissingAttribute(e.tag, key), sourceline)

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from warnings import warn
-
-from lxml import etree
 
 from .. import baseprint as bp
 from .. import condition as fc
@@ -48,6 +47,9 @@ from .tree import (
 )
 from .math import disp_formula_model, inline_formula_model, math_model
 
+if TYPE_CHECKING:
+    from ..xml import XmlElement
+
 
 class BiblioRefPool:
     def __init__(self, avail: list[bp.BiblioRefItem]):
@@ -76,7 +78,7 @@ class CitationModel(TagElementModelBase):
         super().__init__(StartTag('xref', {'ref-type': 'bibr'}))
         self._biblio = biblio
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         assert e.attrib.get("ref-type") == "bibr"
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
@@ -104,7 +106,7 @@ class AutoCorrectCitationModel(CitationModel):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__(biblio)
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         citation = super().load(log, e)
         if not citation:
             return None
@@ -118,7 +120,7 @@ class CitationTupleModel(TagElementModelBase):
         super().__init__('sup')
         self._submodel = CitationModel(biblio)
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         assert e.tag == 'sup'
         kit.check_no_attrib(log, e)
         if not any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in e):
@@ -144,7 +146,7 @@ class CrossReferenceModel(TagElementModelBase):
         super().__init__('xref')
         self.content_model = content_model
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
             del e.attrib["alt"]
@@ -186,7 +188,7 @@ def orcid_model() -> Model[bp.Orcid]:
     return tag_model('contrib-id', load_orcid)
 
 
-def load_orcid(log: IssueCallback, e: etree._Element) -> bp.Orcid | None:
+def load_orcid(log: IssueCallback, e: XmlElement) -> bp.Orcid | None:
     if e.tag != 'contrib-id' or e.attrib.get('contrib-id-type') != 'orcid':
         return None
     kit.check_no_attrib(log, e, ['contrib-id-type'])
@@ -200,7 +202,7 @@ def load_orcid(log: IssueCallback, e: etree._Element) -> bp.Orcid | None:
         return None
 
 
-def load_author_group(log: IssueCallback, e: etree._Element) -> list[bp.Author] | None:
+def load_author_group(log: IssueCallback, e: XmlElement) -> list[bp.Author] | None:
     kit.check_no_attrib(log, e)
     acp = ContentParser(log)
     ret = acp.every(tag_model('contrib', load_author))
@@ -212,7 +214,7 @@ def person_name_model() -> Model[bp.PersonName]:
     return tag_model('name', load_person_name)
 
 
-def load_person_name(log: IssueCallback, e: etree._Element) -> bp.PersonName | None:
+def load_person_name(log: IssueCallback, e: XmlElement) -> bp.PersonName | None:
     kit.check_no_attrib(log, e)
     p = ContentParser(log)
     surname = p.one(tag_model('surname', kit.load_string))
@@ -224,7 +226,7 @@ def load_person_name(log: IssueCallback, e: etree._Element) -> bp.PersonName | N
     return bp.PersonName(surname.out, given_names.out)
 
 
-def load_author(log: IssueCallback, e: etree._Element) -> bp.Author | None:
+def load_author(log: IssueCallback, e: XmlElement) -> bp.Author | None:
     if e.tag != 'contrib':
         return None
     if not kit.confirm_attrib_value(log, e, 'contrib-type', ['author']):
@@ -298,7 +300,7 @@ class SectionModel(TagModelBase[bp.Section]):
         p_level = p_level_model(p_elements)
         self._proto = ProtoSectionContentBinder(p_elements, p_level)
 
-    def load(self, log: IssueCallback, e: etree._Element) -> bp.Section | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> bp.Section | None:
         kit.check_no_attrib(log, e, ['id'])
         ret = bp.Section([], [], e.attrib.get('id'), MixedContent())
         cp = ContentParser(log)
@@ -317,7 +319,7 @@ class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
         super().__init__('person-group', {'person-group-type': group_type})
 
     def load(
-        self, log: IssueCallback, e: etree._Element
+        self, log: IssueCallback, e: XmlElement
     ) -> list[bp.PersonName | str] | None:
         ret: list[bp.PersonName | str] = []
         k = 'person-group-type'
@@ -394,7 +396,7 @@ CC_URLS = {
 }
 
 
-def read_license_ref(log: IssueCallback, e: etree._Element, dest: bp.License) -> bool:
+def read_license_ref(log: IssueCallback, e: XmlElement, dest: bp.License) -> bool:
     kit.check_no_attrib(log, e, ['content-type'])
     dest.license_ref = kit.load_string_content(log, e)
     got_license_type = kit.get_enum_value(log, e, 'content-type', bp.CcLicenseType)
@@ -408,7 +410,7 @@ def read_license_ref(log: IssueCallback, e: etree._Element, dest: bp.License) ->
     return True
 
 
-def load_license(log: IssueCallback, e: etree._Element) -> bp.License | None:
+def load_license(log: IssueCallback, e: XmlElement) -> bp.License | None:
     ali = "{http://www.niso.org/schemas/ali/1.0/}"
     ret = bp.License(MixedContent(), "", None)
     kit.check_no_attrib(log, e)
@@ -419,7 +421,7 @@ def load_license(log: IssueCallback, e: etree._Element) -> bp.License | None:
     return None if ret.blank() else ret
 
 
-def load_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | None:
+def load_permissions(log: IssueCallback, e: XmlElement) -> bp.Permissions | None:
     kit.check_no_attrib(log, e)
     ap = ContentParser(log)
     statement = ap.one(mixed_element_model('copyright-statement'))
@@ -435,7 +437,7 @@ def load_permissions(log: IssueCallback, e: etree._Element) -> bp.Permissions | 
 
 
 def read_article_meta(
-    log: IssueCallback, e: etree._Element, dest: bp.Baseprint
+    log: IssueCallback, e: XmlElement, dest: bp.Baseprint
 ) -> bool:
     kit.check_no_attrib(log, e)
     cp = ContentParser(log)
@@ -454,7 +456,7 @@ def read_article_meta(
 
 
 def read_article_front(
-    log: IssueCallback, e: etree._Element, dest: bp.Baseprint
+    log: IssueCallback, e: XmlElement, dest: bp.Baseprint
 ) -> bool:
     kit.check_no_attrib(log, e)
     cp = ContentParser(log)
@@ -478,7 +480,7 @@ class IntModel(TagModelBase[int]):
         super().__init__(tag)
         self.max_int = max_int
 
-    def load(self, log: IssueCallback, e: etree._Element) -> int | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> int | None:
         kit.check_no_attrib(log, e)
         ret = kit.load_int(log, e)
         if ret and ret not in range(1, self.max_int + 1):
@@ -512,7 +514,7 @@ class AccessDateModel(TagModelBase[bp.Date]):
     def __init__(self) -> None:
         super().__init__('date-in-citation')
 
-    def load(self, log: IssueCallback, e: etree._Element) -> bp.Date | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> bp.Date | None:
         kit.check_no_attrib(log, e, ['content-type'])
         if e.attrib.get('content-type') != 'access-date':
             return None
@@ -523,7 +525,7 @@ class AccessDateModel(TagModelBase[bp.Date]):
 
 
 def read_pub_id(
-    log: IssueCallback, e: etree._Element, dest: dict[bp.PubIdType, str]
+    log: IssueCallback, e: XmlElement, dest: dict[bp.PubIdType, str]
 ) -> bool:
     """<pub-id> Publication Identifier for a Cited Publication
 
@@ -559,7 +561,7 @@ def read_pub_id(
     return True
 
 
-def load_edition(log: IssueCallback, e: etree._Element) -> int | None:
+def load_edition(log: IssueCallback, e: XmlElement) -> int | None:
     for s in e:
         log(fc.UnsupportedElement.issue(s))
         if s.tail and s.tail.strip():
@@ -579,7 +581,7 @@ def load_edition(log: IssueCallback, e: etree._Element) -> int | None:
 
 
 def read_element_citation(
-    log: IssueCallback, e: etree._Element, dest: bp.BiblioRefItem
+    log: IssueCallback, e: XmlElement, dest: bp.BiblioRefItem
 ) -> bool:
     kit.check_no_attrib(log, e)
     cp = ContentParser(log)
@@ -619,7 +621,7 @@ class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
     def __init__(self) -> None:
         super().__init__('ref')
 
-    def load(self, log: IssueCallback, e: etree._Element) -> bp.BiblioRefItem | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> bp.BiblioRefItem | None:
         ret = bp.BiblioRefItem()
         kit.check_no_attrib(log, e, ['id'])
         cp = ContentParser(log)
@@ -634,7 +636,7 @@ class RefListModel(TagModelBase[bp.BiblioRefList]):
     def __init__(self) -> None:
         super().__init__('ref-list')
 
-    def load(self, log: IssueCallback, e: etree._Element) -> bp.BiblioRefList | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> bp.BiblioRefList | None:
         kit.check_no_attrib(log, e)
         cp = ContentParser(log)
         title = cp.one(title_model('title'))
@@ -643,7 +645,7 @@ class RefListModel(TagModelBase[bp.BiblioRefList]):
         return bp.BiblioRefList(title.out, list(references))
 
 
-def load_article(log: IssueCallback, e: etree._Element) -> bp.Baseprint | None:
+def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
     """Loader function for <article>
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article.html

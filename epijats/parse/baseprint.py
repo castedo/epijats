@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from lxml import etree
 
@@ -10,17 +11,16 @@ from ..baseprint import Baseprint
 from .kit import IssueCallback, issue
 from .jats import load_article
 
+if TYPE_CHECKING:
+    from ..xml import XmlElement
 
 def ignore_issue(issue: fc.FormatIssue) -> None:
     pass
 
 
 def parse_baseprint_root(
-    root: etree._Element, log: IssueCallback = ignore_issue
+    root: XmlElement, log: IssueCallback = ignore_issue
 ) -> Baseprint | None:
-    for pi in root.xpath("//processing-instruction()"):
-        log(fc.ProcessingInstruction.issue(pi))
-        etree.strip_elements(root, pi.tag, with_tail=False)
     if root.tag != 'article':
         log(fc.UnsupportedElement.issue(root))
         return None
@@ -33,7 +33,7 @@ def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint |
         xml_path = path / "article.xml"
     else:
         xml_path = path
-    xml_parser = etree.XMLParser(remove_comments=True, load_dtd=False)
+    xml_parser = etree.XMLParser(remove_comments=True, remove_pis=True)
     try:
         et = etree.parse(xml_path, parser=xml_parser)
     except etree.XMLSyntaxError as ex:

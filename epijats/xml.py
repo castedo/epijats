@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import cast
-
-from lxml.builder import ElementMaker
-from lxml.etree import CDATA, _Element
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 from .tree import CdataElement, CitationTuple, Element, MarkupElement
 
 
+if TYPE_CHECKING:
+    import lxml.etree
+    XmlElement: TypeAlias = lxml.etree._Element
+
+
 class ElementFormatter(ABC):
     @abstractmethod
-    def __call__(self, src: Element, level: int) -> _Element: ...
+    def __call__(self, src: Element, level: int) -> XmlElement: ...
 
 
 class MarkupFormatter:
     def __init__(self, sub: ElementFormatter):
         self.subformat = sub
 
-    def format_content(self, src: MarkupElement, level: int, dest: _Element) -> None:
+    def format_content(self, src: MarkupElement, level: int, dest: XmlElement) -> None:
         dest.text = src.content.text
         for it in src.content:
             sublevel = level if isinstance(it, MarkupElement) else level + 1
@@ -32,10 +34,10 @@ class IndentFormatter:
         self.subformat = sub
         self.sep = sep
 
-    def format_content(self, src: Element, level: int, dest: _Element) -> None:
+    def format_content(self, src: Element, level: int, dest: XmlElement) -> None:
         last_newline = "\n" + "  " * level
         newline = "\n" + ("  " * (level + 1))
-        sub: _Element | None = None
+        sub: XmlElement | None = None
         for it in src:
             sub = self.subformat(it, level + 1)
             sub.tail = self.sep + newline 
@@ -52,7 +54,7 @@ class CommonContentFormatter:
         self.markup = MarkupFormatter(sub)
         self.default = IndentFormatter(sub)
 
-    def format_content(self, src: Element, level: int, dest: _Element) -> None:
+    def format_content(self, src: Element, level: int, dest: XmlElement) -> None:
         if isinstance(src, MarkupElement):
             self.markup.format_content(src, level, dest)
         else:
@@ -61,14 +63,15 @@ class CommonContentFormatter:
 
 class XmlFormatter(ElementFormatter):
     def __init__(self, *, nsmap: dict[str, str]):
-        self.EM = ElementMaker(nsmap=nsmap)
+        self.nsmap = nsmap
         self.citation = IndentFormatter(self, sep=",")
         self.common = CommonContentFormatter(self)
 
-    def __call__(self, src: Element, level: int) -> _Element:
-        ret = self.EM(src.xml.tag, src.xml.attrib)
+    def __call__(self, src: Element, level: int) -> XmlElement:
+        import lxml.etree
+        ret = lxml.etree.Element(src.xml.tag, src.xml.attrib, nsmap=self.nsmap)
         if isinstance(src, CdataElement):
-            ret.text = cast(str, CDATA(src.content))
+            ret.text = cast(str, lxml.etree.CDATA(src.content))
         elif isinstance(src, CitationTuple):
             self.citation.format_content(src, level, ret)
         else:
@@ -85,5 +88,5 @@ XML = XmlFormatter(
 )
 
 
-def xml_element(src: Element) -> _Element:
+def xml_element(src: Element) -> XmlElement:
     return XML(src, 0)

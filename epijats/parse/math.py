@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
-
-from lxml import etree
+from typing import TYPE_CHECKING, Iterable
 
 from ..tree import CdataElement, Element, MarkupElement, StartTag
 
@@ -17,6 +15,9 @@ from .tree import (
     TagElementModelBase,
     parse_mixed_content,
 )
+
+if TYPE_CHECKING:
+    from ..xml import XmlElement
 
 
 MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
@@ -66,7 +67,7 @@ class AnyMathmlModel(ElementModelBase):
     def stags(self) -> Iterable[StartTag]:
         return (StartTag(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS)
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         ret = None
         if isinstance(e.tag, str) and e.tag.startswith(MATHML_NAMESPACE_PREFIX):
             ret = MathmlElement(StartTag(e.tag, dict(e.attrib)))
@@ -78,7 +79,7 @@ class TexMathElementModel(TagElementModelBase):
     def __init__(self) -> None:
         super().__init__('tex-math')
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         tex = kit.load_string_content(log, e)
         return CdataElement(self.tag, tex)
 
@@ -89,7 +90,7 @@ class MathmlElementModel(TagElementModelBase):
         self._model = AnyMathmlModel()
         self.mathml_tag = mathml_tag
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         ret = MathmlElement(StartTag(self.tag, dict(e.attrib)))
         parse_mixed_content(log, e, self._model, ret.content)
         return ret

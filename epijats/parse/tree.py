@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Iterable, TypeAlias
-
-from lxml import etree
+from typing import TYPE_CHECKING, Iterable, TypeAlias
 
 from .. import condition as fc
 from ..tree import DataElement, Element, MarkupElement, MixedContent, StartTag
@@ -20,12 +18,15 @@ from .kit import (
     Sink,
 )
 
+if TYPE_CHECKING:
+    from ..xml import XmlElement
+
 
 EModel: TypeAlias = Model[Element]
 
 
 def parse_mixed_content(
-    log: IssueCallback, e: etree._Element, emodel: EModel, dest: MixedContent
+    log: IssueCallback, e: XmlElement, emodel: EModel, dest: MixedContent
 ) -> None:
     dest.append_text(e.text)
     eparser = emodel.bind(log, dest.append)
@@ -46,12 +47,12 @@ class ElementModelBase(Model[Element]):
         return (s.tag for s in self.stags)
 
     @abstractmethod
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None: ...
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None: ...
 
     def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
         return ReaderBinderParser(log, dest, self.stags, self.read)
 
-    def read(self, log: IssueCallback, e: etree._Element, dest: Sink[Element]) -> bool:
+    def read(self, log: IssueCallback, e: XmlElement, dest: Sink[Element]) -> bool:
         parsed = self.load(log, e)
         if parsed is not None:
             if isinstance(parsed, Element) and e.tail:
@@ -79,7 +80,7 @@ class DataElementModel(TagElementModelBase):
         self.content_model = content_model
         self.attrib = attrib
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e, self.attrib)
         ret = DataElement(self.tag)
         for key in self.attrib:
@@ -104,10 +105,10 @@ class TextElementModel(ElementModelBase):
     def stags(self) -> Iterable[StartTag]:
         return (StartTag(tag) for tag in self._tags)
 
-    def check(self, log: IssueCallback, e: etree._Element) -> None:
+    def check(self, log: IssueCallback, e: XmlElement) -> None:
         kit.check_no_attrib(log, e)
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         ret = None
         if isinstance(e.tag, str) and e.tag in self._tags:
             self.check(log, e)
@@ -126,7 +127,7 @@ class MixedContentParser(Parser):
     def match(self, tag: str, attrib: AttribView) -> kit.ParseFunc | None:
         return self._parse if tag == self.tag else None
 
-    def _parse(self, e: etree._Element) -> bool:
+    def _parse(self, e: XmlElement) -> bool:
         self.check_no_attrib(e)
         if self.dest.blank():
             parse_mixed_content(self.log, e, self.model, self.dest)
@@ -139,7 +140,7 @@ class MixedContentLoader(Loader[MixedContent]):
     def __init__(self, model: EModel):
         self.model = model
 
-    def __call__(self, log: IssueCallback, e: etree._Element) -> MixedContent | None:
+    def __call__(self, log: IssueCallback, e: XmlElement) -> MixedContent | None:
         kit.check_no_attrib(log, e)
         ret = MixedContent()
         parse_mixed_content(log, e, self.model, ret)

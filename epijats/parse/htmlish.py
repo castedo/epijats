@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from lxml import etree
+from typing import TYPE_CHECKING
 
 from .. import baseprint as bp
 from .. import condition as fc
@@ -16,6 +16,9 @@ from .tree import (
     parse_mixed_content,
 )
 from .kit import IssueCallback
+
+if TYPE_CHECKING:
+    from ..xml import XmlElement
 
 
 def disp_quote_model(p_elements: EModel) -> EModel:
@@ -41,7 +44,7 @@ class ItalicModel(TextElementModel):
     def __init__(self, content_model: EModel):
         super().__init__({'italic'}, content_model)
 
-    def check(self, log: IssueCallback, e: etree._Element) -> None:
+    def check(self, log: IssueCallback, e: XmlElement) -> None:
         kit.check_no_attrib(log, e, ('toggle',))
         kit.confirm_attrib_value(log, e, 'toggle', ('yes', None))
 
@@ -56,7 +59,7 @@ class ExtLinkModel(TagElementModelBase):
         super().__init__('ext-link')
         self.content_model = content_model
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
             log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
@@ -84,7 +87,7 @@ class ListModel(TagElementModelBase):
             'list-item', list_item_content
         )
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e, ['list-type'])
         list_type = kit.get_enum_value(log, e, 'list-type', bp.ListTypeCode)
         ret = bp.List(list_type)
@@ -133,7 +136,7 @@ class TableCellModel(TagElementModelBase):
         self.content_model = content_model
         self.attrib = {'align', 'rowspan', 'colspan'}
 
-    def load(self, log: IssueCallback, e: etree._Element) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e, self.attrib)
         align_attribs = {'left', 'right', 'center', 'justify', None}
         kit.confirm_attrib_value(log, e, 'align', align_attribs)

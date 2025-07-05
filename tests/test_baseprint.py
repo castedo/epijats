@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import os, pytest
 from pathlib import Path
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
 from lxml import etree
 
@@ -13,6 +15,9 @@ from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.tree import Element, make_paragraph
 from epijats.xml import xml_element
+
+if TYPE_CHECKING:
+    from epijats.xml import XmlElement
 
 
 TEST_CASES = Path(__file__).parent / "cases"
@@ -34,7 +39,7 @@ def assert_eq_if_exists(got: str, expect: Path):
             assert got == f.read()
 
 
-def str_from_lxml_element(e: etree._Element) -> str:
+def str_from_lxml_element(e: XmlElement) -> str:
     root = etree.Element("root", nsmap=NSMAP)
     root.append(e)
     return etree.tostring(e, method="c14n", exclusive=True).decode()
@@ -44,12 +49,12 @@ def root_wrap(content: str):
     return ("<root {}>{}</root>\n".format(NSMAP_STR, content))
 
 
-def lxml_root_from_str(src: str) -> etree._Element:
-    parser = etree.XMLParser(remove_comments=True, load_dtd=False)
+def lxml_root_from_str(src: str) -> XmlElement:
+    parser = etree.XMLParser(remove_comments=True)
     return etree.fromstring(src, parser=parser)
 
 
-def lxml_element_from_str(s: str) -> etree._Element:
+def lxml_element_from_str(s: str) -> XmlElement:
     root = lxml_root_from_str(root_wrap(s.strip()))
     assert not root.text
     assert len(root) == 1
@@ -67,7 +72,7 @@ def assert_bdom_roundtrip(expect: Baseprint):
     assert parse_baseprint_root(root) == expect
 
 
-def parse_abstract(e: etree._Element) -> Tuple[Abstract, list[fc.FormatIssue]]:
+def parse_abstract(e: XmlElement) -> Tuple[Abstract, list[fc.FormatIssue]]:
     issues: list[fc.FormatIssue] = []
     ret = Abstract()
     binder = _.abstract_binder()
