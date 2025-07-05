@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Iterable
 from warnings import warn
 
-from lxml.html import HtmlElement, tostring
-from lxml.html.builder import E
+from lxml import etree as ET
+from lxml.etree import _Element as HtmlElement
+from lxml.etree import Element as E
 
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
@@ -14,7 +15,12 @@ from .xml import CommonContentFormatter, ElementFormatter
 
 
 def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
-    ss = [x if isinstance(x, str) else tostring(x, encoding='unicode') for x in ins]
+    ss = []
+    for x in ins:
+        if isinstance(x, str):
+            ss.append(x)
+        else:
+            ss.append(ET.tostring(x, encoding='unicode', method='html'))
     return "".join(ss)
 
 

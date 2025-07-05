@@ -6,9 +6,10 @@ from importlib import resources
 from html import escape
 from typing import TYPE_CHECKING, cast
 
+from lxml import etree as ET
+from lxml.etree import _Element as HtmlElement
+
 import citeproc
-from lxml import html
-from lxml.html import HtmlElement
 
 from . import baseprint as bp
 
@@ -35,15 +36,16 @@ JATS_TO_CSL_TYPE = {
 }
 
 
-def hyperlink(html_content: str, prepend: str | None = None) -> str:
-    frags = html.fragments_fromstring(html_content)
-    if not frags or not isinstance(frags[0], str):
-        return html_content
-    url = frags[0]
+def hyperlink(xhtml_content: str, prepend: str | None = None) -> str:
+    ele = ET.fromstring(f"<root>{xhtml_content}</root>")
+    if not ele.text or not ele.text.strip():
+        return xhtml_content
+    url = ele.text
     if prepend:
         url = prepend + url
-    element = html.builder.A(url, href=url)
-    return html.tostring(element, encoding='unicode')
+    element = ET.Element('a', {'href': url})
+    element.text = url
+    return ET.tostring(element, encoding='unicode', method='html')
 
 
 def date_parts(src: bp.Date) -> JSONType:
@@ -69,9 +71,11 @@ class CsljsonItem(dict[str, 'JSONType']):
         for key, value in self.items():
             match key:
                 case 'URL':
-                    self[key] = hyperlink(cast(str, value))
+                    assert isinstance(value, str)
+                    self[key] = hyperlink(value)
                 case 'DOI':
-                    self[key] = hyperlink(cast(str, value), "https://doi.org/")
+                    assert isinstance(value, str)
+                    self[key] = hyperlink(value, "https://doi.org/")
         return self
 
     def append_author(self, src: bp.PersonName | str) -> None:
@@ -126,7 +130,7 @@ class BiblioFormatter(ABC):
     def to_str(self, refs: Sequence[bp.BiblioRefItem]) -> str:
         e = self.to_element(refs)
         e.tail = "\n"
-        return html.tostring(e, encoding='unicode')
+        return ET.tostring(e, encoding='unicode', method='xml')
 
 
 def put_tags_on_own_lines(e: HtmlElement) -> None:
@@ -143,11 +147,10 @@ def put_tags_on_own_lines(e: HtmlElement) -> None:
 def divs_from_citeproc_bibliography(
     biblio: citeproc.CitationStylesBibliography
 ) -> list[HtmlElement]:
-    ret = []
+    ret: list[HtmlElement] = []
     for item in biblio.bibliography():
         s = str(item).replace("..\n", ".\n").strip()
-        frags = html.fragments_fromstring(s)
-        div = html.builder.DIV(*frags)
+        div = ET.fromstring("<div>" + s + "</div>")
         put_tags_on_own_lines(div)
         div.tail = "\n"
         ret.append(div)
@@ -173,16 +176,17 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             biblio.register(c)
         divs = divs_from_citeproc_bibliography(biblio)
         assert len(divs) == len(refs)
-        ret = html.builder.OL()
+        ret = ET.Element('ol')
         ret.text = "\n"
         for i in range(len(divs)):
-            li = html.builder.LI()
+            li = ET.Element('li')
             li.attrib['id'] = refs[i].id
             li.text = "\n"
             li.append(divs[i])
             if not self._abridged:
                 if comment := refs[i].biblio_fields.get('comment'):
-                    div2 = html.builder.DIV(comment)
+                    div2 = ET.Element('div')
+                    div2.text = comment
                     div2.tail = "\n"
                     li.append(div2)
             li.tail = "\n"
