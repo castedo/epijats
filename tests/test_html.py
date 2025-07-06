@@ -2,19 +2,21 @@ import os, pytest
 from pathlib import Path
 
 from epijats import condition as fc
-from epijats.html import HtmlFormatter, html_content_to_str
+from epijats.html import HtmlGenerator
 from epijats.parse import jats, kit, tree
+from epijats.tree import MixedContent
 
 from .test_baseprint import lxml_element_from_str
 
-
-HTML = HtmlFormatter()
 
 P_CHILD_CASE = Path(__file__).parent / "cases" / "p_child"
 
 
 def html_from_element(src: tree.Element) -> str:
-    return html_content_to_str([HTML.root(src)])
+    html = HtmlGenerator()
+    content = MixedContent()
+    content.append(src)
+    return html.content_to_str(content)
 
 
 def parse_element(src: str | Path, model: tree.EModel):

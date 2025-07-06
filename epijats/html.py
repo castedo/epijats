@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Iterable
 from warnings import warn
 
@@ -26,6 +27,38 @@ def html_content_to_str(ins: Iterable[str | XmlElement]) -> str:
     return "".join(ss)
 
 
+class Htmlizer(ABC):
+    @abstractmethod
+    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool: ...
+
+
+class BaseHtmlizer(Htmlizer, ElementFormatter):
+    def __init__(self, subformat: ElementFormatter):
+        self.common = CommonContentFormatter(subformat)
+
+    def format(self, src: PureElement, level: int) -> Iterable[XmlElement]:
+        ret: list[XmlElement] = []
+        if not self.handle(src, level, ret):
+            warn(f"Unknown XML {src.xml.tag}")
+            xe = E('span', {'class': f"unknown-xml xml-{src.xml.tag}"})
+            self.common.format_content(src, level, xe)
+            ret = [xe]
+        return ret
+
+
+class UnionHtmlizer(BaseHtmlizer):
+    def __init__(self, subs: Iterable[Htmlizer] = ()) -> None:
+        super().__init__(self)
+        self._subs = list(subs)
+
+    def __ior__(self, other: Htmlizer) -> UnionHtmlizer:
+        self._subs.append(other)
+        return self
+
+    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+        return any(s.handle(src, level, dest) for s in self._subs)
+
+
 HTML_FROM_XML = {
   'bold': 'strong',
   'break': 'br',
@@ -47,14 +80,15 @@ HTML_FROM_XML = {
 }
 
 
-class HtmlFormatter(ElementFormatter):
-    def __init__(self) -> None:
-        self.citation_tuple = CitationTupleHtmlizer(self)
-        self.common = CommonContentFormatter(self)
+class DefaultHtmlizer(BaseHtmlizer):
+    def __init__(self, html: ElementFormatter):
+        super().__init__(html)
 
-    def to_one_only(self, src: PureElement, level: int) -> XmlElement:
-        if isinstance(src, CitationTuple):
-            return self.citation_tuple.htmlize(src, level)
+    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+        if src.xml.tag == 'def-item':
+            for it in src:
+                dest.extend(self.format(it, level))
+            return True
         html_tag = HTML_FROM_XML.get(src.xml.tag)
         if html_tag:
             ret = E(html_tag)
@@ -74,26 +108,11 @@ class HtmlFormatter(ElementFormatter):
             ret = E(src.xml.tag, dict(sorted(src.xml.attrib.items())))
         elif src.xml.tag in ('th', 'td'):
             ret = self.table_cell(src, level)
-        elif isinstance(src, MathmlElement):
-            ret = E(src.html.tag, src.html.attrib)
         else:
-            warn(f"Unknown XML {src.xml.tag}")
-            ret = E('div', {'class': f"unknown-xml xml-{src.xml.tag}"})
+            return False
         self.common.format_content(src, level, ret)
-        return ret
-
-    def root(self, src: PureElement) -> XmlElement:
-        return self.to_one_only(src, 0)
-
-    def format(self, src: PureElement, level: int) -> Iterable[XmlElement]:
-        ret: list[XmlElement]
-        if src.xml.tag == 'def-item':
-            ret = []
-            for it in src:
-                ret.extend(self.format(it, level))
-        else:
-            ret = [self.to_one_only(src, level)]
-        return ret
+        dest.append(ret)
+        return True
 
     def table(self, src: PureElement, level: int) -> XmlElement:
         attrib = src.xml.attrib.copy()
@@ -113,11 +132,13 @@ class HtmlFormatter(ElementFormatter):
         return E(src.xml.tag, dict(sorted(attrib.items())))
 
 
-class CitationTupleHtmlizer:
-    def __init__(self, html: HtmlFormatter):
+class CitationTupleHtmlizer(Htmlizer):
+    def __init__(self, html: ElementFormatter):
         self._html = html
 
-    def htmlize(self, src: CitationTuple, level: int) -> XmlElement:
+    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+        if not isinstance(src, CitationTuple):
+            return False
         assert src.xml.tag == 'sup'
         ret = E('span', {'class': "citation-tuple"})
         ret.text = " ["
@@ -131,12 +152,34 @@ class CitationTupleHtmlizer:
             ret.text += "citation missing]"
         else:
             sub.tail = "]"
-        return ret
+        dest.append(ret)
+        return True
+
+
+class MathHtmlizer(BaseHtmlizer):
+    def __init__(self) -> None:
+        super().__init__(self)
+
+    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+        if isinstance(src, MathmlElement):
+            ret = E(src.html.tag, src.html.attrib)
+        elif src.xml.tag == 'inline-formula':
+            ret = E('span', {'class': "math inline"})
+        elif src.xml.tag == 'disp-formula':
+            ret = E('span', {'class': "math display"})
+        else:
+            return False
+        self.common.format_content(src, level, ret)
+        dest.append(ret)
+        return True
 
 
 class HtmlGenerator:
     def __init__(self) -> None:
-        self._html = HtmlFormatter()
+        self._html = UnionHtmlizer()
+        self._html |= CitationTupleHtmlizer(self._html)
+        self._html |= MathHtmlizer()
+        self._html |= DefaultHtmlizer(self._html)
         self._markup = MarkupFormatter(self._html)
 
     def content_to_str(self, src: MixedContent) -> str:
