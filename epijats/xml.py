@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, TypeAlias, cast
+from typing import Protocol, TYPE_CHECKING, TypeAlias, cast
 
-from .tree import CdataElement, CitationTuple, Element, MarkupElement
-
+from .tree import CdataElement, CitationTuple, Element, MarkupElement, PureElement
 
 if TYPE_CHECKING:
     import lxml.etree
+
     XmlElement: TypeAlias = lxml.etree._Element
 
 
-class ElementFormatter(ABC):
-    @abstractmethod
-    def __call__(self, src: Element, level: int) -> XmlElement: ...
+class ElementFormatter(Protocol):
+    def __call__(self, src: PureElement, level: int) -> XmlElement: ...
 
 
 class MarkupFormatter:
@@ -34,7 +32,8 @@ class IndentFormatter:
         self.subformat = sub
         self.sep = sep
 
-    def format_content(self, src: Element, level: int, dest: XmlElement) -> None:
+    def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
+        assert not isinstance(src, MarkupElement)
         last_newline = "\n" + "  " * level
         newline = "\n" + ("  " * (level + 1))
         sub: XmlElement | None = None
@@ -54,7 +53,7 @@ class CommonContentFormatter:
         self.markup = MarkupFormatter(sub)
         self.default = IndentFormatter(sub)
 
-    def format_content(self, src: Element, level: int, dest: XmlElement) -> None:
+    def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
         if isinstance(src, MarkupElement):
             self.markup.format_content(src, level, dest)
         else:
@@ -67,8 +66,9 @@ class XmlFormatter(ElementFormatter):
         self.citation = IndentFormatter(self, sep=",")
         self.common = CommonContentFormatter(self)
 
-    def __call__(self, src: Element, level: int) -> XmlElement:
+    def __call__(self, src: PureElement, level: int) -> XmlElement:
         import lxml.etree
+
         ret = lxml.etree.Element(src.xml.tag, src.xml.attrib, nsmap=self.nsmap)
         if isinstance(src, CdataElement):
             ret.text = cast(str, lxml.etree.CDATA(src.content))

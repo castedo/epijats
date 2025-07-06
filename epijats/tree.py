@@ -19,16 +19,23 @@ class StartTag:
 
 
 @dataclass
-class Element:
+class PureElement:
     xml: StartTag
-    tail: str
 
     def __init__(self, xml_tag: str | StartTag):
         self.xml = StartTag(xml_tag)
-        self.tail = ""
 
-    def __iter__(self) -> Iterator[Element]:
+    def __iter__(self) -> Iterator[PureElement]:
         return iter(())
+
+
+@dataclass
+class Element(PureElement):
+    tail: str
+
+    def __init__(self, xml_tag: str | StartTag):
+        super().__init__(xml_tag)
+        self.tail = ""
 
 
 @dataclass
@@ -89,20 +96,20 @@ class CdataElement(Element):
 
 @dataclass
 class DataElement(Element):
-    _array: list[Element]
+    _array: list[PureElement]
 
     def __init__(
         self,
         xml_tag: str | StartTag,
-        array: list[Element] = [],
+        array: list[PureElement] = [],
     ):
         super().__init__(xml_tag)
         self._array = list(array)
 
-    def __iter__(self) -> Iterator[Element]:
+    def __iter__(self) -> Iterator[PureElement]:
         return iter(self._array)
 
-    def append(self, e: Element) -> None:
+    def append(self, e: PureElement) -> None:
         self._array.append(e)
 
 

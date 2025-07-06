@@ -1,20 +1,22 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable
 from warnings import warn
 
 from lxml import etree as ET
-from lxml.etree import _Element as HtmlElement
 from lxml.etree import Element as E
 
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .parse.math import MathmlElement
-from .tree import Citation, CitationTuple, Element, MixedContent
+from .tree import Citation, CitationTuple, Element, MixedContent, PureElement
 from .xml import CommonContentFormatter, ElementFormatter
 
+if TYPE_CHECKING:
+    from .xml import XmlElement
 
-def html_content_to_str(ins: Iterable[str | HtmlElement]) -> str:
+
+def html_content_to_str(ins: Iterable[str | XmlElement]) -> str:
     ss = []
     for x in ins:
         if isinstance(x, str):
@@ -50,7 +52,7 @@ class HtmlFormatter(ElementFormatter):
         self.citation_tuple = CitationTupleHtmlizer(self)
         self.common = CommonContentFormatter(self)
 
-    def __call__(self, src: Element, level: int) -> HtmlElement:
+    def __call__(self, src: PureElement, level: int) -> XmlElement:
         if isinstance(src, CitationTuple):
             return self.citation_tuple.htmlize(src, level)
         html_tag = HTML_FROM_XML.get(src.xml.tag)
@@ -80,14 +82,14 @@ class HtmlFormatter(ElementFormatter):
         self.common.format_content(src, level, ret)
         return ret
 
-    def table(self, src: Element, level: int) -> HtmlElement:
+    def table(self, src: PureElement, level: int) -> XmlElement:
         attrib = src.xml.attrib.copy()
         attrib.setdefault('frame', 'hsides')
         attrib.setdefault('rules', 'groups')
         ret = E(src.xml.tag, dict(sorted(attrib.items())))
         return ret
 
-    def table_cell(self, src: Element, level: int) -> HtmlElement:
+    def table_cell(self, src: PureElement, level: int) -> XmlElement:
         attrib = {}
         for key, value in src.xml.attrib.items():
             if key in {'rowspan', 'colspan'}:
@@ -103,11 +105,11 @@ class CitationTupleHtmlizer:
     def __init__(self, form: HtmlFormatter):
         self.form = form
 
-    def htmlize(self, src: CitationTuple, level: int) -> HtmlElement:
+    def htmlize(self, src: CitationTuple, level: int) -> XmlElement:
         assert src.xml.tag == 'sup'
         ret = E('span', {'class': "citation-tuple"})
         ret.text = " ["
-        sub: HtmlElement | None = None
+        sub: XmlElement | None = None
         for it in src:
             sub = self.form(it, level + 1)
             sub.tail = ","
@@ -124,13 +126,13 @@ class HtmlGenerator:
     def __init__(self) -> None:
         self._html = HtmlFormatter()
 
-    def tailed_html_element(self, src: Element) -> HtmlElement:
+    def tailed_html_element(self, src: Element) -> XmlElement:
         ret = self._html(src, 0)
         ret.tail = src.tail
         return ret
 
     def content_to_str(self, src: MixedContent) -> str:
-        ss: list[str | HtmlElement] = [src.text]
+        ss: list[str | XmlElement] = [src.text]
         for sub in src:
             ss.append(self.tailed_html_element(sub))
         return html_content_to_str(ss)
@@ -138,7 +140,7 @@ class HtmlGenerator:
     def proto_section_to_str(self, src: bp.ProtoSection) -> str:
         return html_content_to_str(self._proto_section_content(src))
 
-    def _copy_content(self, src: MixedContent, dest: HtmlElement) -> None:
+    def _copy_content(self, src: MixedContent, dest: XmlElement) -> None:
         dest.text = src.text
         for s in src:
             dest.append(self.tailed_html_element(s))
@@ -149,10 +151,10 @@ class HtmlGenerator:
         title: MixedContent | None = None,
         xid: str | None = None,
         level: int = 0,
-    ) -> Iterable[str | HtmlElement]:
+    ) -> Iterable[str | XmlElement]:
         if level < 6:
             level += 1
-        ret: list[str | HtmlElement] = []
+        ret: list[str | XmlElement] = []
         if title:
             h = E(f"h{level}")
             if xid is not None:
@@ -170,7 +172,7 @@ class HtmlGenerator:
     def html_references(
         self, src: bp.BiblioRefList, abridged: bool = False,
     ) -> str:
-        frags: list[str | HtmlElement] = []
+        frags: list[str | XmlElement] = []
         if src.title:
             h = E('h2')
             self._copy_content(src.title, h)
