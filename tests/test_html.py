@@ -14,7 +14,7 @@ P_CHILD_CASE = Path(__file__).parent / "cases" / "p_child"
 
 
 def html_from_element(src: tree.Element) -> str:
-    return html_content_to_str([HTML(src, 0)])
+    return html_content_to_str([HTML.root(src)])
 
 
 def parse_element(src: str | Path, model: tree.EModel):

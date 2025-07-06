@@ -9,8 +9,8 @@ from lxml.etree import Element as E
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .parse.math import MathmlElement
-from .tree import Citation, CitationTuple, Element, MixedContent, PureElement
-from .xml import CommonContentFormatter, ElementFormatter
+from .tree import Citation, CitationTuple, MixedContent, PureElement
+from .xml import CommonContentFormatter, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
     from .xml import XmlElement
@@ -52,7 +52,7 @@ class HtmlFormatter(ElementFormatter):
         self.citation_tuple = CitationTupleHtmlizer(self)
         self.common = CommonContentFormatter(self)
 
-    def __call__(self, src: PureElement, level: int) -> XmlElement:
+    def to_one_only(self, src: PureElement, level: int) -> XmlElement:
         if isinstance(src, CitationTuple):
             return self.citation_tuple.htmlize(src, level)
         html_tag = HTML_FROM_XML.get(src.xml.tag)
@@ -82,12 +82,24 @@ class HtmlFormatter(ElementFormatter):
         self.common.format_content(src, level, ret)
         return ret
 
+    def root(self, src: PureElement) -> XmlElement:
+        return self.to_one_only(src, 0)
+
+    def format(self, src: PureElement, level: int) -> Iterable[XmlElement]:
+        ret: list[XmlElement]
+        if src.xml.tag == 'def-item':
+            ret = []
+            for it in src:
+                ret.extend(self.format(it, level))
+        else:
+            ret = [self.to_one_only(src, level)]
+        return ret
+
     def table(self, src: PureElement, level: int) -> XmlElement:
         attrib = src.xml.attrib.copy()
         attrib.setdefault('frame', 'hsides')
         attrib.setdefault('rules', 'groups')
-        ret = E(src.xml.tag, dict(sorted(attrib.items())))
-        return ret
+        return E(src.xml.tag, dict(sorted(attrib.items())))
 
     def table_cell(self, src: PureElement, level: int) -> XmlElement:
         attrib = {}
@@ -102,8 +114,8 @@ class HtmlFormatter(ElementFormatter):
 
 
 class CitationTupleHtmlizer:
-    def __init__(self, form: HtmlFormatter):
-        self.form = form
+    def __init__(self, html: HtmlFormatter):
+        self._html = html
 
     def htmlize(self, src: CitationTuple, level: int) -> XmlElement:
         assert src.xml.tag == 'sup'
@@ -111,12 +123,12 @@ class CitationTupleHtmlizer:
         ret.text = " ["
         sub: XmlElement | None = None
         for it in src:
-            sub = self.form(it, level + 1)
-            sub.tail = ","
-            ret.append(sub)
+            for sub in self._html.format(it, level + 1):
+                sub.tail = ","
+                ret.append(sub)
         if sub is None:
-            warn("Citation tuple is empty")
-            ret.text += "]"
+            warn("Citation is missing")
+            ret.text += "citation missing]"
         else:
             sub.tail = "]"
         return ret
@@ -125,25 +137,18 @@ class CitationTupleHtmlizer:
 class HtmlGenerator:
     def __init__(self) -> None:
         self._html = HtmlFormatter()
-
-    def tailed_html_element(self, src: Element) -> XmlElement:
-        ret = self._html(src, 0)
-        ret.tail = src.tail
-        return ret
+        self._markup = MarkupFormatter(self._html)
 
     def content_to_str(self, src: MixedContent) -> str:
         ss: list[str | XmlElement] = [src.text]
-        for sub in src:
-            ss.append(self.tailed_html_element(sub))
+        for it in src:
+            for sub in self._html.format(it, 0):
+                ss.append(sub)
+            ss.append(it.tail)
         return html_content_to_str(ss)
 
     def proto_section_to_str(self, src: bp.ProtoSection) -> str:
         return html_content_to_str(self._proto_section_content(src))
-
-    def _copy_content(self, src: MixedContent, dest: XmlElement) -> None:
-        dest.text = src.text
-        for s in src:
-            dest.append(self.tailed_html_element(s))
 
     def _proto_section_content(
         self,
@@ -159,12 +164,13 @@ class HtmlGenerator:
             h = E(f"h{level}")
             if xid is not None:
                 h.attrib['id'] = xid
-            self._copy_content(title, h)
+            self._markup.format(title, level, h)
             h.tail = "\n"
             ret.append(h)
         for p in src.presection:
-            ret.append(self._html(p, 0))
-            ret.append("\n")
+            for sub in self._html.format(p, 0):
+                ret.append(sub)
+                ret.append("\n")
         for ss in src.subsections:
             ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
         return ret
@@ -175,7 +181,7 @@ class HtmlGenerator:
         frags: list[str | XmlElement] = []
         if src.title:
             h = E('h2')
-            self._copy_content(src.title, h)
+            self._markup.format(src.title, 0, h)
             h.tail = '\n'
             frags.append(h)
         formatter = CiteprocBiblioFormatter(abridged)

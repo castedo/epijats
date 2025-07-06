@@ -1,0 +1,14 @@
+<def-list>
+  <def-item>
+    <term>One</term>
+    <def>
+      <p>1, uno</p>
+    </def>
+  </def-item>
+  <def-item>
+    <term>Two</term>
+    <def>
+      <p>2, dos</p>
+    </def>
+  </def-item>
+</def-list>
