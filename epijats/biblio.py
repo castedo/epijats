@@ -6,15 +6,14 @@ from importlib import resources
 from html import escape
 from typing import TYPE_CHECKING, cast
 
-from lxml import etree as ET
-from lxml.etree import _Element as HtmlElement
-
 import citeproc
 
 from . import baseprint as bp
+from .xml import ET
 
 if TYPE_CHECKING:
     from .typeshed import JSONType
+    from .xml import XmlElement
 
 
 JATS_TO_CSL_VAR = {
@@ -125,7 +124,7 @@ class CsljsonItem(dict[str, 'JSONType']):
 
 class BiblioFormatter(ABC):
     @abstractmethod
-    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> HtmlElement: ...
+    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement: ...
 
     def to_str(self, refs: Sequence[bp.BiblioRefItem]) -> str:
         e = self.to_element(refs)
@@ -133,7 +132,7 @@ class BiblioFormatter(ABC):
         return ET.tostring(e, encoding='unicode', method='xml')
 
 
-def put_tags_on_own_lines(e: HtmlElement) -> None:
+def put_tags_on_own_lines(e: XmlElement) -> None:
     e.text = "\n{}".format(e.text or '')
     s = None
     for s in e:
@@ -146,8 +145,8 @@ def put_tags_on_own_lines(e: HtmlElement) -> None:
 
 def divs_from_citeproc_bibliography(
     biblio: citeproc.CitationStylesBibliography
-) -> list[HtmlElement]:
-    ret: list[HtmlElement] = []
+) -> list[XmlElement]:
+    ret: list[XmlElement] = []
     for item in biblio.bibliography():
         s = str(item).replace("..\n", ".\n").strip()
         div = ET.fromstring("<div>" + s + "</div>")
@@ -165,7 +164,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         with resources.as_file(r) as csl_file:
             self._style = citeproc.CitationStylesStyle(csl_file, validate=False)
 
-    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> HtmlElement:
+    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement:
         csljson = [CsljsonItem.from_ref_item(r).hyperlinkize() for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(

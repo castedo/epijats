@@ -12,10 +12,18 @@ from .tree import (
     PureElement,
 )
 
-if TYPE_CHECKING:
-    import lxml.etree
 
-    XmlElement: TypeAlias = lxml.etree._Element
+import lxml.etree
+# import xml.etree.ElementTree
+
+ET = lxml.etree
+# ET = xml.etree.ElementTree
+
+if TYPE_CHECKING:
+    from lxml import etree
+
+    XmlElement: TypeAlias = etree._Element
+    # XmlElement: TypeAlias = ET.Element
 
 
 class ElementFormatter(Protocol):
@@ -77,6 +85,17 @@ class CommonContentFormatter:
             self.default.format_content(src, level, dest)
 
 
+def root_namespaces(src: XmlElement) -> XmlElement:
+    nsmap = dict[str | None, str]()
+    for c in src.iter():
+        nsmap.update(c.nsmap)
+    ret = ET.Element(src.tag, src.attrib, nsmap=nsmap)
+    ret.text = src.text
+    for c in src:
+        ret.append(c)
+    return ret
+
+
 class XmlFormatter(ElementFormatter):
     def __init__(self, *, nsmap: dict[str, str]):
         self.nsmap = nsmap
@@ -84,11 +103,12 @@ class XmlFormatter(ElementFormatter):
         self.common = CommonContentFormatter(self)
 
     def to_one_only(self, src: PureElement, level: int) -> XmlElement:
-        import lxml.etree
+        from lxml import etree
 
-        ret = lxml.etree.Element(src.xml.tag, src.xml.attrib, nsmap=self.nsmap)
+        ret = ET.Element(src.xml.tag, src.xml.attrib)
         if isinstance(src, CdataElement):
-            ret.text = cast(str, lxml.etree.CDATA(src.content))
+            ret.text = cast(str, etree.CDATA(src.content))
+            # ret.text = src.content
         elif isinstance(src, CitationTuple):
             self.citation.format_content(src, level, ret)
         else:
@@ -96,7 +116,7 @@ class XmlFormatter(ElementFormatter):
         return ret
 
     def root(self, src: PureElement) -> XmlElement:
-        return self.to_one_only(src, 0)
+        return root_namespaces(self.to_one_only(src, 0))
 
     def format(self, src: PureElement, level: int) -> Iterable[XmlElement]:
         return [self.to_one_only(src, level)]
@@ -109,6 +129,10 @@ XML = XmlFormatter(
         'xlink': "http://www.w3.org/1999/xlink",
     }
 )
+
+ET.register_namespace('ali', "http://www.niso.org/schemas/ali/1.0/")
+ET.register_namespace('mml', "http://www.w3.org/1998/Math/MathML")
+ET.register_namespace('xlink', "http://www.w3.org/1999/xlink")
 
 
 def xml_element(src: Element) -> XmlElement:

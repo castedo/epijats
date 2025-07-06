@@ -3,8 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from lxml import etree
-
 from .. import condition as fc
 from ..baseprint import Baseprint
 
@@ -33,14 +31,22 @@ def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint |
         xml_path = path / "article.xml"
     else:
         xml_path = path
-    xml_parser = etree.XMLParser(remove_comments=True, remove_pis=True)
+
+    from lxml import etree as ET
+    # import xml.etree.ElementTree as ET
+
+    xml_parser = ET.XMLParser(remove_comments=True, remove_pis=True)
+    # xml_parser = ET.XMLParser()
     try:
-        et = etree.parse(xml_path, parser=xml_parser)
-    except etree.XMLSyntaxError as ex:
+        et = ET.parse(xml_path, parser=xml_parser)
+    except ET.ParseError as ex:
         issue(log, fc.XMLSyntaxError(), ex.lineno, ex.msg)
         return None
-    if bool(et.docinfo.doctype):
-        issue(log, fc.DoctypeDeclaration())
-    if et.docinfo.encoding.lower() != "utf-8":
-        issue(log, fc.EncodingNotUtf8(et.docinfo.encoding))
+
+    if hasattr(et, 'docinfo'):
+        if bool(et.docinfo.doctype):
+            issue(log, fc.DoctypeDeclaration())
+        if et.docinfo.encoding.lower() != "utf-8":
+            issue(log, fc.EncodingNotUtf8(et.docinfo.encoding))
+
     return parse_baseprint_root(et.getroot(), log)

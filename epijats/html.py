@@ -4,14 +4,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Iterable
 from warnings import warn
 
-from lxml import etree as ET
-from lxml.etree import Element as E
-
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .parse.math import MathmlElement
 from .tree import Citation, CitationTuple, MixedContent, PureElement
-from .xml import CommonContentFormatter, ElementFormatter, MarkupFormatter
+from .xml import CommonContentFormatter, ET, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
     from .xml import XmlElement
@@ -40,7 +37,7 @@ class BaseHtmlizer(Htmlizer, ElementFormatter):
         ret: list[XmlElement] = []
         if not self.handle(src, level, ret):
             warn(f"Unknown XML {src.xml.tag}")
-            xe = E('span', {'class': f"unknown-xml xml-{src.xml.tag}"})
+            xe = ET.Element('span', {'class': f"unknown-xml xml-{src.xml.tag}"})
             self.common.format_content(src, level, xe)
             ret = [xe]
         return ret
@@ -89,6 +86,7 @@ class DefaultHtmlizer(BaseHtmlizer):
             for it in src:
                 dest.extend(self.format(it, level))
             return True
+        E = ET.Element
         html_tag = HTML_FROM_XML.get(src.xml.tag)
         if html_tag:
             ret = E(html_tag)
@@ -118,7 +116,7 @@ class DefaultHtmlizer(BaseHtmlizer):
         attrib = src.xml.attrib.copy()
         attrib.setdefault('frame', 'hsides')
         attrib.setdefault('rules', 'groups')
-        return E(src.xml.tag, dict(sorted(attrib.items())))
+        return ET.Element(src.xml.tag, dict(sorted(attrib.items())))
 
     def table_cell(self, src: PureElement, level: int) -> XmlElement:
         attrib = {}
@@ -129,7 +127,7 @@ class DefaultHtmlizer(BaseHtmlizer):
                     attrib['style'] = f"text-align: {value};"
             else:
                 warn(f"Unknown table cell attribute {key}")
-        return E(src.xml.tag, dict(sorted(attrib.items())))
+        return ET.Element(src.xml.tag, dict(sorted(attrib.items())))
 
 
 class CitationTupleHtmlizer(Htmlizer):
@@ -140,7 +138,7 @@ class CitationTupleHtmlizer(Htmlizer):
         if not isinstance(src, CitationTuple):
             return False
         assert src.xml.tag == 'sup'
-        ret = E('span', {'class': "citation-tuple"})
+        ret = ET.Element('span', {'class': "citation-tuple"})
         ret.text = " ["
         sub: XmlElement | None = None
         for it in src:
@@ -162,11 +160,11 @@ class MathHtmlizer(BaseHtmlizer):
 
     def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
         if isinstance(src, MathmlElement):
-            ret = E(src.html.tag, src.html.attrib)
+            ret = ET.Element(src.html.tag, src.html.attrib)
         elif src.xml.tag == 'inline-formula':
-            ret = E('span', {'class': "math inline"})
+            ret = ET.Element('span', {'class': "math inline"})
         elif src.xml.tag == 'disp-formula':
-            ret = E('span', {'class': "math display"})
+            ret = ET.Element('span', {'class': "math display"})
         else:
             return False
         self.common.format_content(src, level, ret)
@@ -204,7 +202,7 @@ class HtmlGenerator:
             level += 1
         ret: list[str | XmlElement] = []
         if title:
-            h = E(f"h{level}")
+            h = ET.Element(f"h{level}")
             if xid is not None:
                 h.attrib['id'] = xid
             self._markup.format(title, level, h)
@@ -223,7 +221,7 @@ class HtmlGenerator:
     ) -> str:
         frags: list[str | XmlElement] = []
         if src.title:
-            h = E('h2')
+            h = ET.Element('h2')
             self._markup.format(src.title, 0, h)
             h.tail = '\n'
             frags.append(h)

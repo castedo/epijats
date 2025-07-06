@@ -4,8 +4,6 @@ import os, pytest
 from pathlib import Path
 from typing import TYPE_CHECKING, Tuple
 
-from lxml import etree
-
 import epijats.parse.jats as _
 from epijats import html
 from epijats import baseprint as bp
@@ -14,7 +12,7 @@ from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.tree import Element, make_paragraph
-from epijats.xml import xml_element
+from epijats.xml import ET, xml_element
 
 if TYPE_CHECKING:
     from epijats.xml import XmlElement
@@ -39,23 +37,23 @@ def assert_eq_if_exists(got: str, expect: Path):
             assert got == f.read()
 
 
+def tostring(e: XmlElement) -> str:
+    return ET.tostring(e, encoding='unicode')
+    # return ET.tostring(e, encoding='unicode', short_empty_elements=False)
+
+
 def str_from_lxml_element(e: XmlElement) -> str:
-    root = etree.Element("root", nsmap=NSMAP)
+    root = ET.Element("root")
     root.append(e)
-    return etree.tostring(e, method="c14n", exclusive=True).decode()
+    return tostring(e)
 
 
 def root_wrap(content: str):
     return ("<root {}>{}</root>\n".format(NSMAP_STR, content))
 
 
-def lxml_root_from_str(src: str) -> XmlElement:
-    parser = etree.XMLParser(remove_comments=True)
-    return etree.fromstring(src, parser=parser)
-
-
 def lxml_element_from_str(s: str) -> XmlElement:
-    root = lxml_root_from_str(root_wrap(s.strip()))
+    root = ET.fromstring(root_wrap(s.strip()))
     assert not root.text
     assert len(root) == 1
     return root[0]
@@ -67,8 +65,7 @@ def str_from_element(ele: Element) -> str:
 
 def assert_bdom_roundtrip(expect: Baseprint):
     xe = xml_element(restyle.article(expect))
-    dump = etree.tostring(xe).decode()
-    root = lxml_root_from_str(dump)
+    root = ET.fromstring(tostring(xe))
     assert parse_baseprint_root(root) == expect
 
 
@@ -101,7 +98,7 @@ def test_roundtrip(case):
     bp = parse_baseprint(xml_path, issues.append)
     assert bp is not None, issues
     xe = xml_element(restyle.article(bp))
-    assert etree.tostring(xe, encoding="unicode") == expect
+    assert tostring(xe) == expect
     assert not issues
 
 
@@ -134,7 +131,7 @@ def test_article_title():
 
 
 def xml2html(xml):
-    et = etree.fromstring(xml)
+    et = ET.fromstring(xml)
     issues = []
     model = _.base_hypertext_model()
     out = _.MixedContent()
@@ -260,7 +257,7 @@ def test_citation_roundtrip():
         """<sup><xref rid="R1" ref-type="bibr">1</xref></sup>""",
         """\
 <sup>
-  <xref ref-type="bibr" rid="R1">1</xref>
+  <xref rid="R1" ref-type="bibr">1</xref>
 </sup>""")
     assert not issues
     assert len(list(el)) == 1
@@ -273,8 +270,8 @@ def test_citation_tuple_roundtrip():
         """<sup><xref rid="R1" ref-type="bibr">1</xref>,<xref rid="R2" ref-type="bibr">2</xref></sup>""",
         """\
 <sup>
-  <xref ref-type="bibr" rid="R1">1</xref>,
-  <xref ref-type="bibr" rid="R2">2</xref>
+  <xref rid="R1" ref-type="bibr">1</xref>,
+  <xref rid="R2" ref-type="bibr">2</xref>
 </sup>""")
     assert not issues
     assert len(list(el)) == 2
@@ -290,7 +287,7 @@ def test_bare_citation():
     assert len(list(el)) == 1
     expect = """\
 <sup>
-  <xref ref-type="bibr" rid="R1">1</xref>
+  <xref rid="R1" ref-type="bibr">1</xref>
 </sup>"""
     assert str_from_element(el) == expect
 
@@ -364,7 +361,7 @@ def test_restyle():
     with open(case_dir / "expect/article.xml", "r") as f:
         expect = f.read().rstrip()
     xe = xml_element(restyle.article(bp))
-    assert etree.tostring(xe).decode() == expect
+    assert tostring(xe) == expect
     assert {i.condition for i in issues} == {
         fc.InvalidDoi('pub-id', 'element-citation'),
         fc.InvalidPmid('pub-id', 'element-citation'),
@@ -374,7 +371,7 @@ def test_restyle():
 
 def test_minimal_with_issues():
     issues = set()
-    bp = parse_baseprint_root(lxml_root_from_str("<article/>"), issues.add)
+    bp = parse_baseprint_root(ET.fromstring("<article/>"), issues.add)
     print(issues)
     assert bp == Baseprint()
     assert len(issues) == 4
@@ -384,8 +381,8 @@ def test_minimal_with_issues():
         fc.MissingContent('abstract', 'article-meta'),
         fc.MissingContent('body', 'article'),
     }
-    expect = f"""\
-<article {NSMAP_STR}>
+    expect = """\
+<article>
   <front>
     <article-meta>
       <title-group>
@@ -401,10 +398,10 @@ def test_minimal_with_issues():
   </body>
 </article>"""
     xe = xml_element(restyle.article(bp))
-    assert etree.tostring(xe).decode() == expect
+    assert tostring(xe) == expect
 
 
 def test_no_issues():
     issues = []
-    got = parse_baseprint(SNAPSHOT_CASE / "whybaseprint", issues.append)
+    parse_baseprint(SNAPSHOT_CASE / "whybaseprint", issues.append)
     assert not issues

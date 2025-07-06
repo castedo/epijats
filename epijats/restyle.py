@@ -3,12 +3,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from lxml import etree
-
 from . import baseprint
 from . import baseprint as bp
 from .tree import DataElement, MarkupElement, MixedContent, StartTag
-from .xml import xml_element
+from .xml import ET, xml_element
 
 
 def markup_element(tag: str, src: MixedContent) -> MarkupElement:
@@ -182,4 +180,5 @@ def write_baseprint(src: baseprint.Baseprint, dest: Path) -> None:
     root.tail = "\n"
     os.makedirs(dest, exist_ok=True)
     with open(dest / "article.xml", "wb") as f:
-        etree.ElementTree(root).write(f, encoding="utf-8")
+        ET.ElementTree(root).write(f, encoding="utf-8")
+        # ET.ElementTree(root).write(f, encoding="utf-8", short_empty_elements=False)

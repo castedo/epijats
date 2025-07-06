@@ -13,7 +13,7 @@ def _run(src, dest, args=""):
     __main__.main(args)
 
 
-def test_jats_to_json(tmp_path):
+def test_cli_restyle(tmp_path):
     subcase_dir = CASES_DIR / "webstract/basic1"
     _run(subcase_dir / "input", tmp_path, "--to jats")
     with open(subcase_dir / "output" / "article.xml", "r") as f:
