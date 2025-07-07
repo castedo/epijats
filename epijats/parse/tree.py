@@ -55,7 +55,8 @@ class ElementModelBase(Model[Element]):
     def read(self, log: IssueCallback, e: XmlElement, dest: Sink[Element]) -> bool:
         parsed = self.load(log, e)
         if parsed is not None:
-            if isinstance(parsed, Element) and e.tail:
+            assert isinstance(parsed, Element)
+            if e.tail:
                 parsed.tail = e.tail
             dest(parsed)
         return parsed is not None

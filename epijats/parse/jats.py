@@ -45,7 +45,7 @@ from .tree import (
     TextElementModel,
     parse_mixed_content,
 )
-from .math import disp_formula_model, inline_formula_model, math_model
+from .math import disp_formula_model, inline_formula_model
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
@@ -180,8 +180,8 @@ title_binder = hypertext_element_binder
 
 
 def title_group_model() -> Model[MixedContent]:
-    reader = kit.SingleSubElementReader(title_model('article-title'))
-    return ReaderBinder('title-group', reader)
+    loader = kit.SingleSubElementLoader(title_model('article-title'))
+    return tag_model('title-group', loader)
 
 
 def orcid_model() -> Model[bp.Orcid]:
@@ -360,7 +360,6 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
         p_elements |= AutoCorrectCitationModel(biblio)
         p_elements |= CitationTupleModel(biblio)
     p_elements |= hypertext
-    p_elements |= math_model()
     p_elements |= disp_formula_model()
     p_elements |= preformatted
     p_elements |= ListModel(p_elements)

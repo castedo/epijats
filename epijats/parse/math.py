@@ -2,16 +2,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterable
 
-from ..tree import CdataElement, Element, MarkupElement, StartTag
+from ..math import (
+    MATHML_NAMESPACE_PREFIX,
+    MathmlElement,
+    FormulaElement,
+    FormulaStyle,
+)
+from ..tree import CdataElement, Element, StartTag
 
 from . import kit
-from .kit import (
-    IssueCallback,
-)
+from .kit import IssueCallback
 from .tree import (
     EModel,
     ElementModelBase,
-    DataElementModel,
     TagElementModelBase,
     parse_mixed_content,
 )
@@ -19,8 +22,6 @@ from .tree import (
 if TYPE_CHECKING:
     from ..xml import XmlElement
 
-
-MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
 
 # Unknown MathML element per https://www.w3.org/TR/mathml-core/
 # but found in PMC data:
@@ -55,13 +56,6 @@ MATHML_TAGS = [
 ]
 
 
-class MathmlElement(MarkupElement):
-    def __init__(self, xml_tag: str | StartTag):
-        super().__init__(xml_tag)
-        mathml_tag = self.xml.tag[len(MATHML_NAMESPACE_PREFIX) :]
-        self.html = StartTag(mathml_tag, self.xml.attrib)
-
-
 class AnyMathmlModel(ElementModelBase):
     @property
     def stags(self) -> Iterable[StartTag]:
@@ -69,7 +63,8 @@ class AnyMathmlModel(ElementModelBase):
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         ret = None
-        if isinstance(e.tag, str) and e.tag.startswith(MATHML_NAMESPACE_PREFIX):
+        if isinstance(e.tag, str):
+            assert e.tag.startswith(MATHML_NAMESPACE_PREFIX)
             ret = MathmlElement(StartTag(e.tag, dict(e.attrib)))
             parse_mixed_content(log, e, self, ret.content)
         return ret
@@ -85,6 +80,10 @@ class TexMathElementModel(TagElementModelBase):
 
 
 class MathmlElementModel(TagElementModelBase):
+    """<mml:math> Math (MathML Tag Set)
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/mml-math.html
+    """
     def __init__(self, mathml_tag: str):
         super().__init__(MATHML_NAMESPACE_PREFIX + mathml_tag)
         self._model = AnyMathmlModel()
@@ -96,12 +95,35 @@ class MathmlElementModel(TagElementModelBase):
         return ret
 
 
-def math_model() -> EModel:
-    """<mml:math> Math (MathML Tag Set)
+class FormulaAlternativesModel(TagElementModelBase):
+    """<alternatives> within the context of <inline-formula> and <disp-formula>
 
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/mml-math.html
+    https://jats.nlm.nih.gov/publishing/tag-library/1.4/element/alternatives.html
     """
-    return MathmlElementModel('math')
+    def __init__(self, formula_style: FormulaStyle):
+        super().__init__('alternatives')
+        self.formula_style = formula_style
+
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+        kit.check_no_attrib(log, e)
+        cp = kit.ContentParser(log)
+        tex = cp.one(kit.tag_model('tex-math', kit.load_string))
+        mathml = cp.one(MathmlElementModel('math'))
+        cp.parse_array_content(e)
+        if not tex.out:
+            return None
+        ret = FormulaElement(self.formula_style)
+        if tex.out:
+            ret.tex = tex.out
+        if mathml.out:
+            assert isinstance(mathml.out, MathmlElement)
+            ret.mathml = mathml.out
+        return ret
+
+
+def formula_model(formula_style: FormulaStyle) -> EModel:
+    alts = FormulaAlternativesModel(formula_style)
+    return kit.tag_model(formula_style.jats_tag, kit.SingleSubElementLoader(alts))
 
 
 def inline_formula_model() -> EModel:
@@ -109,9 +131,7 @@ def inline_formula_model() -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/inline-formula.html
     """
-    mathml = MathmlElementModel('math')
-    alts = DataElementModel('alternatives', mathml | TexMathElementModel())
-    return DataElementModel('inline-formula', mathml | alts)
+    return formula_model(FormulaStyle.INLINE)
 
 
 def disp_formula_model() -> EModel:
@@ -119,6 +139,4 @@ def disp_formula_model() -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-formula.html
     """
-    mathml = MathmlElementModel('math')
-    alts = DataElementModel('alternatives', mathml | TexMathElementModel())
-    return DataElementModel('disp-formula', mathml | alts)
+    return formula_model(FormulaStyle.DISPLAY)

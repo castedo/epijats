@@ -9,7 +9,7 @@ from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 from lxml import etree
 
 from .. import condition as fc
-from ..tree import StartTag
+from ..tree import Element, StartTag
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
@@ -110,12 +110,11 @@ class Parser(Validator):
     def parse_array_content(self, e: XmlElement) -> None:
         prep_array_elements(self.log, e)
         for s in e:
-            if isinstance(s.tag, str):
-                fun = self.match(s.tag, s.attrib)
-                if fun is not None:
-                    fun(s)
-                    continue
-            self.log(fc.UnsupportedElement.issue(s))
+            fun = self.match(s.tag, s.attrib) if isinstance(s.tag, str) else None
+            if fun is not None:
+                fun(s)
+            else:
+                self.log(fc.UnsupportedElement.issue(s))
 
 
 class UnionParser(Parser):
@@ -297,6 +296,8 @@ class LoaderReader(Reader[Sink[ParsedT]]):
     ) -> bool:
         parsed = self._loader(log, e)
         if parsed is not None:
+            if isinstance(parsed, Element) and e.tail:
+                parsed.tail = e.tail
             dest(parsed)
         return parsed is not None
 
@@ -363,22 +364,20 @@ class ContentParser(UnionParser):
         self._parsers.append(binder.bind(self.log, dest))
 
 
-class SingleSubElementReader(Reader[DestT]):
-    def __init__(self, binder: Binder[DestT]):
-        self._binder = binder
+class SingleSubElementLoader(Loader[ParsedT]):
+    def __init__(self, model: Model[ParsedT]):
+        self._model = model
 
-    def __call__(self, log: IssueCallback, e: XmlElement, dest: DestT) -> bool:
+    def __call__(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
         check_no_attrib(log, e)
         cp = ContentParser(log)
-        cp.bind(self._binder.once(), dest)
+        result = cp.one(self._model)
         cp.parse_array_content(e)
-        return True
+        return result.out
 
 
 def load_single_sub_element(
     log: IssueCallback, e: XmlElement, model: Model[ParsedT]
 ) -> ParsedT | None:
-    reader = SingleSubElementReader(model)
-    ret = Result[ParsedT]()
-    reader(log, e, ret)
-    return ret.out
+    loader = SingleSubElementLoader(model)
+    return loader(log, e)

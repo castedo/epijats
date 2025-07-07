@@ -6,7 +6,7 @@ from warnings import warn
 
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
-from .parse.math import MathmlElement
+from .math import FormulaElement
 from .tree import Citation, CitationTuple, MixedContent, PureElement
 from .xml import CommonContentFormatter, ET, ElementFormatter, MarkupFormatter
 
@@ -154,20 +154,13 @@ class CitationTupleHtmlizer(Htmlizer):
         return True
 
 
-class MathHtmlizer(BaseHtmlizer):
-    def __init__(self) -> None:
-        super().__init__(self)
-
+class MathHtmlizer(Htmlizer):
     def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
-        if isinstance(src, MathmlElement):
-            ret = ET.Element(src.html.tag, src.html.attrib)
-        elif src.xml.tag == 'inline-formula':
-            ret = ET.Element('span', {'class': "math inline"})
-        elif src.xml.tag == 'disp-formula':
-            ret = ET.Element('span', {'class': "math display"})
+        if isinstance(src, FormulaElement):
+            ret = ET.Element('span', {'class': f"math {src.formula_style}"})
+            ret.text = src.tex
         else:
             return False
-        self.common.format_content(src, level, ret)
         dest.append(ret)
         return True
 

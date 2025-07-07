@@ -1,0 +1,9 @@
+<disp-formula>
+  <alternatives>
+    <tex-math><![CDATA[⟦ x \in S ⟧ =
+ \begin{cases}
+   1 & \text{if } x \in S  \\
+   0 & \text{otherwise.}
+ \end{cases}]]></tex-math>
+  </alternatives>
+</disp-formula>
