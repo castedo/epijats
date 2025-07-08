@@ -14,7 +14,9 @@ from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.tree import Element, make_paragraph
-from epijats.xml import ET, ET_tostring_unicode as tostring, xml_element
+from epijats.xml import ET, xml_element
+
+from . import ET_tostring_unicode as tostring
 
 if TYPE_CHECKING:
     from epijats.xml import XmlElement
@@ -41,7 +43,7 @@ def assert_eq_if_exists(got: str, expect: Path):
 
 def str_from_xml_element(e: XmlElement) -> str:
     root = ET.Element("root")
-    root.append(e)
+    root.append(e)  # type: ignore[arg-type]
     return tostring(e)
 
 

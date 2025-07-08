@@ -20,7 +20,7 @@ def html_content_to_str(ins: Iterable[str | XmlElement]) -> str:
         if isinstance(x, str):
             ss.append(x)
         else:
-            ss.append(ET.tostring(x, encoding='unicode', method='html'))
+            ss.append(ET.tostring(x, encoding='unicode', method='html'))  # type: ignore
     return "".join(ss)
 
 
@@ -88,6 +88,7 @@ class DefaultHtmlizer(BaseHtmlizer):
             return True
         E = ET.Element
         html_tag = HTML_FROM_XML.get(src.xml.tag)
+        ret: XmlElement
         if html_tag:
             ret = E(html_tag)
         elif isinstance(src, Citation):
@@ -144,7 +145,7 @@ class CitationTupleHtmlizer(Htmlizer):
         for it in src:
             for sub in self._html.format(it, level + 1):
                 sub.tail = ","
-                ret.append(sub)
+                ret.append(sub)  # type: ignore[arg-type]
         if sub is None:
             warn("Citation is missing")
             ret.text += "citation missing]"

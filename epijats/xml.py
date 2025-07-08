@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Protocol, TYPE_CHECKING, TypeAlias, cast
+from typing import Protocol, TYPE_CHECKING, TypeAlias
+import xml.etree.ElementTree
 
 from .tree import (
     CdataElement,
@@ -20,14 +21,19 @@ ET = lxml.etree
 # ET = xml.etree.ElementTree
 
 if TYPE_CHECKING:
-    from lxml import etree
+    import lxml.etree
 
-    XmlElement: TypeAlias = etree._Element
-    # XmlElement: TypeAlias = ET.Element
+    XmlElement: TypeAlias = lxml.etree._Element | xml.etree.ElementTree.Element
 
 
-def ET_tostring_unicode(e: XmlElement) -> str:
-    return ET.tostring(e, encoding='unicode')
+def ET_CDATA_text(src: CdataElement, dest: XmlElement) -> None:
+    if isinstance(dest, xml.etree.ElementTree.Element):
+        dest.text = src.content
+    else:
+        from typing import cast
+        import lxml.etree
+
+        dest.text = cast(str, lxml.etree.CDATA(src.content))
 
 
 class ElementFormatter(Protocol):
@@ -52,7 +58,7 @@ class MarkupFormatter:
         for it in src:
             sublevel = level if isinstance(it, MarkupElement) else level + 1
             for sub in self.sub.format(it, sublevel):
-                dest.append(sub)
+                dest.append(sub)  # type: ignore[arg-type]
             append_content(it.tail, dest)
 
 
@@ -69,7 +75,7 @@ class IndentFormatter:
         for it in src:
             for sub in self.sub.format(it, level + 1):
                 sub.tail = self.sep + newline
-                dest.append(sub)
+                dest.append(sub)  # type: ignore[arg-type]
         if sub is None:
             dest.text = last_newline
         else:
@@ -90,13 +96,17 @@ class CommonContentFormatter:
 
 
 def root_namespaces(src: XmlElement) -> XmlElement:
-    nsmap = dict[str | None, str]()
-    for c in src.iter():
-        nsmap.update(c.nsmap)
-    ret = ET.Element(src.tag, src.attrib, nsmap=nsmap)
-    ret.text = src.text
-    for c in src:
-        ret.append(c)
+    ret = src
+    if not isinstance(src, xml.etree.ElementTree.Element):
+        import lxml.etree
+
+        nsmap = dict[str | None, str]()
+        for c in src.iter():
+            nsmap.update(c.nsmap)
+        ret = lxml.etree.Element(src.tag, src.attrib, nsmap=nsmap)
+        ret.text = src.text
+        for c in src:
+            ret.append(c)
     return ret
 
 
@@ -107,12 +117,9 @@ class XmlFormatter(ElementFormatter):
         self.common = CommonContentFormatter(self)
 
     def to_one_only(self, src: PureElement, level: int) -> XmlElement:
-        from lxml import etree
-
         ret = ET.Element(src.xml.tag, src.xml.attrib)
         if isinstance(src, CdataElement):
-            ret.text = cast(str, etree.CDATA(src.content))
-            # ret.text = src.content
+            ET_CDATA_text(src, ret)
         elif isinstance(src, CitationTuple):
             self.citation.format_content(src, level, ret)
         else:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import xml.etree.ElementTree
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib import resources
@@ -36,15 +37,15 @@ JATS_TO_CSL_TYPE = {
 
 
 def hyperlink(xhtml_content: str, prepend: str | None = None) -> str:
-    ele = ET.fromstring(f"<root>{xhtml_content}</root>")
+    ele = xml.etree.ElementTree.fromstring(f"<root>{xhtml_content}</root>")
     if not ele.text or not ele.text.strip():
         return xhtml_content
     url = ele.text
     if prepend:
         url = prepend + url
-    element = ET.Element('a', {'href': url})
+    element = xml.etree.ElementTree.Element('a', {'href': url})
     element.text = url
-    return ET.tostring(element, encoding='unicode', method='html')
+    return xml.etree.ElementTree.tostring(element, encoding='unicode', method='html')
 
 
 def date_parts(src: bp.Date) -> JSONType:
@@ -126,11 +127,6 @@ class BiblioFormatter(ABC):
     @abstractmethod
     def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement: ...
 
-    def to_str(self, refs: Sequence[bp.BiblioRefItem]) -> str:
-        e = self.to_element(refs)
-        e.tail = "\n"
-        return ET.tostring(e, encoding='unicode', method='xml')
-
 
 def put_tags_on_own_lines(e: XmlElement) -> None:
     e.text = "\n{}".format(e.text or '')
@@ -181,7 +177,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             li = ET.Element('li')
             li.attrib['id'] = refs[i].id
             li.text = "\n"
-            li.append(divs[i])
+            li.append(divs[i])  # type: ignore[arg-type]
             if not self._abridged:
                 if comment := refs[i].biblio_fields.get('comment'):
                     div2 = ET.Element('div')

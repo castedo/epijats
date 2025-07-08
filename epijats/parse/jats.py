@@ -654,7 +654,7 @@ def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
     if back is not None:
         back_loader = kit.SingleSubElementLoader(RefListModel())
         ret.ref_list = back_loader(back_log.append, back)
-        e.remove(back)
+        e.remove(back)  # type: ignore[arg-type]
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
     cp = ContentParser(log)
     cp.bind(ReaderBinder('front', read_article_front), ret)

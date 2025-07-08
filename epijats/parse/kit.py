@@ -17,8 +17,7 @@ if TYPE_CHECKING:
 
 IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
 EnumT = TypeVar('EnumT', bound=StrEnum)
-AttribView: TypeAlias = etree._Attrib
-# AttribView: TypeAlias = Mapping[str, str]
+AttribView: TypeAlias = etree._Attrib | Mapping[str, str]
 
 
 def issue(

@@ -5,7 +5,9 @@ from epijats import condition as fc
 from epijats.html import HtmlGenerator
 from epijats.parse import jats, kit, tree
 from epijats.tree import MixedContent
-from epijats.xml import ET_tostring_unicode, xml_element
+from epijats.xml import xml_element
+
+from . import ET_tostring_unicode
 
 from .test_baseprint import lxml_element_from_str
 
