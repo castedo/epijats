@@ -56,7 +56,7 @@ class BiblioRefPool:
         self._avail = avail
         self.used: list[bp.BiblioRefItem] = []
 
-    def cite(self, rid: str)-> int:
+    def cite(self, rid: str) -> int:
         """Cite a reference in the bibliography.
 
         Returns:
@@ -69,7 +69,7 @@ class BiblioRefPool:
         for ref in self._avail:
             if rid == ref.id:
                 self.used.append(ref)
-                return len(self.used) 
+                return len(self.used)
         return 0
 
 
@@ -124,7 +124,7 @@ class CitationTupleModel(TagElementModelBase):
         assert e.tag == 'sup'
         kit.check_no_attrib(log, e)
         if not any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in e):
-          return None
+            return None
         delim = e.text.strip() if e.text else ''
         if delim not in ['', '[', '(']:
             log(fc.IgnoredText.issue(e))
@@ -435,9 +435,7 @@ def load_permissions(log: IssueCallback, e: XmlElement) -> bp.Permissions | None
     return bp.Permissions(license.out, copyright)
 
 
-def read_article_meta(
-    log: IssueCallback, e: XmlElement, dest: bp.Baseprint
-) -> bool:
+def read_article_meta(log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> bool:
     kit.check_no_attrib(log, e)
     cp = ContentParser(log)
     title = cp.one(title_group_model())
@@ -454,9 +452,7 @@ def read_article_meta(
     return True
 
 
-def read_article_front(
-    log: IssueCallback, e: XmlElement, dest: bp.Baseprint
-) -> bool:
+def read_article_front(log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> bool:
     kit.check_no_attrib(log, e)
     cp = ContentParser(log)
     cp.bind(ReaderBinder('article-meta', read_article_meta).once(), dest)
@@ -654,8 +650,10 @@ def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
     kit.check_no_attrib(log, e, [lang])
     ret = bp.Baseprint()
     back = e.find("back")
+    back_log = list[fc.FormatIssue]()
     if back is not None:
-        ret.ref_list = kit.load_single_sub_element(log, back, RefListModel())
+        back_loader = kit.SingleSubElementLoader(RefListModel())
+        ret.ref_list = back_loader(back_log.append, back)
         e.remove(back)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
     cp = ContentParser(log)
@@ -673,4 +671,6 @@ def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
         log(fc.FormatIssue(fc.MissingContent('abstract', 'article-meta')))
     if ret.body.has_no_content():
         log(fc.FormatIssue(fc.MissingContent('body', 'article')))
+    for issue in back_log:
+        log(issue)
     return ret

@@ -5,6 +5,7 @@ from epijats import condition as fc
 from epijats.html import HtmlGenerator
 from epijats.parse import jats, kit, tree
 from epijats.tree import MixedContent
+from epijats.xml import ET_tostring_unicode, xml_element
 
 from .test_baseprint import lxml_element_from_str
 
@@ -40,12 +41,19 @@ def parse_element(src: str | Path, model: tree.EModel):
 
 
 @pytest.mark.parametrize("case", os.listdir(P_CHILD_CASE))
-def test_p_child_roundtrip(case):
-    xml_path = P_CHILD_CASE/ case / "jats.xml"
-    with open(xml_path, "r") as f:
-        p_child = parse_element(f.read(), jats.p_child_model())
-        got = html_from_element(p_child)
-    expect_path = P_CHILD_CASE/ case / "expect.html"
-    with open(expect_path, "r") as f:
+def test_p_child_html(case):
+    with open(P_CHILD_CASE/ case / "jats.xml", "r") as f:
+        xml_str = f.read().strip()
+    p_child = parse_element(xml_str, jats.p_child_model())
+
+    expect_xml = P_CHILD_CASE/ case / "expect.xml"
+    if expect_xml.exists():
+        with open(expect_xml, "r") as f:
+            xml_str = f.read().strip()
+
+    assert ET_tostring_unicode(xml_element(p_child)) == xml_str
+
+    expect_html = P_CHILD_CASE/ case / "expect.html"
+    with open(expect_html, "r") as f:
         expect = f.read().strip()
-    assert got == expect
+    assert html_from_element(p_child) == expect

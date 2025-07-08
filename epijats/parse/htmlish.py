@@ -134,18 +134,15 @@ class TableCellModel(TagElementModelBase):
     def __init__(self, content_model: EModel, *, header: bool):
         super().__init__('th' if header else 'td')
         self.content_model = content_model
-        self.attrib = {'align', 'rowspan', 'colspan'}
+        self._ok_attrib_keys = {'align', 'colspan', 'rowspan'}
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
-        kit.check_no_attrib(log, e, self.attrib)
         align_attribs = {'left', 'right', 'center', 'justify', None}
         kit.confirm_attrib_value(log, e, 'align', align_attribs)
         assert e.tag == self.tag
         if isinstance(e.tag, str):
             ret = MarkupElement(e.tag)
-            for key in self.attrib:
-                if key in e.attrib:
-                    ret.xml.attrib[key] = e.attrib[key]
+            kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 

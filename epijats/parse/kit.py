@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
@@ -47,6 +47,19 @@ def confirm_attrib_value(
     else:
         log(fc.UnsupportedAttributeValue.issue(e, key, got))
         return False
+
+
+def copy_ok_attrib_values(
+    log: IssueCallback,
+    e: XmlElement,
+    ok_keys: Iterable[str],
+    dest: MutableMapping[str, str],
+) -> None:
+    for key, value in e.attrib.items():
+        if key in ok_keys:
+            dest[key] = value
+        else:
+            log(fc.UnsupportedAttribute.issue(e, key))
 
 
 def get_enum_value(
@@ -150,9 +163,7 @@ DestConT = TypeVar('DestConT', contravariant=True)
 
 
 class Reader(Protocol, Generic[DestConT]):
-    def __call__(
-        self, log: IssueCallback, e: XmlElement, dest: DestConT
-    ) -> bool: ...
+    def __call__(self, log: IssueCallback, e: XmlElement, dest: DestConT) -> bool: ...
 
 
 ParsedT = TypeVar('ParsedT')
@@ -248,7 +259,7 @@ class ReaderBinderParser(Parser, Generic[DestT]):
 
     def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
         for good in self._stags:
-            if tag == good.tag: 
+            if tag == good.tag:
                 for key, value in good.attrib.items():
                     if attrib.get(key) != value:
                         return None
@@ -291,14 +302,13 @@ class LoaderReader(Reader[Sink[ParsedT]]):
     def __init__(self, loader: Loader[ParsedT]):
         self._loader = loader
 
-    def __call__(
-        self, log: IssueCallback, e: XmlElement, dest: Sink[ParsedT]
-    ) -> bool:
+    def __call__(self, log: IssueCallback, e: XmlElement, dest: Sink[ParsedT]) -> bool:
         parsed = self._loader(log, e)
         if parsed is not None:
             if isinstance(parsed, Element) and e.tail:
                 parsed.tail = e.tail
-            dest(parsed)
+            # mypy v1.9 has issue below but not v1.15
+            dest(parsed)  # type: ignore[arg-type, unused-ignore]
         return parsed is not None
 
 
@@ -374,10 +384,3 @@ class SingleSubElementLoader(Loader[ParsedT]):
         result = cp.one(self._model)
         cp.parse_array_content(e)
         return result.out
-
-
-def load_single_sub_element(
-    log: IssueCallback, e: XmlElement, model: Model[ParsedT]
-) -> ParsedT | None:
-    loader = SingleSubElementLoader(model)
-    return loader(log, e)

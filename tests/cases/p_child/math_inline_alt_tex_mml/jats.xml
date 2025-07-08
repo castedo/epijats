@@ -1,4 +1,4 @@
-<inline-formula>
+<inline-formula xmlns:mml="http://www.w3.org/1998/Math/MathML">
   <alternatives>
     <tex-math><![CDATA[S]]></tex-math>
     <mml:math display="inline"><mml:mi>S</mml:mi></mml:math>

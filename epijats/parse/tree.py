@@ -4,7 +4,14 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Iterable, TypeAlias
 
 from .. import condition as fc
-from ..tree import DataElement, Element, MarkupElement, MixedContent, StartTag
+from ..tree import (
+    DataElement,
+    Element,
+    EmptyElement,
+    MarkupElement,
+    MixedContent,
+    StartTag,
+)
 
 from . import kit
 from .kit import (
@@ -75,26 +82,28 @@ class TagElementModelBase(ElementModelBase):
         return (self.stag,)
 
 
+class EmptyElementModel(TagElementModelBase):
+    def __init__(self, tag: str, *, attrib: set[str] = set()):
+        super().__init__(tag)
+        self._ok_attrib_keys = attrib
+
+    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+        ret = EmptyElement(self.tag)
+        kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
+        return ret
+
+
 class DataElementModel(TagElementModelBase):
     def __init__(self, tag: str, content_model: EModel, *, attrib: set[str] = set()):
         super().__init__(tag)
         self.content_model = content_model
-        self.attrib = attrib
+        self._ok_attrib_keys = attrib
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
-        kit.check_no_attrib(log, e, self.attrib)
         ret = DataElement(self.tag)
-        for key in self.attrib:
-            if key in e.attrib:
-                ret.xml.attrib[key] = e.attrib[key]
+        kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         self.content_model.bind(log, ret.append).parse_array_content(e)
         return ret
-
-
-class EmptyElementModel(DataElementModel):
-    def __init__(self, tag: str, *, attrib: set[str] = set()):
-        no_children = kit.UnionModel[Element]()
-        super().__init__(tag, no_children, attrib=attrib)
 
 
 class TextElementModel(ElementModelBase):

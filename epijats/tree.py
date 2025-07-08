@@ -85,6 +85,9 @@ class MarkupElement(Element):
         return self._content
 
 
+class EmptyElement(Element): ...
+
+
 @dataclass
 class CdataElement(Element):
     content: str

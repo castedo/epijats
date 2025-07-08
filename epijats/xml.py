@@ -7,6 +7,7 @@ from .tree import (
     CdataElement,
     CitationTuple,
     Element,
+    EmptyElement,
     MarkupElement,
     MixedContent,
     PureElement,
@@ -14,7 +15,6 @@ from .tree import (
 
 
 import lxml.etree
-# import xml.etree.ElementTree
 
 ET = lxml.etree
 # ET = xml.etree.ElementTree
@@ -24,6 +24,10 @@ if TYPE_CHECKING:
 
     XmlElement: TypeAlias = etree._Element
     # XmlElement: TypeAlias = ET.Element
+
+
+def ET_tostring_unicode(e: XmlElement) -> str:
+    return ET.tostring(e, encoding='unicode')
 
 
 class ElementFormatter(Protocol):
@@ -81,7 +85,7 @@ class CommonContentFormatter:
     def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
         if isinstance(src, MarkupElement):
             self.markup.format(src.content, level, dest)
-        else:
+        elif not isinstance(src, EmptyElement):
             self.default.format_content(src, level, dest)
 
 

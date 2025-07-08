@@ -4,6 +4,8 @@ import os, pytest
 from pathlib import Path
 from typing import TYPE_CHECKING, Tuple
 
+import lxml.etree
+
 import epijats.parse.jats as _
 from epijats import html
 from epijats import baseprint as bp
@@ -12,7 +14,7 @@ from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.tree import Element, make_paragraph
-from epijats.xml import ET, xml_element
+from epijats.xml import ET, ET_tostring_unicode as tostring, xml_element
 
 if TYPE_CHECKING:
     from epijats.xml import XmlElement
@@ -37,12 +39,7 @@ def assert_eq_if_exists(got: str, expect: Path):
             assert got == f.read()
 
 
-def tostring(e: XmlElement) -> str:
-    return ET.tostring(e, encoding='unicode')
-    # return ET.tostring(e, encoding='unicode', short_empty_elements=False)
-
-
-def str_from_lxml_element(e: XmlElement) -> str:
+def str_from_xml_element(e: XmlElement) -> str:
     root = ET.Element("root")
     root.append(e)
     return tostring(e)
@@ -53,14 +50,14 @@ def root_wrap(content: str):
 
 
 def lxml_element_from_str(s: str) -> XmlElement:
-    root = ET.fromstring(root_wrap(s.strip()))
+    root = lxml.etree.fromstring(root_wrap(s.strip()))
     assert not root.text
     assert len(root) == 1
     return root[0]
 
 
 def str_from_element(ele: Element) -> str:
-    return str_from_lxml_element(xml_element(ele))
+    return str_from_xml_element(xml_element(ele))
 
 
 def assert_bdom_roundtrip(expect: Baseprint):
@@ -335,7 +332,7 @@ def test_abstract_restyle():
   <p>OK</p>
 </abstract>"""
     xe = xml_element(restyle.abstract(bdom))
-    assert str_from_lxml_element(xe) == restyled
+    assert str_from_xml_element(xe) == restyled
 
     issues = []
     (roundtrip, issues) = parse_abstract(xe)
