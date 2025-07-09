@@ -11,7 +11,6 @@ from epijats.parse import jats
 from epijats import biblio
 from epijats import condition as fc
 
-from . import ET_tostring_unicode
 from .test_baseprint import lxml_element_from_str, str_from_element
 
 
@@ -76,9 +75,8 @@ def check_html_match(html_path, ref_item, abridged: bool):
     if html_path.exists():
         with open(html_path, "r") as f:
             expect = f.read().strip()
-        bf = biblio.CiteprocBiblioFormatter(abridged)
-        ele = bf.to_element([ref_item])
-        assert ET_tostring_unicode(ele) == expect
+        bf = biblio.CiteprocBiblioFormatter(abridged=abridged, use_lxml=True)
+        assert bf.to_str([ref_item]) == expect
 
 
 @pytest.mark.parametrize("case", os.listdir(PMC_REF_CASE))

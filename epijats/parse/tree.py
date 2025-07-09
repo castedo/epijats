@@ -15,7 +15,6 @@ from ..tree import (
 
 from . import kit
 from .kit import (
-    AttribView,
     ReaderBinderParser,
     Binder,
     IssueCallback,
@@ -134,7 +133,7 @@ class MixedContentParser(Parser):
         self.model = model
         self.tag = tag
 
-    def match(self, tag: str, attrib: AttribView) -> kit.ParseFunc | None:
+    def match(self, tag: str, attrib: kit.AttribView) -> kit.ParseFunc | None:
         return self._parse if tag == self.tag else None
 
     def _parse(self, e: XmlElement) -> bool:

@@ -8,20 +8,13 @@ from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .math import FormulaElement
 from .tree import Citation, CitationTuple, MixedContent, PureElement
-from .xml import CommonContentFormatter, ET, ElementFormatter, MarkupFormatter
+from .xml import CommonContentFormatter, get_ET, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
     from .xml import XmlElement
 
 
-def html_content_to_str(ins: Iterable[str | XmlElement]) -> str:
-    ss = []
-    for x in ins:
-        if isinstance(x, str):
-            ss.append(x)
-        else:
-            ss.append(ET.tostring(x, encoding='unicode', method='html'))  # type: ignore
-    return "".join(ss)
+ET = get_ET(use_lxml=False)
 
 
 class Htmlizer(ABC):
@@ -57,23 +50,23 @@ class UnionHtmlizer(BaseHtmlizer):
 
 
 HTML_FROM_XML = {
-  'bold': 'strong',
-  'break': 'br',
-  'code': 'pre',
-  'def': 'dd',
-  'def-list': 'dl',
-  'disp-quote': 'blockquote',
-  'italic': 'em',
-  'list-item': 'li',
-  'monospace': 'samp',
-  'p': 'p',
-  'preformat': 'pre',
-  'sub': 'sub',
-  'sup': 'sup',
-  'tbody': 'tbody',
-  'term': 'dt',
-  'thead': 'thead',
-  'tr': 'tr',
+    'bold': 'strong',
+    'break': 'br',
+    'code': 'pre',
+    'def': 'dd',
+    'def-list': 'dl',
+    'disp-quote': 'blockquote',
+    'italic': 'em',
+    'list-item': 'li',
+    'monospace': 'samp',
+    'p': 'p',
+    'preformat': 'pre',
+    'sub': 'sub',
+    'sup': 'sup',
+    'tbody': 'tbody',
+    'term': 'dt',
+    'thead': 'thead',
+    'tr': 'tr',
 }
 
 
@@ -117,7 +110,7 @@ class DefaultHtmlizer(BaseHtmlizer):
         attrib = src.xml.attrib.copy()
         attrib.setdefault('frame', 'hsides')
         attrib.setdefault('rules', 'groups')
-        return ET.Element(src.xml.tag, dict(sorted(attrib.items())))
+        return ET.Element(src.xml.tag, dict(sorted(attrib.items())))  # type: ignore[no-any-return]
 
     def table_cell(self, src: PureElement, level: int) -> XmlElement:
         attrib = {}
@@ -125,10 +118,10 @@ class DefaultHtmlizer(BaseHtmlizer):
             if key in {'rowspan', 'colspan'}:
                 attrib[key] = value
             elif key == 'align':
-                    attrib['style'] = f"text-align: {value};"
+                attrib['style'] = f"text-align: {value};"
             else:
                 warn(f"Unknown table cell attribute {key}")
-        return ET.Element(src.xml.tag, dict(sorted(attrib.items())))
+        return ET.Element(src.xml.tag, dict(sorted(attrib.items())))  # type: ignore[no-any-return]
 
 
 class CitationTupleHtmlizer(Htmlizer):
@@ -145,7 +138,7 @@ class CitationTupleHtmlizer(Htmlizer):
         for it in src:
             for sub in self._html.format(it, level + 1):
                 sub.tail = ","
-                ret.append(sub)  # type: ignore[arg-type]
+                ret.append(sub)
         if sub is None:
             warn("Citation is missing")
             ret.text += "citation missing]"
@@ -174,16 +167,25 @@ class HtmlGenerator:
         self._html |= DefaultHtmlizer(self._html)
         self._markup = MarkupFormatter(self._html)
 
+    def _html_content_to_str(self, ins: Iterable[str | XmlElement]) -> str:
+        ss = []
+        for x in ins:
+            if isinstance(x, str):
+                ss.append(x)
+            else:
+                ss.append(ET.tostring(x, encoding='unicode', method='html'))
+        return "".join(ss)
+
     def content_to_str(self, src: MixedContent) -> str:
         ss: list[str | XmlElement] = [src.text]
         for it in src:
             for sub in self._html.format(it, 0):
                 ss.append(sub)
             ss.append(it.tail)
-        return html_content_to_str(ss)
+        return self._html_content_to_str(ss)
 
     def proto_section_to_str(self, src: bp.ProtoSection) -> str:
-        return html_content_to_str(self._proto_section_content(src))
+        return self._html_content_to_str(self._proto_section_content(src))
 
     def _proto_section_content(
         self,
@@ -210,21 +212,19 @@ class HtmlGenerator:
             ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
         return ret
 
-    def html_references(
-        self, src: bp.BiblioRefList, abridged: bool = False,
-    ) -> str:
+    def html_references(self, src: bp.BiblioRefList, *, abridged: bool = False) -> str:
         frags: list[str | XmlElement] = []
         if src.title:
             h = ET.Element('h2')
             self._markup.format(src.title, 0, h)
             h.tail = '\n'
             frags.append(h)
-        formatter = CiteprocBiblioFormatter(abridged)
+        formatter = CiteprocBiblioFormatter(abridged=abridged, use_lxml=False)
         ol = formatter.to_element(src.references)
         ol.tail = "\n"
         frags.append(ol)
-        return html_content_to_str(frags)
+        return self._html_content_to_str(frags)
 
     def html_body_content(self, src: bp.Baseprint) -> str:
         frags = list(self._proto_section_content(src.body))
-        return html_content_to_str(frags)
+        return self._html_content_to_str(frags)

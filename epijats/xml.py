@@ -7,7 +7,6 @@ import xml.etree.ElementTree
 from .tree import (
     CdataElement,
     CitationTuple,
-    Element,
     EmptyElement,
     MarkupElement,
     MixedContent,
@@ -15,15 +14,38 @@ from .tree import (
 )
 
 
-import lxml.etree
-
-ET = lxml.etree
-# ET = xml.etree.ElementTree
-
 if TYPE_CHECKING:
+    from types import ModuleType
     import lxml.etree
 
     XmlElement: TypeAlias = lxml.etree._Element | xml.etree.ElementTree.Element
+
+
+NAMESPACE_MAP = {
+    'ali': "http://www.niso.org/schemas/ali/1.0/",
+    'mml': "http://www.w3.org/1998/Math/MathML",
+    'xlink': "http://www.w3.org/1999/xlink",
+}
+
+
+# key is (use_lxml: bool)
+_NAMESPACES_REGISTERED = {False: False, True: False}
+
+
+def get_ET(*, use_lxml: bool) -> ModuleType:
+    ret: ModuleType
+    if use_lxml:
+        import lxml.etree
+
+        ret = lxml.etree
+    else:
+        ret = xml.etree.ElementTree
+
+    if not _NAMESPACES_REGISTERED[use_lxml]:
+        for prefix, name in NAMESPACE_MAP.items():
+            ret.register_namespace(prefix, name)
+        _NAMESPACES_REGISTERED[use_lxml] = True
+    return ret
 
 
 def ET_CDATA_text(src: CdataElement, dest: XmlElement) -> None:
@@ -111,13 +133,13 @@ def root_namespaces(src: XmlElement) -> XmlElement:
 
 
 class XmlFormatter(ElementFormatter):
-    def __init__(self, *, nsmap: dict[str, str]):
-        self.nsmap = nsmap
+    def __init__(self, *, use_lxml: bool):
         self.citation = IndentFormatter(self, sep=",")
         self.common = CommonContentFormatter(self)
+        self.ET = get_ET(use_lxml=use_lxml)
 
     def to_one_only(self, src: PureElement, level: int) -> XmlElement:
-        ret = ET.Element(src.xml.tag, src.xml.attrib)
+        ret: XmlElement = self.ET.Element(src.xml.tag, src.xml.attrib)
         if isinstance(src, CdataElement):
             ET_CDATA_text(src, ret)
         elif isinstance(src, CitationTuple):
@@ -132,19 +154,6 @@ class XmlFormatter(ElementFormatter):
     def format(self, src: PureElement, level: int) -> Iterable[XmlElement]:
         return [self.to_one_only(src, level)]
 
-
-XML = XmlFormatter(
-    nsmap={
-        'ali': "http://www.niso.org/schemas/ali/1.0/",
-        'mml': "http://www.w3.org/1998/Math/MathML",
-        'xlink': "http://www.w3.org/1999/xlink",
-    }
-)
-
-ET.register_namespace('ali', "http://www.niso.org/schemas/ali/1.0/")
-ET.register_namespace('mml', "http://www.w3.org/1998/Math/MathML")
-ET.register_namespace('xlink', "http://www.w3.org/1999/xlink")
-
-
-def xml_element(src: Element) -> XmlElement:
-    return XML.root(src)
+    def to_str(self, src: PureElement) -> str:
+        e = self.root(src)
+        return self.ET.tostring(e, encoding='unicode')  # type: ignore[no-any-return]

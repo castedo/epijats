@@ -40,7 +40,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
         ret['body'] = gen.html_body_content(bp)
         if bp.ref_list:
             ret['references'] = gen.html_references(bp.ref_list)
-            ret['references_abridged'] = gen.html_references(bp.ref_list, True)
+            ret['references_abridged'] = gen.html_references(bp.ref_list, abridged=True)
     else:
         with tempfile.TemporaryDirectory() as tempdir:
             if "EPIJATS_NO_RESTYLE" not in os.environ:
@@ -50,7 +50,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     ret.set_source_from_path(src)
     ret['title'] = gen.content_to_str(bp.title)
     ret['contributors'] = list()
-    if bp.abstract :
+    if bp.abstract:
         ret['abstract'] = gen.proto_section_to_str(bp.abstract)
     for a in bp.authors:
         d: dict[str, Any] = {'surname': a.name.surname, 'type': 'author'}

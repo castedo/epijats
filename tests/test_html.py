@@ -5,11 +5,12 @@ from epijats import condition as fc
 from epijats.html import HtmlGenerator
 from epijats.parse import jats, kit, tree
 from epijats.tree import MixedContent
-from epijats.xml import xml_element
-
-from . import ET_tostring_unicode
+from epijats.xml import XmlFormatter
 
 from .test_baseprint import lxml_element_from_str
+
+
+XML = XmlFormatter(use_lxml=True)
 
 
 P_CHILD_CASE = Path(__file__).parent / "cases" / "p_child"
@@ -53,7 +54,7 @@ def test_p_child_html(case):
         with open(expect_xml, "r") as f:
             xml_str = f.read().strip()
 
-    assert ET_tostring_unicode(xml_element(p_child)) == xml_str
+    assert XML.to_str(p_child) == xml_str
 
     expect_html = P_CHILD_CASE/ case / "expect.html"
     with open(expect_html, "r") as f:

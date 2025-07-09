@@ -6,7 +6,7 @@ from pathlib import Path
 from . import baseprint
 from . import baseprint as bp
 from .tree import DataElement, MarkupElement, MixedContent, StartTag
-from .xml import ET, xml_element
+from .xml import XmlFormatter
 
 
 def markup_element(tag: str, src: MixedContent) -> MarkupElement:
@@ -175,10 +175,13 @@ def article(src: baseprint.Baseprint) -> DataElement:
     return ret
 
 
-def write_baseprint(src: baseprint.Baseprint, dest: Path) -> None:
-    root = xml_element(article(src))
+def write_baseprint(
+    src: baseprint.Baseprint, dest: Path, *, use_lxml: bool = True
+) -> None:
+    XML = XmlFormatter(use_lxml=use_lxml)
+    root = XML.root(article(src))
     root.tail = "\n"
     os.makedirs(dest, exist_ok=True)
     with open(dest / "article.xml", "wb") as f:
-        tree = ET.ElementTree(root)  # type: ignore
+        tree = XML.ET.ElementTree(root)
         tree.write(f, encoding="utf-8")

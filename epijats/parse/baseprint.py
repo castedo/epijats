@@ -5,12 +5,14 @@ from typing import TYPE_CHECKING
 
 from .. import condition as fc
 from ..baseprint import Baseprint
+from ..xml import get_ET
 
 from .kit import IssueCallback, issue
 from .jats import load_article
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
+
 
 def ignore_issue(issue: fc.FormatIssue) -> None:
     pass
@@ -25,18 +27,20 @@ def parse_baseprint_root(
     return load_article(log, root)
 
 
-def parse_baseprint(src: Path, log: IssueCallback = ignore_issue) -> Baseprint | None:
+def parse_baseprint(
+    src: Path, log: IssueCallback = ignore_issue, *, use_lxml: bool = True
+) -> Baseprint | None:
     path = Path(src)
     if path.is_dir():
         xml_path = path / "article.xml"
     else:
         xml_path = path
 
-    from lxml import etree as ET
-    # import xml.etree.ElementTree as ET
-
-    xml_parser = ET.XMLParser(remove_comments=True, remove_pis=True)
-    # xml_parser = ET.XMLParser()
+    ET = get_ET(use_lxml=use_lxml)
+    if use_lxml:
+        xml_parser = ET.XMLParser(remove_comments=True, remove_pis=True)
+    else:
+        xml_parser = ET.XMLParser()
     try:
         et = ET.parse(xml_path, parser=xml_parser)
     except ET.ParseError as ex:

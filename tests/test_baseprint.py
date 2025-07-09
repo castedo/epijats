@@ -14,13 +14,13 @@ from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.tree import Element, make_paragraph
-from epijats.xml import ET, xml_element
-
-from . import ET_tostring_unicode as tostring
+from epijats.xml import XmlFormatter
 
 if TYPE_CHECKING:
     from epijats.xml import XmlElement
 
+
+XML = XmlFormatter(use_lxml=True)
 
 TEST_CASES = Path(__file__).parent / "cases"
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
@@ -42,9 +42,9 @@ def assert_eq_if_exists(got: str, expect: Path):
 
 
 def str_from_xml_element(e: XmlElement) -> str:
-    root = ET.Element("root")
+    root = XML.ET.Element("root")
     root.append(e)  # type: ignore[arg-type]
-    return tostring(e)
+    return XML.ET.tostring(e, encoding='unicode')
 
 
 def root_wrap(content: str):
@@ -59,12 +59,11 @@ def lxml_element_from_str(s: str) -> XmlElement:
 
 
 def str_from_element(ele: Element) -> str:
-    return str_from_xml_element(xml_element(ele))
+    return str_from_xml_element(XML.root(ele))
 
 
 def assert_bdom_roundtrip(expect: Baseprint):
-    xe = xml_element(restyle.article(expect))
-    root = ET.fromstring(tostring(xe))
+    root = XML.ET.fromstring(XML.to_str(restyle.article(expect)))
     assert parse_baseprint_root(root) == expect
 
 
@@ -96,8 +95,7 @@ def test_roundtrip(case):
     issues = []
     bp = parse_baseprint(xml_path, issues.append)
     assert bp is not None, issues
-    xe = xml_element(restyle.article(bp))
-    assert tostring(xe) == expect
+    assert XML.to_str(restyle.article(bp)) == expect
     assert not issues
 
 
@@ -130,7 +128,7 @@ def test_article_title():
 
 
 def xml2html(xml):
-    et = ET.fromstring(xml)
+    et = XML.ET.fromstring(xml)
     issues = []
     model = _.base_hypertext_model()
     out = _.MixedContent()
@@ -333,7 +331,7 @@ def test_abstract_restyle():
     </list></p>
   <p>OK</p>
 </abstract>"""
-    xe = xml_element(restyle.abstract(bdom))
+    xe = XML.root(restyle.abstract(bdom))
     assert str_from_xml_element(xe) == restyled
 
     issues = []
@@ -359,8 +357,7 @@ def test_restyle():
     assert bp is not None, issues
     with open(case_dir / "expect/article.xml", "r") as f:
         expect = f.read().rstrip()
-    xe = xml_element(restyle.article(bp))
-    assert tostring(xe) == expect
+    assert XML.to_str(restyle.article(bp)) == expect
     assert {i.condition for i in issues} == {
         fc.InvalidDoi('pub-id', 'element-citation'),
         fc.InvalidPmid('pub-id', 'element-citation'),
@@ -370,7 +367,7 @@ def test_restyle():
 
 def test_minimal_with_issues():
     issues = set()
-    bp = parse_baseprint_root(ET.fromstring("<article/>"), issues.add)
+    bp = parse_baseprint_root(XML.ET.fromstring("<article/>"), issues.add)
     print(issues)
     assert bp == Baseprint()
     assert len(issues) == 4
@@ -396,8 +393,7 @@ def test_minimal_with_issues():
   <body>
   </body>
 </article>"""
-    xe = xml_element(restyle.article(bp))
-    assert tostring(xe) == expect
+    assert XML.to_str(restyle.article(bp)) == expect
 
 
 def test_no_issues():

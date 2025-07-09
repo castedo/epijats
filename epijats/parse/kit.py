@@ -6,18 +6,18 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
-from lxml import etree
-
 from .. import condition as fc
 from ..tree import Element, StartTag
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
+    import lxml.etree
+
+    AttribView: TypeAlias = lxml.etree._Attrib | Mapping[str, str]
 
 
 IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
 EnumT = TypeVar('EnumT', bound=StrEnum)
-AttribView: TypeAlias = etree._Attrib | Mapping[str, str]
 
 
 def issue(

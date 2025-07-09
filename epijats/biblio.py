@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, cast
 import citeproc
 
 from . import baseprint as bp
-from .xml import ET
+from .xml import get_ET
 
 if TYPE_CHECKING:
     from .typeshed import JSONType
@@ -139,26 +139,26 @@ def put_tags_on_own_lines(e: XmlElement) -> None:
         s.tail = "{}\n".format(s.tail or '')
 
 
-def divs_from_citeproc_bibliography(
-    biblio: citeproc.CitationStylesBibliography
-) -> list[XmlElement]:
-    ret: list[XmlElement] = []
-    for item in biblio.bibliography():
-        s = str(item).replace("..\n", ".\n").strip()
-        div = ET.fromstring("<div>" + s + "</div>")
-        put_tags_on_own_lines(div)
-        div.tail = "\n"
-        ret.append(div)
-    return ret
-
-
 class CiteprocBiblioFormatter(BiblioFormatter):
-    def __init__(self, abridged: bool = False):
+    def __init__(self, *, abridged: bool = False, use_lxml: bool):
         self._abridged = abridged
         filename = "abridged.csl" if abridged else "full-preview.csl"
         r = resources.files(__package__) / f"csl/{filename}"
         with resources.as_file(r) as csl_file:
             self._style = citeproc.CitationStylesStyle(csl_file, validate=False)
+        self._ET = get_ET(use_lxml=use_lxml)
+
+    def _divs_from_citeproc_bibliography(
+        self, biblio: citeproc.CitationStylesBibliography
+    ) -> list[XmlElement]:
+        ret: list[XmlElement] = []
+        for item in biblio.bibliography():
+            s = str(item).replace("..\n", ".\n").strip()
+            div = self._ET.fromstring("<div>" + s + "</div>")
+            put_tags_on_own_lines(div)
+            div.tail = "\n"
+            ret.append(div)
+        return ret
 
     def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement:
         csljson = [CsljsonItem.from_ref_item(r).hyperlinkize() for r in refs]
@@ -169,21 +169,25 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         for ref_item in refs:
             c = citeproc.Citation([citeproc.CitationItem(ref_item.id)])
             biblio.register(c)
-        divs = divs_from_citeproc_bibliography(biblio)
+        divs = self._divs_from_citeproc_bibliography(biblio)
         assert len(divs) == len(refs)
-        ret = ET.Element('ol')
+        ret: XmlElement = self._ET.Element('ol')
         ret.text = "\n"
         for i in range(len(divs)):
-            li = ET.Element('li')
+            li = self._ET.Element('li')
             li.attrib['id'] = refs[i].id
             li.text = "\n"
-            li.append(divs[i])  # type: ignore[arg-type]
+            li.append(divs[i])
             if not self._abridged:
                 if comment := refs[i].biblio_fields.get('comment'):
-                    div2 = ET.Element('div')
+                    div2 = self._ET.Element('div')
                     div2.text = comment
                     div2.tail = "\n"
                     li.append(div2)
             li.tail = "\n"
             ret.append(li)
         return ret
+
+    def to_str(self, refs: Sequence[bp.BiblioRefItem]) -> str:
+        e = self.to_element(refs)
+        return self._ET.tostring(e, encoding='unicode')  # type: ignore[no-any-return]

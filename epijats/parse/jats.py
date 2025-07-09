@@ -16,7 +16,6 @@ from ..tree import (
 
 from . import kit
 from .kit import (
-    AttribView,
     TagModelBase,
     Binder,
     ContentParser,
@@ -262,7 +261,7 @@ class AutoCorrectParser(Parser):
         correction.content.append(parsed_p_element)
         self.dest(correction)
 
-    def match(self, tag: str, attrib: AttribView) -> kit.ParseFunc | None:
+    def match(self, tag: str, attrib: kit.AttribView) -> kit.ParseFunc | None:
         return self._parser.match(tag, attrib)
 
 
@@ -506,6 +505,7 @@ class AccessDateModel(TagModelBase[bp.Date]):
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/date-in-citation.html
     """
+
     def __init__(self) -> None:
         super().__init__('date-in-citation')
 
@@ -543,7 +543,7 @@ def read_pub_id(
                 log(fc.InvalidDoi.issue(e, "DOIs begin with '10.'"))
                 https_prefix = "https://doi.org/"
                 if value.startswith(https_prefix):
-                    value = value[len(https_prefix):]
+                    value = value[len(https_prefix) :]
                 else:
                     return False
         case bp.PubIdType.PMID:
