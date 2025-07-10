@@ -124,9 +124,10 @@ class Eprint:
 
     def _source_date_epoch(self) -> dict[str, str]:
         ret = dict()
-        if self.webstract.date is not None:
-            assert isinstance(self.webstract.date, date)
-            doc_date = datetime.combine(self.webstract.date, time(0), timezone.utc)
+        date_str = self.webstract.get('date')
+        if date_str is not None:
+            d = date.fromisoformat(date_str)
+            doc_date = datetime.combine(d, time(0), timezone.utc)
             source_mtime = doc_date.timestamp()
             if source_mtime:
                 ret["SOURCE_DATE_EPOCH"] = "{:.0f}".format(source_mtime)

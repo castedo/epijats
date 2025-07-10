@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Iterable, Iterator
 
 
 @dataclass
@@ -43,13 +43,16 @@ class MixedContent:
     text: str
     _children: list[Element]
 
-    def __init__(self, content: str | MixedContent = ""):
+    def __init__(self, content: str | MixedContent | Iterable[Element] = ""):
         super().__init__()
         if isinstance(content, str):
             self.text = content
             self._children = []
-        else:
+        elif isinstance(content, MixedContent):
             self.text = content.text
+            self._children = list(content)
+        else:
+            self.text = ""
             self._children = list(content)
 
     def __iter__(self) -> Iterator[Element]:

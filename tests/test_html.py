@@ -59,4 +59,7 @@ def test_p_child_html(case):
     expect_html = P_CHILD_CASE/ case / "expect.html"
     with open(expect_html, "r") as f:
         expect = f.read().strip()
-    assert html_from_element(p_child) == expect
+    html = HtmlGenerator()
+    got = html.content_to_str(MixedContent([p_child]))
+    assert html.bare_tex == case.startswith("math")
+    assert got == expect

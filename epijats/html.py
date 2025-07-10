@@ -149,10 +149,14 @@ class CitationTupleHtmlizer(Htmlizer):
 
 
 class MathHtmlizer(Htmlizer):
+    def __init__(self) -> None:
+        self.bare_tex = False
+
     def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
         if isinstance(src, FormulaElement):
             ret = ET.Element('span', {'class': f"math {src.formula_style}"})
             ret.text = src.tex
+            self.bare_tex = True
         else:
             return False
         dest.append(ret)
@@ -161,11 +165,16 @@ class MathHtmlizer(Htmlizer):
 
 class HtmlGenerator:
     def __init__(self) -> None:
+        self._math = MathHtmlizer()
         self._html = UnionHtmlizer()
+        self._html |= self._math
         self._html |= CitationTupleHtmlizer(self._html)
-        self._html |= MathHtmlizer()
         self._html |= DefaultHtmlizer(self._html)
         self._markup = MarkupFormatter(self._html)
+
+    @property
+    def bare_tex(self) -> bool:
+        return self._math.bare_tex
 
     def _html_content_to_str(self, ins: Iterable[str | XmlElement]) -> str:
         ss = []

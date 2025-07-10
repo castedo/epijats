@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime, json, os, shutil, tempfile
 from pathlib import Path
-from datetime import date
 from typing import TYPE_CHECKING, Any, Callable
 from warnings import warn
 
@@ -71,6 +70,7 @@ class Webstract(dict[str, Any]):
     KEYS = [
         "abstract",
         "archive_date",
+        "bare_tex",
         "body",
         "cc_license_type",
         "contributors",
@@ -131,14 +131,10 @@ class Webstract(dict[str, Any]):
         return self._source
 
     @property
-    def date(self) -> date | None:
+    def date(self) -> datetime.date | None:
+        warn("Do not directly access typed non-POD webstract data", DeprecationWarning)
         s = self.get("date")
-        return date.fromisoformat(s) if s else None
-
-    @property
-    def archive_date(self) -> datetime.date | None:
-        s = self.get("archive_date")
-        return date.fromisoformat(s) if s else None
+        return datetime.date.fromisoformat(s) if s else None
 
     def __setitem__(self, key: str, value: Any) -> None:
         if key not in self.KEYS:

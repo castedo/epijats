@@ -1,5 +1,6 @@
 {
     "abstract": "<p>Here we test.</p>\n",
+    "bare_tex": false,
     "body": "<h2 id=\"summary\">Summary</h2>\n<p>Begoña José Sagües is test.</p>\n",
     "contributors": [
         {
