@@ -17,8 +17,8 @@ Stage 3:   ▼
 Choose `--to=jats` to restyle from any JATS XML to Baseprint JATS XML.
 
 ```
-usage: __main__.py [-h] [--version] [--to {jats,html,html+pdf,pdf}] [--no-web-fonts]
-                   inpath outpath
+usage: epijats [-h] [--version] [--to {jats,html,html+pdf,pdf}] [--no-web-fonts]
+               inpath outpath
 
 Eprint JATS
 
@@ -42,3 +42,21 @@ Installation
 python3 -m pip install epijats[pdf]
 ```
 with the `[pdf]` suffix optional and only needed of PDF generation.
+
+
+Option Trade-offs
+-----------------
+
+### `--no-web-fonts`
+
+<dl>
+  <dt> Advantages: </dt>
+  <dd>
++ works offline
+  </dd>
+  <dt> Disadvantages: </dt>
+  <dd>
+- fonts need to be installed locally<br>
+- font rendering may vary
+  </dd>
+</dl>

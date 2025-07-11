@@ -9,7 +9,6 @@ import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
-from warnings import warn
 
 # WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
 # file has relative URLs in anchor hrefs.
@@ -23,15 +22,10 @@ class EprinterConfig:
         self,
         *,
         dsi_domain: str | None = None,
-        dsi_base_url: str | None = None,
         math_css_url: str | None = None,
     ):
-        self.math_css_url = math_css_url or "static/katex/katex.css"
-        if dsi_base_url:
-            warn("use dsi_domain instead of dsi_base_url", DeprecationWarning)
-            if not dsi_domain:
-                assert dsi_base_url.startswith('https://perm.pub')
-                dsi_domain = "perm.pub" 
+        if math_css_url:
+            self.math_css_url = math_css_url
         if dsi_domain:
             self.dsi_domain = dsi_domain
         self.embed_web_fonts = True
@@ -67,8 +61,7 @@ class Eprint:
     def make_html_dir(self, target: Path) -> Path:
         os.makedirs(target, exist_ok=True)
         ret = target / "index.html"
-        # for now just assume math is always needed
-        ctx = dict(doc=self.webstract.facade, has_math=True, **self._html_ctx)
+        ctx = dict(doc=self.webstract.facade, **self._html_ctx)
         assert self._gen
         self._gen.render_file("article.html.jinja", ret, ctx)
         self._gen.render_file("issues.html.jinja", target / "issues.html", ctx)

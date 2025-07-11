@@ -38,7 +38,7 @@ class Main:
     no_web_fonts: bool
 
     def __init__(self, cmd_line_args: Any = None):
-        parser = argparse.ArgumentParser(description="Eprint JATS")
+        parser = argparse.ArgumentParser(prog="epijats", description="Eprint JATS")
         parser.add_argument("--version", action="version", version=version())
         parser.add_argument("inpath", type=Path, help="input directory/path")
         parser.add_argument("outpath", type=Path, help="output directory/path")
