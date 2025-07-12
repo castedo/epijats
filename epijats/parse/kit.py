@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
+from typing import Any, Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
 from .. import condition as fc
 from ..tree import Element, StartTag
@@ -27,6 +27,16 @@ def issue(
     info: str | None = None,
 ) -> None:
     return log(fc.FormatIssue(condition, sourceline, info))
+
+
+def match_start_tag(tag: Any, attrib: AttribView, cases: Iterable[StartTag]) -> bool:
+    for ok in cases:
+        if isinstance(tag, str) and tag == ok.tag:
+            for key, value in ok.attrib.items():
+                if attrib.get(key) != value:
+                    return False
+            return True
+    return False
 
 
 def check_no_attrib(
@@ -257,12 +267,8 @@ class ReaderBinderParser(Parser, Generic[DestT]):
         self._reader = reader
 
     def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
-        for good in self._stags:
-            if tag == good.tag:
-                for key, value in good.attrib.items():
-                    if attrib.get(key) != value:
-                        return None
-                return self._parse
+        if match_start_tag(tag, attrib, self._stags):
+            return self._parse
         return None
 
     def _parse(self, e: XmlElement) -> bool:
@@ -284,17 +290,40 @@ Model: TypeAlias = Binder[Sink[ParsedT]]
 UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
 
 
-class TagModelBase(Model[ParsedT]):
-    def __init__(self, tag: str, attrib: Mapping[str, str] = {}):
-        self.tag = tag
-        self.attrib = dict(attrib)
+class ModelBase(Model[ParsedT]):
+    @property
+    @abstractmethod
+    def stags(self) -> Iterable[StartTag]: ...
+
+    @property
+    def tags(self) -> Iterable[str]:
+        return (s.tag for s in self.stags)
 
     @abstractmethod
     def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None: ...
 
+    def load_if_match(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
+        if match_start_tag(e.tag, e.attrib, self.stags):
+            return self.load(log, e)
+        else:
+            return None
+
     def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
-        stag = StartTag(self.tag, self.attrib)
-        return ReaderBinderParser(log, dest, stag, LoaderReader(self.load))
+        reader = LoaderReader(self.load)
+        return ReaderBinderParser(log, dest, self.stags, reader)
+
+
+class TagModelBase(ModelBase[ParsedT]):
+    def __init__(self, tag: str | StartTag):
+        self.stag = StartTag(tag)
+
+    @property
+    def tag(self) -> str:
+        return self.stag.tag
+
+    @property
+    def stags(self) -> Iterable[StartTag]:
+        return (self.stag,)
 
 
 class LoaderReader(Reader[Sink[ParsedT]]):

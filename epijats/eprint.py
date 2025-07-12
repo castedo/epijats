@@ -24,10 +24,8 @@ class EprinterConfig:
         dsi_domain: str | None = None,
         math_css_url: str | None = None,
     ):
-        if math_css_url:
-            self.math_css_url = math_css_url
-        if dsi_domain:
-            self.dsi_domain = dsi_domain
+        self.dsi_domain = dsi_domain
+        self.math_css_url = math_css_url
         self.embed_web_fonts = True
         self.show_pdf_icon = False
         self.header_banner_msg: str | None = None
@@ -53,7 +51,7 @@ class Eprint:
             'show_pdf_icon',
             'header_banner_msg',
         ]:
-            self._html_ctx[key] = getattr(config, key)
+            self._html_ctx[key] = getattr(config, key, None)
         self.webstract = webstract
         if Eprint._gen is None:
             Eprint._gen = PackagePageGenerator()

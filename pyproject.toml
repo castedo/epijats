@@ -52,7 +52,7 @@ packages = [
 version_file = "epijats/_version.py"
 
 [[tool.mypy.overrides]]
-module = ['citeproc.*', 'weasyprint', 'lxml', 'epijats._version']
+module = ['citeproc.*', 'weasyprint', 'epijats._version']
 ignore_missing_imports = true
 
 [tool.yapf]

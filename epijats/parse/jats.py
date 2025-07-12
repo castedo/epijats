@@ -40,7 +40,6 @@ from .tree import (
     EModel,
     MixedContentBinder,
     MixedContentLoader,
-    TagElementModelBase,
     TextElementModel,
     parse_mixed_content,
 )
@@ -72,7 +71,7 @@ class BiblioRefPool:
         return 0
 
 
-class CitationModel(TagElementModelBase):
+class CitationModel(kit.TagModelBase[Element]):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__(StartTag('xref', {'ref-type': 'bibr'}))
         self._biblio = biblio
@@ -114,7 +113,7 @@ class AutoCorrectCitationModel(CitationModel):
         return ret
 
 
-class CitationTupleModel(TagElementModelBase):
+class CitationTupleModel(kit.TagModelBase[Element]):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__('sup')
         self._submodel = CitationModel(biblio)
@@ -132,15 +131,17 @@ class CitationTupleModel(TagElementModelBase):
             if delim not in ['', ',', ';', ']', ')']:
                 log(fc.IgnoredText.issue(e))
         ret = CitationTuple()
-        eparser = self._submodel.bind(log, ret.append)
         for child in e:
             child.tail = None
-            if not eparser.parse_element(child):
+            citation = self._submodel.load_if_match(log, child)
+            if citation is None:
                 log(fc.UnsupportedElement.issue(child))
+            else:
+                ret.append(citation)
         return ret
 
 
-class CrossReferenceModel(TagElementModelBase):
+class CrossReferenceModel(kit.TagModelBase[Element]):
     def __init__(self, content_model: EModel):
         super().__init__('xref')
         self.content_model = content_model
@@ -315,7 +316,7 @@ class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
     """
 
     def __init__(self, group_type: str) -> None:
-        super().__init__('person-group', {'person-group-type': group_type})
+        super().__init__(StartTag('person-group', {'person-group-type': group_type}))
 
     def load(
         self, log: IssueCallback, e: XmlElement

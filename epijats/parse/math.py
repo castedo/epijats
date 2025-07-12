@@ -14,8 +14,6 @@ from . import kit
 from .kit import IssueCallback
 from .tree import (
     EModel,
-    ElementModelBase,
-    TagElementModelBase,
     parse_mixed_content,
 )
 
@@ -56,7 +54,7 @@ MATHML_TAGS = [
 ]
 
 
-class AnyMathmlModel(ElementModelBase):
+class AnyMathmlModel(kit.ModelBase[Element]):
     @property
     def stags(self) -> Iterable[StartTag]:
         return (StartTag(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS)
@@ -70,7 +68,7 @@ class AnyMathmlModel(ElementModelBase):
         return ret
 
 
-class TexMathElementModel(TagElementModelBase):
+class TexMathElementModel(kit.TagModelBase[Element]):
     def __init__(self) -> None:
         super().__init__('tex-math')
 
@@ -79,7 +77,7 @@ class TexMathElementModel(TagElementModelBase):
         return CdataElement(self.tag, tex)
 
 
-class MathmlElementModel(TagElementModelBase):
+class MathmlElementModel(kit.TagModelBase[Element]):
     """<mml:math> Math (MathML Tag Set)
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/mml-math.html
@@ -95,7 +93,7 @@ class MathmlElementModel(TagElementModelBase):
         return ret
 
 
-class FormulaAlternativesModel(TagElementModelBase):
+class FormulaAlternativesModel(kit.TagModelBase[Element]):
     """<alternatives> within the context of <inline-formula> and <disp-formula>
 
     https://jats.nlm.nih.gov/publishing/tag-library/1.4/element/alternatives.html

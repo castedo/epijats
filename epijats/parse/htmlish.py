@@ -12,7 +12,6 @@ from .tree import (
     EModel,
     TextElementModel,
     EmptyElementModel,
-    TagElementModelBase,
     parse_mixed_content,
 )
 from .kit import IssueCallback
@@ -54,7 +53,7 @@ def formatted_text_model(content: EModel) -> EModel:
     return ItalicModel(content) | TextElementModel(simple_tags, content)
 
 
-class ExtLinkModel(TagElementModelBase):
+class ExtLinkModel(kit.TagModelBase[Element]):
     def __init__(self, content_model: EModel):
         super().__init__('ext-link')
         self.content_model = content_model
@@ -76,7 +75,7 @@ class ExtLinkModel(TagElementModelBase):
             return ret
 
 
-class ListModel(TagElementModelBase):
+class ListModel(kit.TagModelBase[Element]):
     def __init__(self, p_elements_model: EModel):
         super().__init__('list')
         # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
@@ -130,7 +129,7 @@ def def_list_model(term_text: EModel, p_elements: EModel) -> EModel:
     return DataElementModel('def-list', content_model)
 
 
-class TableCellModel(TagElementModelBase):
+class TableCellModel(kit.TagModelBase[Element]):
     def __init__(self, content_model: EModel, *, header: bool):
         super().__init__('th' if header else 'td')
         self.content_model = content_model

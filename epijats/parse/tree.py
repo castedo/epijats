@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from typing import TYPE_CHECKING, Iterable, TypeAlias
 
 from .. import condition as fc
@@ -15,13 +14,11 @@ from ..tree import (
 
 from . import kit
 from .kit import (
-    ReaderBinderParser,
     Binder,
     IssueCallback,
     Loader,
     Model,
     Parser,
-    Sink,
 )
 
 if TYPE_CHECKING:
@@ -43,45 +40,7 @@ def parse_mixed_content(
             dest.append_text(s.tail)
 
 
-class ElementModelBase(Model[Element]):
-    @property
-    @abstractmethod
-    def stags(self) -> Iterable[StartTag]: ...
-
-    @property
-    def tags(self) -> Iterable[str]:
-        return (s.tag for s in self.stags)
-
-    @abstractmethod
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None: ...
-
-    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
-        return ReaderBinderParser(log, dest, self.stags, self.read)
-
-    def read(self, log: IssueCallback, e: XmlElement, dest: Sink[Element]) -> bool:
-        parsed = self.load(log, e)
-        if parsed is not None:
-            assert isinstance(parsed, Element)
-            if e.tail:
-                parsed.tail = e.tail
-            dest(parsed)
-        return parsed is not None
-
-
-class TagElementModelBase(ElementModelBase):
-    def __init__(self, stag: str | StartTag):
-        self.stag = StartTag(stag)
-
-    @property
-    def tag(self) -> str:
-        return self.stag.tag
-
-    @property
-    def stags(self) -> Iterable[StartTag]:
-        return (self.stag,)
-
-
-class EmptyElementModel(TagElementModelBase):
+class EmptyElementModel(kit.TagModelBase[Element]):
     def __init__(self, tag: str, *, attrib: set[str] = set()):
         super().__init__(tag)
         self._ok_attrib_keys = attrib
@@ -92,7 +51,7 @@ class EmptyElementModel(TagElementModelBase):
         return ret
 
 
-class DataElementModel(TagElementModelBase):
+class DataElementModel(kit.TagModelBase[Element]):
     def __init__(self, tag: str, content_model: EModel, *, attrib: set[str] = set()):
         super().__init__(tag)
         self.content_model = content_model
@@ -105,7 +64,7 @@ class DataElementModel(TagElementModelBase):
         return ret
 
 
-class TextElementModel(ElementModelBase):
+class TextElementModel(kit.ModelBase[Element]):
     def __init__(self, tags: set[str], content_model: EModel):
         self._tags = tags
         self.content_model = content_model
