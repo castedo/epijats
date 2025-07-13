@@ -112,6 +112,11 @@ class IgnoredText(ElementFormatCondition):
     """Unexpected text ignored within XML element"""
 
 
+@dataclass(frozen=True)
+class IgnoredTail(ElementFormatCondition):
+    """Unexpected text ignored after XML element"""
+
+
 class InvalidOrcid(ElementFormatCondition):
     """Invalid ORCID"""
 

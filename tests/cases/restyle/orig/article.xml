@@ -18,8 +18,9 @@
   </front>
   <body>
     <p>!<xref alt="1" rid="ref-1" ref-type="bibr">1</xref></p>
+    <p>OneToThree<sup>(<xref rid="ref-1" ref-type="bibr">1</xref>-<xref rid="ref-hartl_essential_2006" ref-type="bibr">3</xref>)</sup></p>
     <p>Two<sup><xref alt="2" rid="ref-himmelstein_open_2019" ref-type="bibr">2</xref></sup></p>
-    <p>OneThree<sup><xref rid="ref-1" ref-type="bibr"></xref><xref rid="ref-hartl_essential_2006" ref-type="bibr"></xref></sup></p>
+    <p>OneThree<sup><xref rid="ref-1" ref-type="bibr"></xref>,<xref rid="ref-hartl_essential_2006" ref-type="bibr"></xref></sup></p>
   </body>
   <back>
     <ref-list>
@@ -28,20 +29,6 @@
           <year iso-8601-date="1969">1969</year>
           <pub-id pub-id-type="doi">https://doi.org/10.1111/j.1558-5646.1969.tb03496.x</pub-id>
           <pub-id pub-id-type="pmid">PMC666</pub-id>
-        </element-citation>
-      </ref>
-      <ref id="ref-hartl_essential_2006">
-        <element-citation publication-type="book">
-          <person-group person-group-type="author">
-            <name><surname>Hartl</surname><given-names>Daniel L.</given-names></name>
-            <name><surname>Jones</surname><given-names>Elizabeth W.</given-names></name>
-          </person-group>
-          <source>Essential genetics: A genomics perspective</source>
-          <publisher-name>Jones; Bartlett Publishers</publisher-name>
-          <publisher-loc>Boston</publisher-loc>
-          <year iso-8601-date="2006">2006</year>
-          <edition>4th ed</edition>
-          <isbn>978-0-7637-3527-2</isbn>
         </element-citation>
       </ref>
       <ref id="ref-himmelstein_open_2019">
@@ -69,6 +56,20 @@
           <pub-id pub-id-type="doi">10.1371/journal.pcbi.1007128</pub-id>
           <fpage>e1007128</fpage>
           <lpage></lpage>
+        </element-citation>
+      </ref>
+      <ref id="ref-hartl_essential_2006">
+        <element-citation publication-type="book">
+          <person-group person-group-type="author">
+            <name><surname>Hartl</surname><given-names>Daniel L.</given-names></name>
+            <name><surname>Jones</surname><given-names>Elizabeth W.</given-names></name>
+          </person-group>
+          <source>Essential genetics: A genomics perspective</source>
+          <publisher-name>Jones; Bartlett Publishers</publisher-name>
+          <publisher-loc>Boston</publisher-loc>
+          <year iso-8601-date="2006">2006</year>
+          <edition>4th ed</edition>
+          <isbn>978-0-7637-3527-2</isbn>
         </element-citation>
       </ref>
     </ref-list>

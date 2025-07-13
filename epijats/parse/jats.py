@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING
 from warnings import warn
 
@@ -50,33 +51,44 @@ if TYPE_CHECKING:
 
 
 class BiblioRefPool:
-    def __init__(self, avail: list[bp.BiblioRefItem]):
-        self._avail = avail
+    def __init__(self, orig: Iterable[bp.BiblioRefItem]):
+        self._orig = list(orig)
         self.used: list[bp.BiblioRefItem] = []
+        self._orig_order = True
 
-    def cite(self, rid: str) -> int:
-        """Cite a reference in the bibliography.
-
-        Returns:
-            Zero if no reference found, otherwise 1 to N for bibliography entry.
-        """
-
-        for i, ref in enumerate(self.used):
+    def cite(self, rid: str, ideal_rord: int | None) -> Citation | None:
+        for zidx, ref in enumerate(self.used):
             if rid == ref.id:
-                return i + 1
-        for ref in self._avail:
+                return Citation(rid, zidx + 1)
+        for zidx, ref in enumerate(self._orig):
             if rid == ref.id:
+                if self._orig_order:
+                    if zidx + 1 == ideal_rord:
+                        for j in range(len(self.used), zidx):
+                            self.used.append(self._orig[j])
+                    else:
+                        self._orig_order = False
                 self.used.append(ref)
-                return len(self.used)
-        return 0
+                return Citation(rid, len(self.used))
+        return None
+
+    def get_by_rord(self, rord: int) -> bp.BiblioRefItem:
+        """Get using one-based index of 'rord' value"""
+
+        return self.used[rord - 1]
+
+    def inner_range(self, before: Citation, after: Citation) -> Iterator[Citation]:
+        for rord in range(before.rord + 1, after.rord):
+            rid = self.get_by_rord(rord).id
+            yield Citation(rid, rord)
 
 
-class CitationModel(kit.TagModelBase[Element]):
+class CitationModel(kit.TagModelBase[Citation]):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__(StartTag('xref', {'ref-type': 'bibr'}))
-        self._biblio = biblio
+        self.biblio = biblio
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: IssueCallback, e: XmlElement) -> Citation | None:
         assert e.attrib.get("ref-type") == "bibr"
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
@@ -88,29 +100,67 @@ class CitationModel(kit.TagModelBase[Element]):
             return None
         for s in e:
             log(fc.UnsupportedElement.issue(s))
-        i = self._biblio.cite(rid)
-        if i:
-            if e.text and e.text.strip() != str(i):
-                log(fc.IgnoredText.issue(e))
-            return Citation(rid, i)
-        else:
-            log(fc.InvalidCitation.issue(e))
-            ret = bp.CrossReference(rid, "bibr")
-            ret.content.append_text(e.text)
-            return ret
-
-
-class AutoCorrectCitationModel(CitationModel):
-    def __init__(self, biblio: BiblioRefPool):
-        super().__init__(biblio)
-
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
-        citation = super().load(log, e)
-        if not citation:
-            return None
-        ret = CitationTuple()
-        ret.append(citation)
+        try:
+            rord = int(e.text or '')
+        except ValueError:
+            rord = None
+        ret = self.biblio.cite(rid, rord)
+        if not ret:
+            log(fc.InvalidCitation.issue(e, rid))
+        elif e.text and not ret.matching_text(e.text):
+            log(fc.IgnoredText.issue(e))
         return ret
+
+
+class AutoCorrectCitationModel(kit.TagModelBase[Element]):
+    def __init__(self, biblio: BiblioRefPool):
+        submodel = CitationModel(biblio)
+        super().__init__(submodel.stag)
+        self._submodel = submodel
+
+    def load(self, log: IssueCallback, e: XmlElement) -> CitationTuple | None:
+        citation = self._submodel.load(log, e)
+        if citation:
+            return CitationTuple([citation])
+        else:
+            return None
+
+
+class CitationRangeHelper:
+    def __init__(self, log: IssueCallback, biblio: BiblioRefPool):
+        self.log = log
+        self._biblio = biblio
+        self.starter: Citation | None = None
+        self.stopper: Citation | None = None
+
+    @staticmethod
+    def is_tuple_open(text: str | None) -> bool:
+        delim = text.strip() if text else ''
+        return delim in {'', '[', '('}
+
+    def get_range(self, child: XmlElement, citation: Citation) -> Iterator[Citation]:
+        if citation.matching_text(child.text):
+            self.stopper = citation
+        if self.starter:
+            if self.stopper:
+                return self._biblio.inner_range(self.starter, self.stopper)
+            else:
+                msg = f"Invalid citation '{citation.rid}' to end range"
+                self.log(fc.InvalidCitation.issue(child, msg))
+        return iter(())
+
+    def new_start(self, child: XmlElement) -> None:
+        delim = child.tail.strip() if child.tail else ''
+        if delim in {'-', '\u2010', '\u2011', '\u2012', '\u2013', '\u2014'}:
+            self.starter = self.stopper
+            if not self.starter:
+                msg = "Invalid citation to start range"
+                self.log(fc.InvalidCitation.issue(child, msg))
+        else:
+            self.starter = None
+            if delim not in {'', ',', ';', ']', ')'}:
+                self.log(fc.IgnoredTail.issue(child))
+        self.stopper = None
 
 
 class CitationTupleModel(kit.TagModelBase[Element]):
@@ -119,25 +169,23 @@ class CitationTupleModel(kit.TagModelBase[Element]):
         self._submodel = CitationModel(biblio)
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
-        assert e.tag == 'sup'
         kit.check_no_attrib(log, e)
         if not any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in e):
+            log(fc.MissingElement.issue(e, "xref ret-type='bibr' citations missing"))
             return None
-        delim = e.text.strip() if e.text else ''
-        if delim not in ['', '[', '(']:
+        range_helper = CitationRangeHelper(log, self._submodel.biblio)
+        if not range_helper.is_tuple_open(e.text):
             log(fc.IgnoredText.issue(e))
-        for child in e:
-            delim = child.tail.strip() if child.tail else ''
-            if delim not in ['', ',', ';', ']', ')']:
-                log(fc.IgnoredText.issue(e))
         ret = CitationTuple()
         for child in e:
-            child.tail = None
             citation = self._submodel.load_if_match(log, child)
             if citation is None:
                 log(fc.UnsupportedElement.issue(child))
             else:
+                ret.extend(range_helper.get_range(child, citation))
+                citation.tail = ''
                 ret.append(citation)
+            range_helper.new_start(child)
         return ret
 
 

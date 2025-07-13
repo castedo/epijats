@@ -124,22 +124,29 @@ class Citation(MarkupElement):
     def __init__(self, rid: str, rord: int):
         super().__init__(StartTag('xref', {'rid': rid, 'ref-type': 'bibr'}))
         self.rid = rid
+        self.rord = rord
         self.content.append_text(str(rord))
+
+    def matching_text(self, text: str | None) -> bool:
+        return text is not None and text.strip() == self.content.text
 
 
 @dataclass
 class CitationTuple(Element):
-    _citations: list[Element]
+    _citations: list[Citation]
 
-    def __init__(self) -> None:
+    def __init__(self, citations: Iterable[Citation] = ()) -> None:
         super().__init__('sup')
-        self._citations = []
+        self._citations = list(citations)
 
     def __iter__(self) -> Iterator[Element]:
         return iter(self._citations)
 
-    def append(self, c: Element) -> None:
+    def append(self, c: Citation) -> None:
         self._citations.append(c)
+
+    def extend(self, cs: Iterable[Citation]) -> None:
+        self._citations.extend(cs)
 
 
 def make_paragraph(text: str) -> MarkupElement:

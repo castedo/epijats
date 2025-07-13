@@ -1,16 +1,23 @@
+from __future__ import annotations
+
 import os, subprocess, tempfile
 from pathlib import Path
 from importlib import resources
-from typing import Any, Iterable
+from typing import Any, Iterable, TYPE_CHECKING
+from warnings import warn
 
 from .parse import parse_baseprint
 from .html import HtmlGenerator
 from .webstract import Webstract
 from .condition import FormatIssue
-from . import restyle
+from . import restyle, baseprint
+
+if TYPE_CHECKING:
+    from .typeshed import JSONType
 
 
 def run_pandoc(args: Iterable[Any], echo: bool = True) -> str:
+    warn("Stop using EPIJATS_USE_PANDOC mode", DeprecationWarning)
     cmd = ["pandoc"] + [str(a) for a in args]
     if echo:
         print(" ".join(cmd))
@@ -25,6 +32,19 @@ def pandoc_jats_to_webstract(jats_src: Path | str) -> str:
     ):
         args = ["-d", defaults_file, "--csl", csl_file]
         return run_pandoc(args + [jats_src])
+
+
+def author_as_pod(self: baseprint.Author) -> JSONType:
+    ret: dict[str, JSONType] = {'type': 'author'}
+    if self.name.surname:
+        ret['surname'] = self.name.surname
+    if self.name.given_names:
+        ret['given-names'] = self.name.given_names
+    if self.email:
+        ret['email'] = [self.email]
+    if self.orcid:
+        ret['orcid'] = self.orcid.as_19chars()
+    return ret
 
 
 def webstract_from_jats(src: Path | str) -> Webstract:
@@ -50,18 +70,9 @@ def webstract_from_jats(src: Path | str) -> Webstract:
             ret['body'] = pandoc_jats_to_webstract(jats_src)
     ret.set_source_from_path(src)
     ret['title'] = gen.content_to_str(bp.title)
-    ret['contributors'] = list()
+    ret['contributors'] = [author_as_pod(a) for a in bp.authors]
     if bp.abstract:
         ret['abstract'] = gen.proto_section_to_str(bp.abstract)
-    for a in bp.authors:
-        d: dict[str, Any] = {'surname': a.name.surname, 'type': 'author'}
-        if a.name.given_names:
-            d['given-names'] = a.name.given_names
-        if a.email:
-            d['email'] = [a.email]
-        if a.orcid:
-            d['orcid'] = a.orcid.as_19chars()
-        ret['contributors'].append(d)
     ret['issues'] = [i.as_pod() for i in issues]
     if bp.permissions:
         if bp.permissions.license:

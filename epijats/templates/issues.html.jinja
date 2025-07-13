@@ -12,6 +12,9 @@ There are {{ doc.issues | length }} Baseprint document format issues in <code>ar
 {% if issue.sourceline %}
 (line {{ issue.sourceline }})
 {% endif %}
+{% if issue.info %}
+"{{ issue.info }}"
+{% endif %}
 </li>
 {% endfor %}
 </ol>
