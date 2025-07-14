@@ -200,13 +200,17 @@ def load_string_content(log: IssueCallback, e: XmlElement) -> str:
     return "".join(frags)
 
 
-def load_int(log: IssueCallback, e: XmlElement) -> int | None:
+def load_int(
+    log: IssueCallback, e: XmlElement, *, strip_trailing_period: bool = False
+) -> int | None:
     for s in e:
         log(fc.UnsupportedElement.issue(s))
         if s.tail and s.tail.strip():
             log(fc.IgnoredText.issue(e))
     try:
         text = e.text or ""
+        if strip_trailing_period:
+            text = text.rstrip().rstrip('.')
         return int(text)
     except ValueError:
         log(fc.InvalidInteger.issue(e, text))

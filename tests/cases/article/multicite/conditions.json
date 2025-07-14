@@ -1,0 +1,5 @@
+[
+  ["UnsupportedAttribute", "element-citation", "publication-type"],
+  ["InvalidDoi", "pub-id", "element-citation"],
+  ["InvalidPmid", "pub-id", "element-citation"]
+]

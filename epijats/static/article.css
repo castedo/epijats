@@ -409,16 +409,13 @@
   margin: 0;
   font-weight: normal;
 }
-.eprint .contributors > dt:not(:first-child)::after {
+.eprint .contributors > dt:not(:first-child)::before {
   content: ",";
 }
 .eprint .contributors > dd::before {
   content: "(";
 }
 .eprint .contributors > dd::after {
-  content: "),";
-}
-.eprint .contributors > dd:last-child::after {
   content: ")";
 }
 .eprint .orcid-icon::before {

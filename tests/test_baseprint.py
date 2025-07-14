@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import os, pytest
+import json, os, pytest
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING, Tuple
 
@@ -24,7 +25,7 @@ XML = XmlFormatter(use_lxml=True)
 
 TEST_CASES = Path(__file__).parent / "cases"
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
-ROUNDTRIP_CASE = Path(__file__).parent / "cases" / "roundtrip"
+ARTICLE_CASE = Path(__file__).parent / "cases" / "article"
 
 HTML = html.HtmlGenerator()
 NSMAP = {
@@ -87,24 +88,29 @@ def test_minimalish():
     assert_bdom_roundtrip(got)
 
 
-@pytest.mark.parametrize("case", os.listdir(ROUNDTRIP_CASE))
-def test_roundtrip(case):
-    xml_path = ROUNDTRIP_CASE / case / "article.xml"
-    with open(xml_path, "r") as f:
-        expect = f.read().rstrip()
+@pytest.mark.parametrize("case", os.listdir(ARTICLE_CASE))
+def test_article(case):
+    case_path = ARTICLE_CASE / case
     issues = []
-    bp = parse_baseprint(xml_path, issues.append)
+    article_path = case_path / "article.xml"
+    bp = parse_baseprint(article_path, issues.append)
     assert bp is not None, issues
+
+    expect_path = case_path / "restyle.xml"
+    if not expect_path.exists():
+        expect_path = article_path
+    with open(expect_path, "r") as f:
+        expect = f.read().rstrip()
     assert XML.to_str(restyle.article(bp)) == expect
-    assert not issues
 
+    conditions_path = case_path / "conditions.json"
+    if not conditions_path.exists():
+        assert not issues
+    else:
+        with open(conditions_path, "r") as f:
+            conditions = Counter(i.condition for i in issues)
+            assert [c.as_pod() for c in conditions] == json.load(f)
 
-@pytest.mark.parametrize("case", os.listdir(ROUNDTRIP_CASE))
-def test_html(case):
-    case_path = ROUNDTRIP_CASE / case
-    issues = []
-    bp = parse_baseprint(case_path / "article.xml", issues.append)
-    assert bp
     title = HTML.content_to_str(bp.title)
     assert_eq_if_exists(title, case_path / "title.html")
     abstract = HTML.proto_section_to_str(bp.abstract)
@@ -348,21 +354,6 @@ def test_abstract_restyle():
 <p>OK</p>
 """
     assert HTML.proto_section_to_str(bdom) == expect_html
-
-
-def test_restyle():
-    case_dir = TEST_CASES / "restyle"
-    issues = []
-    bp = parse_baseprint(case_dir / "orig/", issues.append)
-    assert bp is not None, issues
-    with open(case_dir / "expect/article.xml", "r") as f:
-        expect = f.read().rstrip()
-    assert XML.to_str(restyle.article(bp)) == expect
-    assert {i.condition for i in issues} == {
-        fc.InvalidDoi('pub-id', 'element-citation'),
-        fc.InvalidPmid('pub-id', 'element-citation'),
-        fc.UnsupportedAttribute('element-citation', 'publication-type'),
-    }
 
 
 def test_minimal_with_issues():

@@ -518,14 +518,15 @@ def body_binder(biblio: BiblioRefPool | None) -> Binder[bp.ProtoSection]:
     return kit.SingleElementBinder('body', ProtoSectionContentBinder(p_child, p_level))
 
 
-class IntModel(TagModelBase[int]):
-    def __init__(self, tag: str, max_int: int):
+class PositiveIntModel(TagModelBase[int]):
+    def __init__(self, tag: str, max_int: int, *, strip_trailing_period: bool = False):
         super().__init__(tag)
         self.max_int = max_int
+        self.strip_trailing_period = strip_trailing_period
 
     def load(self, log: IssueCallback, e: XmlElement) -> int | None:
         kit.check_no_attrib(log, e)
-        ret = kit.load_int(log, e)
+        ret = kit.load_int(log, e, strip_trailing_period=self.strip_trailing_period)
         if ret and ret not in range(1, self.max_int + 1):
             log(fc.UnsupportedAttributeValue.issue(e, self.tag, str(ret)))
             ret = None
@@ -535,8 +536,8 @@ class IntModel(TagModelBase[int]):
 class DateBuilder:
     def __init__(self, cp: ContentParser):
         self.year = cp.one(tag_model('year', kit.load_int))
-        self.month = cp.one(IntModel('month', 12))
-        self.day = cp.one(IntModel('day', 31))
+        self.month = cp.one(PositiveIntModel('month', 12))
+        self.day = cp.one(PositiveIntModel('day', 31))
 
     def build(self) -> bp.Date | None:
         ret = None
@@ -669,7 +670,8 @@ class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
         ret = bp.BiblioRefItem()
         kit.check_no_attrib(log, e, ['id'])
         cp = ContentParser(log)
-        cp.one(IntModel('label', 1048576))  # ignoring if it's a valid integer
+        label = PositiveIntModel('label', 1048576, strip_trailing_period=True)
+        cp.one(label)  # ignoring if it's a valid integer
         cp.bind(ReaderBinder('element-citation', read_element_citation).once(), ret)
         cp.parse_array_content(e)
         ret.id = e.attrib.get('id', "")
