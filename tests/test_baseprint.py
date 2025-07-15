@@ -234,7 +234,8 @@ def mock_biblio_pool() -> _.BiblioRefPool:
 def verify_roundtrip_citation(
     log: _.IssueCallback, start: str, expected: str,
 ) -> Element:
-    model = _.CitationTupleModel(mock_biblio_pool())
+    fake = _.UnionModel()
+    model = _.CitationTupleModel(mock_biblio_pool(), fake)
     subel1 = model.load(log, lxml_element_from_str(start))
     assert subel1
     got = str_from_element(subel1)

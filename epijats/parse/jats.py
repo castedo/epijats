@@ -164,15 +164,21 @@ class CitationRangeHelper:
 
 
 class CitationTupleModel(kit.TagModelBase[Element]):
-    def __init__(self, biblio: BiblioRefPool):
+    def __init__(self, biblio: BiblioRefPool, sup_model: Model[Element]):
         super().__init__('sup')
         self._submodel = CitationModel(biblio)
+        self._sup_model = sup_model
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e)
         if not any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in e):
-            log(fc.MissingElement.issue(e, "xref ret-type='bibr' citations missing"))
-            return None
+            # this isn't a citation tuple, so parse per the regular sup_model
+            parse_result = kit.Result[Element]()
+            sup_parser = self._sup_model.bind(log, parse_result)
+            sup_parser.parse_element(e)
+            if not parse_result.out:
+                warn("CitationTupleModel not provided a parser of <sub> elements")
+            return parse_result.out
         range_helper = CitationRangeHelper(log, self._submodel.biblio)
         if not range_helper.is_tuple_open(e.text):
             log(fc.IgnoredText.issue(e))
@@ -414,7 +420,7 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     p_elements = UnionModel[Element]()
     if biblio:
         p_elements |= AutoCorrectCitationModel(biblio)
-        p_elements |= CitationTupleModel(biblio)
+        p_elements |= CitationTupleModel(biblio, hypertext)
     p_elements |= hypertext
     p_elements |= disp_formula_model()
     p_elements |= preformatted
