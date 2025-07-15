@@ -327,15 +327,23 @@ class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
         return ret
 
 
-def abstract_binder() -> Binder[bp.ProtoSection]:
+class AbstractModel(TagModelBase[bp.Abstract]):
     """<abstract> Abstract
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
     """
-    p_child = p_child_model()
-    just_para = TextElementModel({'p'}, p_child)
-    content = ProtoSectionContentBinder(p_child, just_para)
-    return kit.SingleElementBinder('abstract', content)
+    def __init__(self) -> None:
+        super().__init__('abstract')
+        p_child = p_child_model()
+        just_para = TextElementModel({'p'}, p_child)
+        self._content = ProtoSectionContentBinder(p_child, just_para)
+
+    def load(self, log: IssueCallback, e: XmlElement) -> bp.Abstract | None:
+        ret = bp.Abstract()
+        cp = ContentParser(log)
+        cp.bind(self._content, ret)
+        cp.parse_array_content(e)
+        return ret
 
 
 class SectionModel(TagModelBase[bp.Section]):
@@ -488,13 +496,15 @@ def read_article_meta(log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> 
     cp = ContentParser(log)
     title = cp.one(title_group_model())
     authors = cp.one(tag_model('contrib-group', load_author_group))
-    cp.bind(abstract_binder().once(), dest.abstract)
+    abstract = cp.one(AbstractModel())
     permissions = cp.one(tag_model('permissions', load_permissions))
     cp.parse_array_content(e)
     if title.out:
         dest.title = title.out
     if authors.out is not None:
         dest.authors = authors.out
+    if abstract.out is not None:
+        dest.abstract = abstract.out
     if permissions.out is not None:
         dest.permissions = permissions.out
     return True
@@ -718,7 +728,7 @@ def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
         log(fc.FormatIssue(fc.MissingContent('article-title', 'title-group')))
     if not len(ret.authors):
         log(fc.FormatIssue(fc.MissingContent('contrib', 'contrib-group')))
-    if ret.abstract.has_no_content():
+    if not ret.abstract or ret.abstract.has_no_content():
         log(fc.FormatIssue(fc.MissingContent('abstract', 'article-meta')))
     if ret.body.has_no_content():
         log(fc.FormatIssue(fc.MissingContent('body', 'article')))

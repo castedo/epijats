@@ -209,7 +209,7 @@ class BiblioRefList:
 class Baseprint:
     title: MixedContent
     authors: list[Author]
-    abstract: Abstract
+    abstract: Abstract | None
     permissions: Permissions | None
     body: ProtoSection
     ref_list: BiblioRefList | None
@@ -218,6 +218,6 @@ class Baseprint:
         self.title = MixedContent()
         self.authors = []
         self.permissions = None
-        self.abstract = Abstract()
+        self.abstract = None
         self.body = ProtoSection()
         self.ref_list = None

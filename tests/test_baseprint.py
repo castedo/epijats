@@ -36,7 +36,7 @@ NSMAP = {
 NSMAP_STR = " ".join('xmlns:{}="{}"'.format(k, v) for k, v in NSMAP.items())
 
 
-def assert_eq_if_exists(got: str, expect: Path):
+def assert_eq_if_exists(got: str | None, expect: Path):
     if expect.exists():
         with open(expect, "r") as f:
             assert got == f.read()
@@ -66,15 +66,6 @@ def str_from_element(ele: Element) -> str:
 def assert_bdom_roundtrip(expect: Baseprint):
     root = XML.ET.fromstring(XML.to_str(restyle.article(expect)))
     assert parse_baseprint_root(root) == expect
-
-
-def parse_abstract(e: XmlElement) -> Tuple[Abstract, list[fc.FormatIssue]]:
-    issues: list[fc.FormatIssue] = []
-    ret = Abstract()
-    binder = _.abstract_binder()
-    p = binder.bind(issues.append, ret)
-    p.parse_element(e)
-    return (ret, issues)
 
 
 def test_minimalish():
@@ -113,7 +104,7 @@ def test_article(case):
 
     title = HTML.content_to_str(bp.title)
     assert_eq_if_exists(title, case_path / "title.html")
-    abstract = HTML.proto_section_to_str(bp.abstract)
+    abstract = HTML.proto_section_to_str(bp.abstract) if bp.abstract else None
     assert_eq_if_exists(abstract, case_path / "abstract.html")
     body = HTML.html_body_content(bp)
     assert_eq_if_exists(body, case_path / "body.html")
@@ -316,6 +307,9 @@ def test_author_restyle():
 
 
 def test_abstract_restyle():
+    model = _.AbstractModel()
+    issues: list[fc.FormatIssue] = []
+
     bad_style = """\
 <abstract>
     <p>OK</p>
@@ -326,7 +320,8 @@ def test_abstract_restyle():
     </list>
                 <p>OK</p>
 </abstract>"""
-    (bdom, _) = parse_abstract(lxml_element_from_str(bad_style))
+    bdom = model.load(issues.append, lxml_element_from_str(bad_style))
+    assert bdom and not issues
     restyled = """\
 <abstract>
   <p>OK</p>
@@ -340,8 +335,7 @@ def test_abstract_restyle():
     xe = XML.root(restyle.abstract(bdom))
     assert str_from_xml_element(xe) == restyled
 
-    issues = []
-    (roundtrip, issues) = parse_abstract(xe)
+    roundtrip = model.load(issues.append, xe)
     assert not issues
     assert roundtrip == bdom
 
@@ -375,10 +369,6 @@ def test_minimal_with_issues():
       <title-group>
         <article-title></article-title>
       </title-group>
-      <contrib-group>
-      </contrib-group>
-      <abstract>
-      </abstract>
     </article-meta>
   </front>
   <body>

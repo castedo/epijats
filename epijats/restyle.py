@@ -153,16 +153,13 @@ def ref_list(src: baseprint.BiblioRefList) -> DataElement:
 
 
 def article(src: baseprint.Baseprint) -> DataElement:
-    article_meta = DataElement(
-        'article-meta',
-        [
-            title_group(src.title),
-            contrib_group(src.authors),
-        ],
-    )
+    article_meta = DataElement('article-meta', [title_group(src.title)])
+    if src.authors:
+        article_meta.append(contrib_group(src.authors))
     if src.permissions:
         article_meta.append(permissions(src.permissions))
-    article_meta.append(abstract(src.abstract))
+    if src.abstract:
+        article_meta.append(abstract(src.abstract))
     ret = DataElement(
         'article',
         [
