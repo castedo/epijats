@@ -217,20 +217,27 @@ def mixed_element_model(tag: str) -> Model[MixedContent]:
     return tag_model(tag, MixedContentLoader(base_hypertext_model()))
 
 
-def title_model(tag: str) -> Model[MixedContent]:
+def article_title_model() -> Model[MixedContent]:
+    """
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article-title.html
+    """
+    return mixed_element_model('article-title')
+
+
+def title_model() -> Model[MixedContent]:
+    """
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/title.html
+    """
     content_model = base_hypertext_model() | break_model()
-    return tag_model(tag, MixedContentLoader(content_model))
+    return tag_model('title', MixedContentLoader(content_model))
 
 
 def hypertext_element_binder(tag: str) -> Binder[MixedContent]:
     return MixedContentBinder(tag, base_hypertext_model())
 
 
-title_binder = hypertext_element_binder
-
-
 def title_group_model() -> Model[MixedContent]:
-    loader = kit.SingleSubElementLoader(title_model('article-title'))
+    loader = kit.SingleSubElementLoader(article_title_model())
     return tag_model('title-group', loader)
 
 
@@ -334,6 +341,7 @@ class AbstractModel(TagModelBase[bp.Abstract]):
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
     """
+
     def __init__(self) -> None:
         super().__init__('abstract')
         p_child = p_child_model()
@@ -362,9 +370,13 @@ class SectionModel(TagModelBase[bp.Section]):
         kit.check_no_attrib(log, e, ['id'])
         ret = bp.Section([], [], e.attrib.get('id'), MixedContent())
         cp = ContentParser(log)
-        cp.bind(title_binder('title'), ret.title)
+        title = cp.one(title_model())
         cp.bind(self._proto, ret)
         cp.parse_array_content(e)
+        if title.out:
+            ret.title = title.out
+        else:
+            log(fc.FormatIssue(fc.MissingContent('title', 'sec')))
         return ret
 
 
@@ -456,18 +468,15 @@ CC_URLS = {
 class LicenseRefBinder(kit.Reader[bp.License]):
     TAG = "{http://www.niso.org/schemas/ali/1.0/}license_ref"
 
-    def read(
-        self, log: IssueCallback, xe: XmlElement, dest: bp.License
-    ) -> None:
+    def read(self, log: IssueCallback, xe: XmlElement, dest: bp.License) -> None:
         kit.check_no_attrib(log, xe, ['content-type'])
         dest.license_ref = kit.load_string_content(log, xe)
         got_license_type = kit.get_enum_value(log, xe, 'content-type', bp.CcLicenseType)
         for prefix, matching_type in CC_URLS.items():
             if dest.license_ref.startswith(prefix):
                 if got_license_type and got_license_type != matching_type:
-                    log(fc.InvalidAttributeValue.issue(
-                        xe, 'content-type', got_license_type
-                    ))
+                    issue = fc.InvalidAttributeValue.issue
+                    log(issue(xe, 'content-type', got_license_type))
                 dest.cc_license_type = matching_type
                 return
         dest.cc_license_type = got_license_type
@@ -709,7 +718,7 @@ class RefListModel(TagModelBase[bp.BiblioRefList]):
     def load(self, log: IssueCallback, e: XmlElement) -> bp.BiblioRefList | None:
         kit.check_no_attrib(log, e)
         cp = ContentParser(log)
-        title = cp.one(title_model('title'))
+        title = cp.one(title_model())
         references = cp.every(BiblioRefItemModel())
         cp.parse_array_content(e)
         return bp.BiblioRefList(title.out, list(references))

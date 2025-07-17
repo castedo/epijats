@@ -273,7 +273,7 @@ class ParserBinder(Binder[DestT]):
 
 
 class Reader(ParserBinder[DestT]):
-    def __init__(self, tag: str | StartTag | None = None):
+    def __init__(self, tag: str | None = None):
         if tag is None:
             tag = getattr(type(self), 'TAG')
         self.tag = tag
@@ -330,7 +330,7 @@ class TagModelBase(ModelBase[ParsedT]):
 
 
 class LoaderTagModel(TagModelBase[ParsedT]):
-    def __init__(self, tag: str | StartTag, loader: Loader[ParsedT]):
+    def __init__(self, tag: str, loader: Loader[ParsedT]):
         super().__init__(tag)
         self._loader = loader
 

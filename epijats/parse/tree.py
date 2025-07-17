@@ -13,10 +13,8 @@ from ..tree import (
 
 from . import kit
 from .kit import (
-    Binder,
     IssueCallback,
     Loader,
-    Parser,
 )
 
 if TYPE_CHECKING:
@@ -82,25 +80,6 @@ class TextElementModel(kit.ModelBase[Element]):
         return ret
 
 
-class MixedContentParser(Parser):
-    def __init__(self, log: IssueCallback, dest: MixedContent, model: EModel, tag: str):
-        super().__init__(log)
-        self.dest = dest
-        self.model = model
-        self.tag = tag
-
-    def match(self, xe: XmlElement) -> kit.ParseFunc | None:
-        return self._parse if xe.tag == self.tag else None
-
-    def _parse(self, e: XmlElement) -> bool:
-        self.check_no_attrib(e)
-        if self.dest.blank():
-            parse_mixed_content(self.log, e, self.model, self.dest)
-        else:
-            self.log(fc.ExcessElement.issue(e))
-        return True
-
-
 class MixedContentLoader(Loader[MixedContent]):
     def __init__(self, model: EModel):
         self.model = model
@@ -112,10 +91,14 @@ class MixedContentLoader(Loader[MixedContent]):
         return ret
 
 
-class MixedContentBinder(Binder[MixedContent]):
+class MixedContentBinder(kit.Reader[MixedContent]):
     def __init__(self, tag: str, content_model: EModel):
-        self.tag = tag
+        super().__init__(tag)
         self.content_model = content_model
 
-    def bind(self, log: IssueCallback, dest: MixedContent) -> Parser:
-        return MixedContentParser(log, dest, self.content_model, self.tag)
+    def read(self, log: IssueCallback, xe: XmlElement, dest: MixedContent) -> None:
+        kit.check_no_attrib(log, xe)
+        if dest.blank():
+            parse_mixed_content(log, xe, self.content_model, dest)
+        else:
+            log(fc.ExcessElement.issue(xe))
