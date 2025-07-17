@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 from ..math import (
     MATHML_NAMESPACE_PREFIX,
@@ -13,7 +13,6 @@ from ..tree import CdataElement, Element, StartTag
 from . import kit
 from .kit import IssueCallback
 from .tree import (
-    EModel,
     parse_mixed_content,
 )
 
@@ -55,9 +54,10 @@ MATHML_TAGS = [
 
 
 class AnyMathmlModel(kit.ModelBase[Element]):
-    @property
-    def stags(self) -> Iterable[StartTag]:
-        return (StartTag(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS)
+    XML_TAGS = {(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS}
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in self.XML_TAGS
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         ret = None
@@ -119,12 +119,12 @@ class FormulaAlternativesModel(kit.TagModelBase[Element]):
         return ret
 
 
-def formula_model(formula_style: FormulaStyle) -> EModel:
+def formula_model(formula_style: FormulaStyle) -> kit.Model[Element]:
     alts = FormulaAlternativesModel(formula_style)
     return kit.tag_model(formula_style.jats_tag, kit.SingleSubElementLoader(alts))
 
 
-def inline_formula_model() -> EModel:
+def inline_formula_model() -> kit.Model[Element]:
     """<inline-formula> Formula, Inline
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/inline-formula.html
@@ -132,7 +132,7 @@ def inline_formula_model() -> EModel:
     return formula_model(FormulaStyle.INLINE)
 
 
-def disp_formula_model() -> EModel:
+def disp_formula_model() -> kit.Model[Element]:
     """<disp-formula> Formula, Display
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-formula.html

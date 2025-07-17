@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 from .. import condition as fc
 from ..tree import (
@@ -9,7 +9,6 @@ from ..tree import (
     EmptyElement,
     MarkupElement,
     MixedContent,
-    StartTag,
 )
 
 from . import kit
@@ -17,7 +16,6 @@ from .kit import (
     Binder,
     IssueCallback,
     Loader,
-    Model,
     Parser,
 )
 
@@ -25,7 +23,7 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
-EModel: TypeAlias = Model[Element]
+EModel: TypeAlias = kit.Model[Element]
 
 
 def parse_mixed_content(
@@ -69,9 +67,8 @@ class TextElementModel(kit.ModelBase[Element]):
         self._tags = tags
         self.content_model = content_model
 
-    @property
-    def stags(self) -> Iterable[StartTag]:
-        return (StartTag(tag) for tag in self._tags)
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in self._tags
 
     def check(self, log: IssueCallback, e: XmlElement) -> None:
         kit.check_no_attrib(log, e)
@@ -92,8 +89,8 @@ class MixedContentParser(Parser):
         self.model = model
         self.tag = tag
 
-    def match(self, tag: str, attrib: kit.AttribView) -> kit.ParseFunc | None:
-        return self._parse if tag == self.tag else None
+    def match(self, xe: XmlElement) -> kit.ParseFunc | None:
+        return self._parse if xe.tag == self.tag else None
 
     def _parse(self, e: XmlElement) -> bool:
         self.check_no_attrib(e)

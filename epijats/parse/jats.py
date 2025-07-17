@@ -24,7 +24,6 @@ from .kit import (
     tag_model,
     Model,
     Parser,
-    ReaderBinder,
     Sink,
     UnionModel,
 )
@@ -163,22 +162,19 @@ class CitationRangeHelper:
         self.stopper = None
 
 
-class CitationTupleModel(kit.TagModelBase[Element]):
-    def __init__(self, biblio: BiblioRefPool, sup_model: Model[Element]):
-        super().__init__('sup')
+class CitationTupleModel(kit.ModelBase[Element]):
+    def __init__(self, biblio: BiblioRefPool):
+        super().__init__()
         self._submodel = CitationModel(biblio)
-        self._sup_model = sup_model
+
+    def match(self, xe: XmlElement) -> bool:
+        if xe.tag == 'sup':
+            if any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in xe):
+                return True
+        return False
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e)
-        if not any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in e):
-            # this isn't a citation tuple, so parse per the regular sup_model
-            parse_result = kit.Result[Element]()
-            sup_parser = self._sup_model.bind(log, parse_result)
-            sup_parser.parse_element(e)
-            if not parse_result.out:
-                warn("CitationTupleModel not provided a parser of <sub> elements")
-            return parse_result.out
         range_helper = CitationRangeHelper(log, self._submodel.biblio)
         if not range_helper.is_tuple_open(e.text):
             log(fc.IgnoredText.issue(e))
@@ -192,7 +188,7 @@ class CitationTupleModel(kit.TagModelBase[Element]):
                 citation.tail = ''
                 ret.append(citation)
             range_helper.new_start(child)
-        return ret
+        return ret if len(ret) else None
 
 
 class CrossReferenceModel(kit.TagModelBase[Element]):
@@ -316,12 +312,12 @@ class AutoCorrectParser(Parser):
         correction.content.append(parsed_p_element)
         self.dest(correction)
 
-    def match(self, tag: str, attrib: kit.AttribView) -> kit.ParseFunc | None:
-        return self._parser.match(tag, attrib)
+    def match(self, xe: XmlElement) -> kit.ParseFunc | None:
+        return self._parser.match(xe)
 
 
 class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
-    def __init__(self, p_elements: EModel, p_level: EModel):
+    def __init__(self, p_elements: Model[Element], p_level: Model[Element]):
         self.p_elements = p_elements
         self.p_level = p_level
 
@@ -420,7 +416,7 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     p_elements = UnionModel[Element]()
     if biblio:
         p_elements |= AutoCorrectCitationModel(biblio)
-        p_elements |= CitationTupleModel(biblio, hypertext)
+        p_elements |= CitationTupleModel(biblio)
     p_elements |= hypertext
     p_elements |= disp_formula_model()
     p_elements |= preformatted
@@ -457,27 +453,32 @@ CC_URLS = {
 }
 
 
-def read_license_ref(log: IssueCallback, e: XmlElement, dest: bp.License) -> bool:
-    kit.check_no_attrib(log, e, ['content-type'])
-    dest.license_ref = kit.load_string_content(log, e)
-    got_license_type = kit.get_enum_value(log, e, 'content-type', bp.CcLicenseType)
-    for prefix, matching_type in CC_URLS.items():
-        if dest.license_ref.startswith(prefix):
-            if got_license_type and got_license_type != matching_type:
-                log(fc.InvalidAttributeValue.issue(e, 'content-type', got_license_type))
-            dest.cc_license_type = matching_type
-            return True
-    dest.cc_license_type = got_license_type
-    return True
+class LicenseRefBinder(kit.Reader[bp.License]):
+    TAG = "{http://www.niso.org/schemas/ali/1.0/}license_ref"
+
+    def read(
+        self, log: IssueCallback, xe: XmlElement, dest: bp.License
+    ) -> None:
+        kit.check_no_attrib(log, xe, ['content-type'])
+        dest.license_ref = kit.load_string_content(log, xe)
+        got_license_type = kit.get_enum_value(log, xe, 'content-type', bp.CcLicenseType)
+        for prefix, matching_type in CC_URLS.items():
+            if dest.license_ref.startswith(prefix):
+                if got_license_type and got_license_type != matching_type:
+                    log(fc.InvalidAttributeValue.issue(
+                        xe, 'content-type', got_license_type
+                    ))
+                dest.cc_license_type = matching_type
+                return
+        dest.cc_license_type = got_license_type
 
 
 def load_license(log: IssueCallback, e: XmlElement) -> bp.License | None:
-    ali = "{http://www.niso.org/schemas/ali/1.0/}"
     ret = bp.License(MixedContent(), "", None)
     kit.check_no_attrib(log, e)
     ap = ContentParser(log)
     ap.bind(hypertext_element_binder('license-p').once(), ret.license_p)
-    ap.bind(ReaderBinder(f"{ali}license_ref", read_license_ref).once(), ret)
+    ap.bind(LicenseRefBinder().once(), ret)
     ap.parse_array_content(e)
     return None if ret.blank() else ret
 
@@ -497,31 +498,35 @@ def load_permissions(log: IssueCallback, e: XmlElement) -> bp.Permissions | None
     return bp.Permissions(license.out, copyright)
 
 
-def read_article_meta(log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> bool:
-    kit.check_no_attrib(log, e)
-    cp = ContentParser(log)
-    title = cp.one(title_group_model())
-    authors = cp.one(tag_model('contrib-group', load_author_group))
-    abstract = cp.one(AbstractModel())
-    permissions = cp.one(tag_model('permissions', load_permissions))
-    cp.parse_array_content(e)
-    if title.out:
-        dest.title = title.out
-    if authors.out is not None:
-        dest.authors = authors.out
-    if abstract.out is not None:
-        dest.abstract = abstract.out
-    if permissions.out is not None:
-        dest.permissions = permissions.out
-    return True
+class ArticleMetaBinder(kit.Reader[bp.Baseprint]):
+    TAG = 'article-meta'
+
+    def read(self, log: IssueCallback, xe: XmlElement, dest: bp.Baseprint) -> None:
+        kit.check_no_attrib(log, xe)
+        cp = ContentParser(log)
+        title = cp.one(title_group_model())
+        authors = cp.one(tag_model('contrib-group', load_author_group))
+        abstract = cp.one(AbstractModel())
+        permissions = cp.one(tag_model('permissions', load_permissions))
+        cp.parse_array_content(xe)
+        if title.out:
+            dest.title = title.out
+        if authors.out is not None:
+            dest.authors = authors.out
+        if abstract.out is not None:
+            dest.abstract = abstract.out
+        if permissions.out is not None:
+            dest.permissions = permissions.out
 
 
-def read_article_front(log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> bool:
-    kit.check_no_attrib(log, e)
-    cp = ContentParser(log)
-    cp.bind(ReaderBinder('article-meta', read_article_meta).once(), dest)
-    cp.parse_array_content(e)
-    return True
+class ArticleFrontBinder(kit.Reader[bp.Baseprint]):
+    TAG = 'front'
+
+    def read(self, log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> None:
+        kit.check_no_attrib(log, e)
+        cp = ContentParser(log)
+        cp.bind(ArticleMetaBinder().once(), dest)
+        cp.parse_array_content(e)
 
 
 def body_binder(biblio: BiblioRefPool | None) -> Binder[bp.ProtoSection]:
@@ -585,41 +590,44 @@ class AccessDateModel(TagModelBase[bp.Date]):
         return date.build()
 
 
-def read_pub_id(
-    log: IssueCallback, e: XmlElement, dest: dict[bp.PubIdType, str]
-) -> bool:
+class PubIdBinder(kit.Reader[dict[bp.PubIdType, str]]):
     """<pub-id> Publication Identifier for a Cited Publication
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/pub-id.html
     """
-    kit.check_no_attrib(log, e, ['pub-id-type'])
-    pub_id_type = kit.get_enum_value(log, e, 'pub-id-type', bp.PubIdType)
-    if not pub_id_type:
-        return False
-    if pub_id_type in dest:
-        log(fc.ExcessElement.issue(e))
-        return False
-    value = kit.load_string_content(log, e)
-    if not value:
-        log(fc.MissingContent.issue(e))
-        return False
-    match pub_id_type:
-        case bp.PubIdType.DOI:
-            if not value.startswith("10."):
-                log(fc.InvalidDoi.issue(e, "DOIs begin with '10.'"))
-                https_prefix = "https://doi.org/"
-                if value.startswith(https_prefix):
-                    value = value[len(https_prefix) :]
-                else:
-                    return False
-        case bp.PubIdType.PMID:
-            try:
-                int(value)
-            except ValueError as ex:
-                log(fc.InvalidPmid.issue(e, str(ex)))
-                return False
-    dest[pub_id_type] = value
-    return True
+
+    TAG = 'pub-id'
+
+    def read(
+        self, log: IssueCallback, e: XmlElement, dest: dict[bp.PubIdType, str]
+    ) -> None:
+        kit.check_no_attrib(log, e, ['pub-id-type'])
+        pub_id_type = kit.get_enum_value(log, e, 'pub-id-type', bp.PubIdType)
+        if not pub_id_type:
+            return
+        if pub_id_type in dest:
+            log(fc.ExcessElement.issue(e))
+            return
+        value = kit.load_string_content(log, e)
+        if not value:
+            log(fc.MissingContent.issue(e))
+            return
+        match pub_id_type:
+            case bp.PubIdType.DOI:
+                if not value.startswith("10."):
+                    log(fc.InvalidDoi.issue(e, "DOIs begin with '10.'"))
+                    https_prefix = "https://doi.org/"
+                    if value.startswith(https_prefix):
+                        value = value[len(https_prefix) :]
+                    else:
+                        return
+            case bp.PubIdType.PMID:
+                try:
+                    int(value)
+                except ValueError as ex:
+                    log(fc.InvalidPmid.issue(e, str(ex)))
+                    return
+        dest[pub_id_type] = value
 
 
 def load_edition(log: IssueCallback, e: XmlElement) -> int | None:
@@ -641,36 +649,36 @@ def load_edition(log: IssueCallback, e: XmlElement) -> int | None:
         return None
 
 
-def read_element_citation(
-    log: IssueCallback, e: XmlElement, dest: bp.BiblioRefItem
-) -> bool:
-    kit.check_no_attrib(log, e)
-    cp = ContentParser(log)
-    source = cp.one(tag_model('source', kit.load_string))
-    title = cp.one(tag_model('article-title', kit.load_string))
-    authors = cp.one(PersonGroupModel('author'))
-    editors = cp.one(PersonGroupModel('editor'))
-    edition = cp.one(tag_model('edition', load_edition))
-    date = DateBuilder(cp)
-    access_date = cp.one(AccessDateModel())
-    fields = {}
-    for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
-        fields[key] = cp.one(tag_model(key, kit.load_string))
-    cp.bind(kit.ReaderBinder('pub-id', read_pub_id), dest.pub_ids)
-    cp.parse_array_content(e)
-    dest.source = source.out
-    dest.article_title = title.out
-    if authors.out:
-        dest.authors = authors.out
-    if editors.out:
-        dest.editors = editors.out
-    dest.edition = edition.out
-    dest.date = date.build()
-    dest.access_date = access_date.out
-    for key, parser in fields.items():
-        if parser.out:
-            dest.biblio_fields[key] = parser.out
-    return True
+class ElementCitationBinder(kit.Reader[bp.BiblioRefItem]):
+    TAG = 'element-citation'
+
+    def read(self, log: IssueCallback, e: XmlElement, dest: bp.BiblioRefItem) -> None:
+        kit.check_no_attrib(log, e)
+        cp = ContentParser(log)
+        source = cp.one(tag_model('source', kit.load_string))
+        title = cp.one(tag_model('article-title', kit.load_string))
+        authors = cp.one(PersonGroupModel('author'))
+        editors = cp.one(PersonGroupModel('editor'))
+        edition = cp.one(tag_model('edition', load_edition))
+        date = DateBuilder(cp)
+        access_date = cp.one(AccessDateModel())
+        fields = {}
+        for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
+            fields[key] = cp.one(tag_model(key, kit.load_string))
+        cp.bind(PubIdBinder(), dest.pub_ids)
+        cp.parse_array_content(e)
+        dest.source = source.out
+        dest.article_title = title.out
+        if authors.out:
+            dest.authors = authors.out
+        if editors.out:
+            dest.editors = editors.out
+        dest.edition = edition.out
+        dest.date = date.build()
+        dest.access_date = access_date.out
+        for key, parser in fields.items():
+            if parser.out:
+                dest.biblio_fields[key] = parser.out
 
 
 class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
@@ -688,7 +696,7 @@ class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
         cp = ContentParser(log)
         label = PositiveIntModel('label', 1048576, strip_trailing_period=True)
         cp.one(label)  # ignoring if it's a valid integer
-        cp.bind(ReaderBinder('element-citation', read_element_citation).once(), ret)
+        cp.bind(ElementCitationBinder().once(), ret)
         cp.parse_array_content(e)
         ret.id = e.attrib.get('id', "")
         return ret
@@ -724,7 +732,7 @@ def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
         e.remove(back)  # type: ignore[arg-type]
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
     cp = ContentParser(log)
-    cp.bind(ReaderBinder('front', read_article_front), ret)
+    cp.bind(ArticleFrontBinder().once(), ret)
     cp.bind(body_binder(biblio), ret.body)
     cp.parse_array_content(e)
     if ret.ref_list:

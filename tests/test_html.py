@@ -34,7 +34,7 @@ def parse_element(src: str | Path, model: tree.EModel):
 
     e = lxml_element_from_str(src)
     assert isinstance(e.tag, str)
-    parse_func = parser.match(e.tag, e.attrib)
+    parse_func = parser.match(e)
     assert parse_func
     assert parse_func(e)
 

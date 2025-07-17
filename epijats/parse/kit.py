@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
+from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
 from .. import condition as fc
 from ..tree import Element, StartTag
@@ -29,13 +29,12 @@ def issue(
     return log(fc.FormatIssue(condition, sourceline, info))
 
 
-def match_start_tag(tag: Any, attrib: AttribView, cases: Iterable[StartTag]) -> bool:
-    for ok in cases:
-        if isinstance(tag, str) and tag == ok.tag:
-            for key, value in ok.attrib.items():
-                if attrib.get(key) != value:
-                    return False
-            return True
+def match_start_tag(xe: XmlElement, ok: StartTag) -> bool:
+    if isinstance(xe.tag, str) and xe.tag == ok.tag:
+        for key, value in ok.attrib.items():
+            if xe.attrib.get(key) != value:
+                return False
+        return True
     return False
 
 
@@ -121,21 +120,16 @@ if TYPE_CHECKING:
 
 class Parser(Validator):
     @abstractmethod
-    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None: ...
+    def match(self, xe: XmlElement) -> ParseFunc | None: ...
 
     def parse_element(self, e: XmlElement) -> bool:
-        if not isinstance(e.tag, str):
-            return False
-        fun = self.match(e.tag, e.attrib)
+        fun = self.match(e)
         return False if fun is None else fun(e)
 
     def parse_array_content(self, e: XmlElement) -> None:
         prep_array_elements(self.log, e)
         for s in e:
-            fun = self.match(s.tag, s.attrib) if isinstance(s.tag, str) else None
-            if fun is not None:
-                fun(s)
-            else:
+            if not self.parse_element(s):
                 self.log(fc.UnsupportedElement.issue(s))
 
 
@@ -144,9 +138,9 @@ class UnionParser(Parser):
         super().__init__(log)
         self._parsers = list(parsers)
 
-    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
+    def match(self, xe: XmlElement) -> ParseFunc | None:
         for p in self._parsers:
-            fun = p.match(tag, attrib)
+            fun = p.match(xe)
             if fun is not None:
                 return fun
         return None
@@ -158,8 +152,8 @@ class SingleElementParser(Parser):
         self.tag = tag
         self.content_parser = content_parser
 
-    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
-        return self._parse if tag == self.tag else None
+    def match(self, xe: XmlElement) -> ParseFunc | None:
+        return self._parse if xe.tag == self.tag else None
 
     def _parse(self, e: XmlElement) -> bool:
         check_no_attrib(self.log, e)
@@ -169,11 +163,6 @@ class SingleElementParser(Parser):
 
 DestT = TypeVar('DestT')
 DestConT = TypeVar('DestConT', contravariant=True)
-
-
-class Reader(Protocol, Generic[DestConT]):
-    def __call__(self, log: IssueCallback, e: XmlElement, dest: DestConT) -> bool: ...
-
 
 ParsedT = TypeVar('ParsedT')
 ParsedCovT = TypeVar('ParsedCovT', covariant=True)
@@ -257,36 +246,47 @@ class SingleElementBinder(Binder[DestT]):
         return SingleElementParser(log, self.tag, self.content_binder.bind(log, dest))
 
 
-class ReaderBinderParser(Parser, Generic[DestT]):
-    def __init__(
-        self,
-        log: IssueCallback,
-        dest: DestT,
-        stag: StartTag | Iterable[StartTag],
-        reader: Reader[DestT],
-    ):
+class StatelessParser(Parser, Generic[DestT]):
+    def __init__(self, log: IssueCallback, dest: DestT, binder: ParserBinder[DestT]):
         super().__init__(log)
         self.dest = dest
-        self._stags = [stag] if isinstance(stag, StartTag) else list(stag)
-        self._reader = reader
+        self._binder = binder
 
-    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
-        if match_start_tag(tag, attrib, self._stags):
+    def match(self, xe: XmlElement) -> ParseFunc | None:
+        if self._binder.match(xe):
             return self._parse
         return None
 
     def _parse(self, e: XmlElement) -> bool:
-        return self._reader(self.log, e, self.dest)
+        return self._binder.parse(self.log, e, self.dest)
 
 
-class ReaderBinder(Binder[DestT]):
-    def __init__(self, tag: str, reader: Reader[DestT]):
-        self.tag = tag
-        self._reader = reader
+class ParserBinder(Binder[DestT]):
+    @abstractmethod
+    def match(self, xe: XmlElement) -> bool: ...
+
+    @abstractmethod
+    def parse(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> bool: ...
 
     def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        stag = StartTag(self.tag)
-        return ReaderBinderParser(log, dest, stag, self._reader)
+        return StatelessParser(log, dest, self)
+
+
+class Reader(ParserBinder[DestT]):
+    def __init__(self, tag: str | StartTag | None = None):
+        if tag is None:
+            tag = getattr(type(self), 'TAG')
+        self.tag = tag
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == self.tag
+
+    @abstractmethod
+    def read(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> None: ...
+
+    def parse(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> bool:
+        self.read(log, xe, dest)
+        return True
 
 
 Sink: TypeAlias = Callable[[ParsedT], None]
@@ -294,27 +294,27 @@ Model: TypeAlias = Binder[Sink[ParsedT]]
 UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
 
 
-class ModelBase(Model[ParsedT]):
-    @property
-    @abstractmethod
-    def stags(self) -> Iterable[StartTag]: ...
-
-    @property
-    def tags(self) -> Iterable[str]:
-        return (s.tag for s in self.stags)
-
+class ModelBase(ParserBinder[Sink[ParsedT]]):
     @abstractmethod
     def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None: ...
 
     def load_if_match(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
-        if match_start_tag(e.tag, e.attrib, self.stags):
+        if self.match(e):
             return self.load(log, e)
         else:
             return None
 
+    def parse(self, log: IssueCallback, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
+        parsed = self.load(log, xe)
+        if parsed is not None:
+            if isinstance(parsed, Element) and xe.tail:
+                parsed.tail = xe.tail
+            # mypy v1.9 has issue below but not v1.15
+            dest(parsed)  # type: ignore[arg-type, unused-ignore]
+        return parsed is not None
+
     def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
-        reader = LoaderReader(self.load)
-        return ReaderBinderParser(log, dest, self.stags, reader)
+        return StatelessParser(log, dest, self)
 
 
 class TagModelBase(ModelBase[ParsedT]):
@@ -325,27 +325,21 @@ class TagModelBase(ModelBase[ParsedT]):
     def tag(self) -> str:
         return self.stag.tag
 
-    @property
-    def stags(self) -> Iterable[StartTag]:
-        return (self.stag,)
+    def match(self, xe: XmlElement) -> bool:
+        return match_start_tag(xe, self.stag)
 
 
-class LoaderReader(Reader[Sink[ParsedT]]):
-    def __init__(self, loader: Loader[ParsedT]):
+class LoaderTagModel(TagModelBase[ParsedT]):
+    def __init__(self, tag: str | StartTag, loader: Loader[ParsedT]):
+        super().__init__(tag)
         self._loader = loader
 
-    def __call__(self, log: IssueCallback, e: XmlElement, dest: Sink[ParsedT]) -> bool:
-        parsed = self._loader(log, e)
-        if parsed is not None:
-            if isinstance(parsed, Element) and e.tail:
-                parsed.tail = e.tail
-            # mypy v1.9 has issue below but not v1.15
-            dest(parsed)  # type: ignore[arg-type, unused-ignore]
-        return parsed is not None
+    def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
+        return self._loader(log, e)
 
 
 def tag_model(tag: str, loader: Loader[ParsedT]) -> Model[ParsedT]:
-    return ReaderBinder(tag, LoaderReader(loader))
+    return LoaderTagModel(tag, loader)
 
 
 class OnlyOnceParser(Parser):
@@ -354,14 +348,14 @@ class OnlyOnceParser(Parser):
         self._parser = parser
         self._parse_done = False
 
-    def match(self, tag: str, attrib: AttribView) -> ParseFunc | None:
-        fun = self._parser.match(tag, attrib)
+    def match(self, xe: XmlElement) -> ParseFunc | None:
+        fun = self._parser.match(xe)
         return None if fun is None else self._parse
 
     def _parse(self, e: XmlElement) -> bool:
         if not isinstance(e.tag, str):
             return False
-        parse_func = self._parser.match(e.tag, e.attrib)
+        parse_func = self._parser.match(e)
         if parse_func is None:
             return False
         if not self._parse_done:
