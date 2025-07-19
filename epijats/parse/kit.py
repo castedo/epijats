@@ -91,34 +91,14 @@ def prep_array_elements(log: IssueCallback, e: XmlElement) -> None:
         s.tail = None
 
 
-class Validator(ABC):
-    def __init__(self, log: IssueCallback):
-        self._log = log
-
-    @property
-    def log(self) -> IssueCallback:
-        return self._log
-
-    def log_issue(
-        self,
-        condition: fc.FormatCondition,
-        sourceline: int | None = None,
-        info: str | None = None,
-    ) -> None:
-        return issue(self._log, condition, sourceline, info)
-
-    def check_no_attrib(self, e: XmlElement, ignore: Iterable[str] = ()) -> None:
-        check_no_attrib(self.log, e, ignore)
-
-    def prep_array_elements(self, e: XmlElement) -> None:
-        prep_array_elements(self.log, e)
-
-
 if TYPE_CHECKING:
     ParseFunc: TypeAlias = Callable[[XmlElement], bool]
 
 
-class Parser(Validator):
+class Parser(ABC):
+    def __init__(self, log: IssueCallback):
+        self.log = log
+
     @abstractmethod
     def match(self, xe: XmlElement) -> ParseFunc | None: ...
 
@@ -144,21 +124,6 @@ class UnionParser(Parser):
             if fun is not None:
                 return fun
         return None
-
-
-class SingleElementParser(Parser):
-    def __init__(self, log: IssueCallback, tag: str, content_parser: Parser):
-        super().__init__(log)
-        self.tag = tag
-        self.content_parser = content_parser
-
-    def match(self, xe: XmlElement) -> ParseFunc | None:
-        return self._parse if xe.tag == self.tag else None
-
-    def _parse(self, e: XmlElement) -> bool:
-        check_no_attrib(self.log, e)
-        self.content_parser.parse_array_content(e)
-        return True
 
 
 DestT = TypeVar('DestT')
@@ -220,6 +185,12 @@ class Binder(ABC, Generic[DestT]):
         union = list(self.as_binders()) + list(other.as_binders())
         return UnionBinder(union)
 
+    def parse_array_content(
+        self, log: IssueCallback, xe: XmlElement, dest: DestT
+    ) -> None:
+        parser = self.bind(log, dest)
+        parser.parse_array_content(xe)
+
 
 class UnionBinder(Binder[DestT]):
     def __init__(self, binders: Iterable[Binder[DestT]] = ()):
@@ -235,15 +206,6 @@ class UnionBinder(Binder[DestT]):
     def __ior__(self, other: Binder[DestT]) -> UnionBinder[DestT]:
         self._binders.extend(other.as_binders())
         return self
-
-
-class SingleElementBinder(Binder[DestT]):
-    def __init__(self, tag: str, content_binder: Binder[DestT]):
-        self.tag = tag
-        self.content_binder = content_binder
-
-    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        return SingleElementParser(log, self.tag, self.content_binder.bind(log, dest))
 
 
 class StatelessParser(Parser, Generic[DestT]):
@@ -272,15 +234,7 @@ class ParserBinder(Binder[DestT]):
         return StatelessParser(log, dest, self)
 
 
-class Reader(ParserBinder[DestT]):
-    def __init__(self, tag: str | None = None):
-        if tag is None:
-            tag = getattr(type(self), 'TAG')
-        self.tag = tag
-
-    def match(self, xe: XmlElement) -> bool:
-        return xe.tag == self.tag
-
+class ReadBinder(ParserBinder[DestT]):
     @abstractmethod
     def read(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> None: ...
 
@@ -289,12 +243,36 @@ class Reader(ParserBinder[DestT]):
         return True
 
 
+class TagReader(ReadBinder[DestT]):
+    def __init__(self, tag: str | StartTag | None = None):
+        if tag is None:
+            tag = getattr(type(self), 'TAG')
+        self.stag = StartTag(tag)
+
+    @property
+    def tag(self) -> str:
+        return self.stag.tag
+
+    def match(self, xe: XmlElement) -> bool:
+        return match_start_tag(xe, self.stag)
+
+
+class SingleElementBinder(TagReader[DestT]):
+    def __init__(self, tag: str, content_binder: Binder[DestT]):
+        super().__init__(tag)
+        self.content_binder = content_binder
+
+    def read(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> None:
+        check_no_attrib(log, xe)
+        self.content_binder.parse_array_content(log, xe, dest)
+
+
 Sink: TypeAlias = Callable[[ParsedT], None]
 Model: TypeAlias = Binder[Sink[ParsedT]]
 UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
 
 
-class ModelBase(ParserBinder[Sink[ParsedT]]):
+class LoadModel(ReadBinder[Sink[ParsedT]]):
     @abstractmethod
     def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None: ...
 
@@ -303,6 +281,10 @@ class ModelBase(ParserBinder[Sink[ParsedT]]):
             return self.load(log, e)
         else:
             return None
+
+    def read(self, log: IssueCallback, xe: XmlElement, dest: Sink[ParsedT]) -> None:
+        if self.match(xe):
+            self.parse(log, xe, dest)
 
     def parse(self, log: IssueCallback, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
         parsed = self.load(log, xe)
@@ -313,11 +295,8 @@ class ModelBase(ParserBinder[Sink[ParsedT]]):
             dest(parsed)  # type: ignore[arg-type, unused-ignore]
         return parsed is not None
 
-    def bind(self, log: IssueCallback, dest: Sink[ParsedT]) -> Parser:
-        return StatelessParser(log, dest, self)
 
-
-class TagModelBase(ModelBase[ParsedT]):
+class TagModelBase(LoadModel[ParsedT]):
     def __init__(self, tag: str | StartTag):
         self.stag = StartTag(tag)
 

@@ -53,7 +53,7 @@ MATHML_TAGS = [
 ]
 
 
-class AnyMathmlModel(kit.ModelBase[Element]):
+class AnyMathmlModel(kit.LoadModel[Element]):
     XML_TAGS = {(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS}
 
     def match(self, xe: XmlElement) -> bool:

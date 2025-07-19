@@ -56,11 +56,11 @@ class DataElementModel(kit.TagModelBase[Element]):
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         ret = DataElement(self.tag)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
-        self.content_model.bind(log, ret.append).parse_array_content(e)
+        self.content_model.parse_array_content(log, e, ret.append)
         return ret
 
 
-class TextElementModel(kit.ModelBase[Element]):
+class TextElementModel(kit.LoadModel[Element]):
     def __init__(self, tags: set[str], content_model: EModel):
         self._tags = tags
         self.content_model = content_model
@@ -91,7 +91,7 @@ class MixedContentLoader(Loader[MixedContent]):
         return ret
 
 
-class MixedContentBinder(kit.Reader[MixedContent]):
+class MixedContentBinder(kit.TagReader[MixedContent]):
     def __init__(self, tag: str, content_model: EModel):
         super().__init__(tag)
         self.content_model = content_model

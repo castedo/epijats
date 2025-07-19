@@ -162,7 +162,7 @@ class CitationRangeHelper:
         self.stopper = None
 
 
-class CitationTupleModel(kit.ModelBase[Element]):
+class CitationTupleModel(kit.LoadModel[Element]):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__()
         self._submodel = CitationModel(biblio)
@@ -349,6 +349,7 @@ class AbstractModel(TagModelBase[bp.Abstract]):
         self._content = ProtoSectionContentBinder(p_child, just_para)
 
     def load(self, log: IssueCallback, e: XmlElement) -> bp.Abstract | None:
+        kit.check_no_attrib(log, e)
         ret = bp.Abstract()
         cp = ContentParser(log)
         cp.bind(self._content, ret)
@@ -465,7 +466,7 @@ CC_URLS = {
 }
 
 
-class LicenseRefBinder(kit.Reader[bp.License]):
+class LicenseRefBinder(kit.TagReader[bp.License]):
     TAG = "{http://www.niso.org/schemas/ali/1.0/}license_ref"
 
     def read(self, log: IssueCallback, xe: XmlElement, dest: bp.License) -> None:
@@ -507,7 +508,7 @@ def load_permissions(log: IssueCallback, e: XmlElement) -> bp.Permissions | None
     return bp.Permissions(license.out, copyright)
 
 
-class ArticleMetaBinder(kit.Reader[bp.Baseprint]):
+class ArticleMetaBinder(kit.TagReader[bp.Baseprint]):
     TAG = 'article-meta'
 
     def read(self, log: IssueCallback, xe: XmlElement, dest: bp.Baseprint) -> None:
@@ -528,7 +529,7 @@ class ArticleMetaBinder(kit.Reader[bp.Baseprint]):
             dest.permissions = permissions.out
 
 
-class ArticleFrontBinder(kit.Reader[bp.Baseprint]):
+class ArticleFrontBinder(kit.TagReader[bp.Baseprint]):
     TAG = 'front'
 
     def read(self, log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> None:
@@ -599,7 +600,7 @@ class AccessDateModel(TagModelBase[bp.Date]):
         return date.build()
 
 
-class PubIdBinder(kit.Reader[dict[bp.PubIdType, str]]):
+class PubIdBinder(kit.TagReader[dict[bp.PubIdType, str]]):
     """<pub-id> Publication Identifier for a Cited Publication
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/pub-id.html
@@ -658,7 +659,7 @@ def load_edition(log: IssueCallback, e: XmlElement) -> int | None:
         return None
 
 
-class ElementCitationBinder(kit.Reader[bp.BiblioRefItem]):
+class ElementCitationBinder(kit.TagReader[bp.BiblioRefItem]):
     TAG = 'element-citation'
 
     def read(self, log: IssueCallback, e: XmlElement, dest: bp.BiblioRefItem) -> None:
