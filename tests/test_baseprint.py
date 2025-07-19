@@ -3,14 +3,14 @@ from __future__ import annotations
 import json, os, pytest
 from collections import Counter
 from pathlib import Path
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 import lxml.etree
 
 import epijats.parse.jats as _
 from epijats import html
 from epijats import baseprint as bp
-from epijats.baseprint import Abstract, Baseprint, List
+from epijats.baseprint import Baseprint, List, ProtoSection
 from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
@@ -73,7 +73,7 @@ def test_minimalish():
     got = parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
     assert got.authors == [bp.Author(bp.PersonName("Wang"))]
-    expect = Abstract()
+    expect = ProtoSection()
     expect.presection.append(make_paragraph('A simple test.'))
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
@@ -307,7 +307,7 @@ def test_author_restyle():
 
 
 def test_abstract_restyle():
-    model = _.AbstractModel()
+    binder = _.abstract_binder()
     issues: list[fc.FormatIssue] = []
 
     bad_style = """\
@@ -320,8 +320,9 @@ def test_abstract_restyle():
     </list>
                 <p>OK</p>
 </abstract>"""
-    bdom = model.load(issues.append, lxml_element_from_str(bad_style))
-    assert bdom and not issues
+    bdom = ProtoSection()
+    binder.bind(issues.append, bdom).parse_element(lxml_element_from_str(bad_style))
+    assert not issues
     restyled = """\
 <abstract>
   <p>OK</p>
@@ -335,7 +336,8 @@ def test_abstract_restyle():
     xe = XML.root(restyle.abstract(bdom))
     assert str_from_xml_element(xe) == restyled
 
-    roundtrip = model.load(issues.append, xe)
+    roundtrip = ProtoSection()
+    binder.bind(issues.append, roundtrip).parse_element(xe)
     assert not issues
     assert roundtrip == bdom
 

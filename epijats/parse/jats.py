@@ -336,25 +336,16 @@ class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
         return ret
 
 
-class AbstractModel(TagModelBase[bp.Abstract]):
+def abstract_binder() -> Binder[bp.ProtoSection]:
     """<abstract> Abstract
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
     """
 
-    def __init__(self) -> None:
-        super().__init__('abstract')
-        p_child = p_child_model()
-        just_para = TextElementModel({'p'}, p_child)
-        self._content = ProtoSectionContentBinder(p_child, just_para)
-
-    def load(self, log: IssueCallback, e: XmlElement) -> bp.Abstract | None:
-        kit.check_no_attrib(log, e)
-        ret = bp.Abstract()
-        cp = ContentParser(log)
-        cp.bind(self._content, ret)
-        cp.parse_array_content(e)
-        return ret
+    p_child = p_child_model()
+    just_para = TextElementModel({'p'}, p_child)
+    content = ProtoSectionContentBinder(p_child, just_para)
+    return kit.SingleElementBinder('abstract', content)
 
 
 class SectionModel(TagModelBase[bp.Section]):
@@ -522,15 +513,16 @@ class ArticleMetaBinder(kit.TagReader[bp.Baseprint]):
         cp = ContentParser(log)
         title = cp.one(title_group_model())
         authors = cp.one(tag_model('contrib-group', load_author_group))
-        abstract = cp.one(AbstractModel())
+        abstract = bp.ProtoSection()
+        cp.bind(abstract_binder().once(), abstract)
         permissions = cp.one(PermissionsModel())
         cp.parse_array_content(xe)
         if title.out:
             dest.title = title.out
         if authors.out is not None:
             dest.authors = authors.out
-        if abstract.out is not None:
-            dest.abstract = abstract.out
+        if not abstract.has_no_content():
+            dest.abstract = abstract
         if permissions.out is not None:
             dest.permissions = permissions.out
 
@@ -552,7 +544,8 @@ def body_binder(biblio: BiblioRefPool | None) -> Binder[bp.ProtoSection]:
     """
     p_child = p_child_model(biblio)
     p_level = p_level_model(p_child)
-    return kit.SingleElementBinder('body', ProtoSectionContentBinder(p_child, p_level))
+    content = ProtoSectionContentBinder(p_child, p_level)
+    return kit.SingleElementBinder('body', content)
 
 
 class PositiveIntModel(TagModelBase[int]):

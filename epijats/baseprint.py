@@ -144,10 +144,6 @@ class Section(ProtoSection):
     title: MixedContent
 
 
-class Abstract(ProtoSection):
-    pass
-
-
 @dataclass
 class Date:
     year: int
@@ -209,7 +205,7 @@ class BiblioRefList:
 class Baseprint:
     title: MixedContent
     authors: list[Author]
-    abstract: Abstract | None
+    abstract: ProtoSection | None
     permissions: Permissions | None
     body: ProtoSection
     ref_list: BiblioRefList | None

@@ -88,7 +88,7 @@ def proto_section(
     return ret
 
 
-def abstract(src: baseprint.Abstract) -> DataElement:
+def abstract(src: baseprint.ProtoSection) -> DataElement:
     return proto_section('abstract', src)
 
 
