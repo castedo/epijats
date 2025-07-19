@@ -483,29 +483,35 @@ class LicenseRefBinder(kit.TagReader[bp.License]):
         dest.cc_license_type = got_license_type
 
 
-def load_license(log: IssueCallback, e: XmlElement) -> bp.License | None:
-    ret = bp.License(MixedContent(), "", None)
-    kit.check_no_attrib(log, e)
-    ap = ContentParser(log)
-    ap.bind(hypertext_element_binder('license-p').once(), ret.license_p)
-    ap.bind(LicenseRefBinder().once(), ret)
-    ap.parse_array_content(e)
-    return None if ret.blank() else ret
+class LicenseModel(kit.TagModelBase[bp.License]):
+    TAG = 'license'
+
+    def load(self, log: IssueCallback, e: XmlElement) -> bp.License | None:
+        ret = bp.License(MixedContent(), "", None)
+        kit.check_no_attrib(log, e)
+        ap = ContentParser(log)
+        ap.bind(hypertext_element_binder('license-p').once(), ret.license_p)
+        ap.bind(LicenseRefBinder().once(), ret)
+        ap.parse_array_content(e)
+        return None if ret.blank() else ret
 
 
-def load_permissions(log: IssueCallback, e: XmlElement) -> bp.Permissions | None:
-    kit.check_no_attrib(log, e)
-    ap = ContentParser(log)
-    statement = ap.one(mixed_element_model('copyright-statement'))
-    license = ap.one(tag_model("license", load_license))
-    ap.parse_array_content(e)
-    if license.out is None:
-        return None
-    if statement.out and not statement.out.blank():
-        copyright = bp.Copyright(statement.out)
-    else:
-        copyright = None
-    return bp.Permissions(license.out, copyright)
+class PermissionsModel(kit.TagModelBase[bp.Permissions]):
+    TAG = 'permissions'
+
+    def load(self, log: IssueCallback, e: XmlElement) -> bp.Permissions | None:
+        kit.check_no_attrib(log, e)
+        ap = ContentParser(log)
+        statement = ap.one(mixed_element_model('copyright-statement'))
+        license = ap.one(LicenseModel())
+        ap.parse_array_content(e)
+        if license.out is None:
+            return None
+        if statement.out and not statement.out.blank():
+            copyright = bp.Copyright(statement.out)
+        else:
+            copyright = None
+        return bp.Permissions(license.out, copyright)
 
 
 class ArticleMetaBinder(kit.TagReader[bp.Baseprint]):
@@ -517,7 +523,7 @@ class ArticleMetaBinder(kit.TagReader[bp.Baseprint]):
         title = cp.one(title_group_model())
         authors = cp.one(tag_model('contrib-group', load_author_group))
         abstract = cp.one(AbstractModel())
-        permissions = cp.one(tag_model('permissions', load_permissions))
+        permissions = cp.one(PermissionsModel())
         cp.parse_array_content(xe)
         if title.out:
             dest.title = title.out

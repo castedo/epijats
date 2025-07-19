@@ -297,7 +297,9 @@ class LoadModel(ReadBinder[Sink[ParsedT]]):
 
 
 class TagModelBase(LoadModel[ParsedT]):
-    def __init__(self, tag: str | StartTag):
+    def __init__(self, tag: str | StartTag | None = None):
+        if tag is None:
+            tag = getattr(type(self), 'TAG')
         self.stag = StartTag(tag)
 
     @property

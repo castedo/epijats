@@ -90,7 +90,7 @@ class ListModel(kit.TagModelBase[Element]):
         kit.check_no_attrib(log, e, ['list-type'])
         list_type = kit.get_enum_value(log, e, 'list-type', bp.ListTypeCode)
         ret = bp.List(list_type)
-        self._list_content_model.bind(log, ret.append).parse_array_content(e)
+        self._list_content_model.parse_array_content(log, e, ret.append)
         return ret
 
 
