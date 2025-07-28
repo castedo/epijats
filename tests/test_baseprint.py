@@ -235,9 +235,7 @@ def mock_biblio_pool() -> _.BiblioRefPool:
     return _.BiblioRefPool([r1, r2])
 
 
-def verify_roundtrip_citation(
-    log: _.IssueCallback, start: str, expected: str,
-) -> Element:
+def verify_roundtrip_citation(log: _.Log, start: str, expected: str) -> Element:
     model = _.CitationTupleModel(mock_biblio_pool())
     subel1 = model.load(log, lxml_element_from_str(start))
     assert subel1
@@ -324,7 +322,7 @@ def test_abstract_restyle() -> None:
                 <p>OK</p>
 </abstract>"""
     bdom = bp.ProtoSection()
-    model.mod(assert_not, lxml_element_from_str(bad_style), bdom)
+    model.read(assert_not, lxml_element_from_str(bad_style), bdom)
     restyled = """\
 <abstract>
   <p>OK</p>
@@ -339,7 +337,7 @@ def test_abstract_restyle() -> None:
     assert str_from_xml_element(xe) == restyled
 
     roundtrip = bp.ProtoSection()
-    model.mod(assert_not, xe, roundtrip)
+    model.read(assert_not, xe, roundtrip)
     assert roundtrip == bdom
 
     expect_html = """<p>OK</p>

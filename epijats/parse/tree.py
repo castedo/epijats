@@ -1,3 +1,5 @@
+"""Parsing of abstract systax tree elements in ..tree submodule."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -12,11 +14,9 @@ from ..tree import (
 )
 
 from . import kit
-from .kit import (
-    IssueCallback,
-    Log,
-    Model,
-)
+from .content import ArrayContentSession
+from .kit import Log, Model
+
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
@@ -39,7 +39,7 @@ class EmptyElementModel(kit.TagModelBase[Element]):
         super().__init__(tag)
         self._ok_attrib_keys = attrib
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         ret = EmptyElement(self.tag)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         return ret
@@ -56,7 +56,7 @@ class DataElementModel(kit.TagModelBase[Element]):
     def load(self, log: Log, xe: XmlElement) -> Element | None:
         ret = DataElement(self.tag)
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, ret.xml.attrib)
-        sess = kit.ArrayContentSession(log)
+        sess = ArrayContentSession(log)
         sess.bind(self.content_model, ret.append)
         sess.parse_content(xe)
         return ret
@@ -70,10 +70,10 @@ class TextElementModel(kit.LoadModel[Element]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in self._tags
 
-    def check(self, log: IssueCallback, e: XmlElement) -> None:
+    def check(self, log: Log, e: XmlElement) -> None:
         kit.check_no_attrib(log, e)
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         ret = None
         if isinstance(e.tag, str) and e.tag in self._tags:
             self.check(log, e)
@@ -82,7 +82,7 @@ class TextElementModel(kit.LoadModel[Element]):
         return ret
 
 
-class MixedContentModel(kit.TagModModelBase[MixedContent]):
+class MixedContentModel(kit.TagMonoModelBase[MixedContent]):
     def __init__(self, tag: str, child_model: Model[Element]):
         super().__init__(tag)
         self.child_model = child_model
@@ -91,7 +91,7 @@ class MixedContentModel(kit.TagModModelBase[MixedContent]):
     def parsed_type(self) -> type[MixedContent]:
         return MixedContent
 
-    def mod(self, log: Log, xe: XmlElement, target: MixedContent) -> None:
+    def read(self, log: Log, xe: XmlElement, target: MixedContent) -> None:
         kit.check_no_attrib(log, xe)
         if target.blank():
             parse_mixed_content(log, xe, self.child_model, target)

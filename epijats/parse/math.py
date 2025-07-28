@@ -11,10 +11,9 @@ from ..math import (
 from ..tree import CdataElement, Element, StartTag
 
 from . import kit
-from .kit import IssueCallback
-from .tree import (
-    parse_mixed_content,
-)
+from .content import ArrayContentSession
+from .kit import Log
+from .tree import parse_mixed_content
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
@@ -59,7 +58,7 @@ class AnyMathmlModel(kit.LoadModel[Element]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in self.XML_TAGS
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         ret = None
         if isinstance(e.tag, str):
             assert e.tag.startswith(MATHML_NAMESPACE_PREFIX)
@@ -72,7 +71,7 @@ class TexMathElementModel(kit.TagModelBase[Element]):
     def __init__(self) -> None:
         super().__init__('tex-math')
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         tex = kit.load_string_content(log, e)
         return CdataElement(self.tag, tex)
 
@@ -88,7 +87,7 @@ class MathmlElementModel(kit.TagModelBase[Element]):
         self._model = AnyMathmlModel()
         self.mathml_tag = mathml_tag
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         ret = MathmlElement(StartTag(self.tag, dict(e.attrib)))
         parse_mixed_content(log, e, self._model, ret.content)
         return ret
@@ -104,9 +103,9 @@ class FormulaAlternativesModel(kit.TagModelBase[Element]):
         super().__init__('alternatives')
         self.formula_style = formula_style
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e)
-        cp = kit.ArrayContentSession(log)
+        cp = ArrayContentSession(log)
         tex = cp.one(kit.tag_model('tex-math', kit.load_string))
         mathml = cp.one(MathmlElementModel('math'))
         cp.parse_content(e)
@@ -126,9 +125,9 @@ class FormulaModel(kit.TagModelBase[Element]):
         super().__init__(formula_style.jats_tag)
         self.child_model = FormulaAlternativesModel(formula_style)
 
-    def load(self, log: IssueCallback, xe: XmlElement) -> Element | None:
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
         kit.check_no_attrib(log, xe)
-        sess = kit.ArrayContentSession(log)
+        sess = ArrayContentSession(log)
         result = sess.one(self.child_model)
         sess.parse_content(xe)
         return result.out

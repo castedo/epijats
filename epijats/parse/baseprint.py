@@ -1,3 +1,5 @@
+"""Parsing at the level of Baseprint."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,20 +9,18 @@ from .. import condition as fc
 from ..baseprint import Baseprint
 from ..xml import get_ET
 
-from .kit import IssueCallback, issue
+from .kit import Log, issue
 from .jats import load_article
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
-def ignore_issue(issue: fc.FormatIssue) -> None:
+def nolog(issue: fc.FormatIssue) -> None:
     pass
 
 
-def parse_baseprint_root(
-    root: XmlElement, log: IssueCallback = ignore_issue
-) -> Baseprint | None:
+def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> Baseprint | None:
     if root.tag != 'article':
         log(fc.UnsupportedElement.issue(root))
         return None
@@ -28,7 +28,7 @@ def parse_baseprint_root(
 
 
 def parse_baseprint(
-    src: Path, log: IssueCallback = ignore_issue, *, use_lxml: bool = True
+    src: Path, log: Log = nolog, *, use_lxml: bool = True
 ) -> Baseprint | None:
     path = Path(src)
     if path.is_dir():

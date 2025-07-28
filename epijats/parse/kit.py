@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
@@ -17,12 +17,11 @@ if TYPE_CHECKING:
 
 
 Log: TypeAlias = Callable[[fc.FormatIssue], None]
-IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
 EnumT = TypeVar('EnumT', bound=StrEnum)
 
 
 def issue(
-    log: IssueCallback,
+    log: Log,
     condition: fc.FormatCondition,
     sourceline: int | None = None,
     info: str | None = None,
@@ -39,16 +38,14 @@ def match_start_tag(xe: XmlElement, ok: StartTag) -> bool:
     return False
 
 
-def check_no_attrib(
-    log: IssueCallback, e: XmlElement, ignore: Iterable[str] = []
-) -> None:
+def check_no_attrib(log: Log, e: XmlElement, ignore: Iterable[str] = []) -> None:
     for k in e.attrib.keys():
         if k not in ignore:
             log(fc.UnsupportedAttribute.issue(e, k))
 
 
 def confirm_attrib_value(
-    log: IssueCallback, e: XmlElement, key: str, ok: Iterable[str | None]
+    log: Log, e: XmlElement, key: str, ok: Iterable[str | None]
 ) -> bool:
     got = e.attrib.get(key)
     if got in ok:
@@ -59,7 +56,7 @@ def confirm_attrib_value(
 
 
 def copy_ok_attrib_values(
-    log: IssueCallback,
+    log: Log,
     e: XmlElement,
     ok_keys: Iterable[str],
     dest: MutableMapping[str, str],
@@ -72,7 +69,7 @@ def copy_ok_attrib_values(
 
 
 def get_enum_value(
-    log: IssueCallback, e: XmlElement, key: str, enum: type[EnumT]
+    log: Log, e: XmlElement, key: str, enum: type[EnumT]
 ) -> EnumT | None:
     ret: EnumT | None = None
     if got := e.attrib.get(key):
@@ -81,15 +78,6 @@ def get_enum_value(
         else:
             log(fc.UnsupportedAttributeValue.issue(e, key, got))
     return ret
-
-
-def prep_array_elements(log: IssueCallback, e: XmlElement) -> None:
-    if e.text and e.text.strip():
-        log(fc.IgnoredText.issue(e))
-    for s in e:
-        if s.tail and s.tail.strip():
-            log(fc.IgnoredTail.issue(s))
-        s.tail = None
 
 
 if TYPE_CHECKING:
@@ -113,15 +101,15 @@ ParsedCovT = TypeVar('ParsedCovT', covariant=True)
 
 
 class Loader(Protocol, Generic[ParsedCovT]):
-    def __call__(self, log: IssueCallback, e: XmlElement) -> ParsedCovT | None: ...
+    def __call__(self, log: Log, e: XmlElement) -> ParsedCovT | None: ...
 
 
-def load_string(log: IssueCallback, e: XmlElement) -> str:
+def load_string(log: Log, e: XmlElement) -> str:
     check_no_attrib(log, e)
     return load_string_content(log, e)
 
 
-def load_string_content(log: IssueCallback, e: XmlElement) -> str:
+def load_string_content(log: Log, e: XmlElement) -> str:
     frags = []
     if e.text:
         frags.append(e.text)
@@ -134,7 +122,7 @@ def load_string_content(log: IssueCallback, e: XmlElement) -> str:
 
 
 def load_int(
-    log: IssueCallback, e: XmlElement, *, strip_trailing_period: bool = False
+    log: Log, e: XmlElement, *, strip_trailing_period: bool = False
 ) -> int | None:
     for s in e:
         log(fc.UnsupportedElement.issue(s))
@@ -172,7 +160,7 @@ class TagBinderBase(ABC, Binder[DestT]):
         self.stag = StartTag(tag)
 
     @abstractmethod
-    def read(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> None: ...
+    def read(self, log: Log, xe: XmlElement, dest: DestT) -> None: ...
 
     @property
     def tag(self) -> str:
@@ -236,15 +224,15 @@ class UnionModel(Model[ParsedT]):
 
 class LoadModel(Model[ParsedT]):
     @abstractmethod
-    def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None: ...
+    def load(self, log: Log, e: XmlElement) -> ParsedT | None: ...
 
-    def load_if_match(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
+    def load_if_match(self, log: Log, e: XmlElement) -> ParsedT | None:
         if self.match(e):
             return self.load(log, e)
         else:
             return None
 
-    def parse(self, log: IssueCallback, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
         parsed = self.load(log, xe)
         if parsed is not None:
             if isinstance(parsed, Element) and xe.tail:
@@ -254,22 +242,22 @@ class LoadModel(Model[ParsedT]):
         return parsed is not None
 
 
-class ModModel(LoadModel[ParsedT]):
+class MonoModel(LoadModel[ParsedT]):
     @property
     @abstractmethod
     def parsed_type(self) -> type[ParsedT]: ...
 
     @abstractmethod
-    def mod(self, log: Log, xe: XmlElement, target: ParsedT) -> None: ...
+    def read(self, log: Log, xe: XmlElement, target: ParsedT) -> None: ...
 
     def load(self, log: Log, xe: XmlElement) -> ParsedT | None:
         out = self.parsed_type()
-        self.mod(log, xe, out)
+        self.read(log, xe, out)
         return out
 
-    def bind_mod(self, log: Log, target: ParsedT) -> Parser:
+    def mono_parser(self, log: Log, target: ParsedT) -> Parser:
         def parse_fun(xe: XmlElement) -> bool:
-            self.mod(log, xe, target)
+            self.read(log, xe, target)
             return True
 
         return StatelessParser(self.match, parse_fun)
@@ -289,7 +277,7 @@ class TagModelBase(LoadModel[ParsedT]):
         return match_start_tag(xe, self.stag)
 
 
-class TagModModelBase(ModModel[ParsedT]):
+class TagMonoModelBase(MonoModel[ParsedT]):
     def __init__(self, tag: str | StartTag | None = None):
         if tag is None:
             tag = getattr(type(self), 'TAG')
@@ -308,7 +296,7 @@ class LoaderTagModel(TagModelBase[ParsedT]):
         super().__init__(tag)
         self._loader = loader
 
-    def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
+    def load(self, log: Log, e: XmlElement) -> ParsedT | None:
         return self._loader(log, e)
 
 
@@ -341,7 +329,7 @@ class OnlyOnceBinder(Binder[DestT]):
     def __init__(self, binder: Binder[DestT]):
         self.binder = binder
 
-    def bound_parser(self, log: IssueCallback, dest: DestT) -> Parser:
+    def bound_parser(self, log: Log, dest: DestT) -> Parser:
         return OnlyOnceParser(log, self.binder.bound_parser(log, dest))
 
 
@@ -356,75 +344,3 @@ class SinkDestination(Outcome[ParsedT]):
 
     def __call__(self, parsed: ParsedT) -> None:
         self.out = parsed
-
-
-class Session(ABC):
-    def __init__(self, log: Log):
-        self.log = log
-        self._parsers: list[Parser] = []
-
-    def _add_parser(self, p: Parser) -> None:
-        self._parsers.append(p)
-
-    def bind(self, binder: Binder[DestT], dest: DestT) -> None:
-        self._add_parser(binder.bound_parser(self.log, dest))
-
-    def bind_mod(self, model: ModModel[ParsedT], target: ParsedT) -> None:
-        self._add_parser(model.bind_mod(self.log, target))
-
-
-class ArrayContentSession(Session):
-    def bind_once(self, binder: Binder[DestT], dest: DestT) -> None:
-        once = OnlyOnceBinder(binder)
-        self._add_parser(once.bound_parser(self.log, dest))
-
-    def one(self, model: Model[ParsedT]) -> Outcome[ParsedT]:
-        ret = SinkDestination[ParsedT]()
-        once = OnlyOnceBinder(model)
-        self._add_parser(once.bound_parser(self.log, ret))
-        return ret
-
-    def every(self, model: Model[ParsedT]) -> Sequence[ParsedT]:
-        ret: list[ParsedT] = list()
-        parser = model.bound_parser(self.log, ret.append)
-        self._add_parser(parser)
-        return ret
-
-    def parse_content(self, e: XmlElement) -> None:
-        prep_array_elements(self.log, e)
-        for s in e:
-            if not any(p.parse_element(s) for p in self._parsers):
-                self.log(fc.UnsupportedElement.issue(s))
-
-
-class ContentBinder(ABC, Generic[DestT]):
-    def __init__(self, dest_type: type[DestT]):
-        self.dest_type = dest_type
-
-    @abstractmethod
-    def binds(self, sess: Session, dest: DestT) -> None: ...
-
-
-class MergedElementsContentBinder(ContentBinder[DestT]):
-    def __init__(self, child_model: ModModel[DestT]) -> None:
-        super().__init__(child_model.parsed_type)
-        self.child_model = child_model
-
-    def binds(self, sess: Session, dest: DestT) -> None:
-        sess.bind_mod(self.child_model, dest)
-
-
-class ContentInElementModel(TagModModelBase[ParsedT]):
-    def __init__(self, tag: str, content: ContentBinder[ParsedT]):
-        super().__init__(tag)
-        self.content = content
-
-    @property
-    def parsed_type(self) -> type[ParsedT]:
-        return self.content.dest_type
-
-    def mod(self, log: Log, xe: XmlElement, target: ParsedT) -> None:
-        check_no_attrib(log, xe, self.stag.attrib.keys())
-        sess = ArrayContentSession(log)
-        self.content.binds(sess, target)
-        sess.parse_content(xe)

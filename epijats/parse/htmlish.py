@@ -7,13 +7,14 @@ from .. import condition as fc
 from ..tree import Element, MarkupElement
 
 from . import kit
+from .content import ArrayContentSession
 from .tree import (
     DataElementModel,
     TextElementModel,
     EmptyElementModel,
     parse_mixed_content,
 )
-from .kit import IssueCallback, Log, Model
+from .kit import Log, Model
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
@@ -45,7 +46,7 @@ class ItalicModel(TextElementModel):
     def __init__(self, content_model: EModel):
         super().__init__({'italic'}, content_model)
 
-    def check(self, log: IssueCallback, e: XmlElement) -> None:
+    def check(self, log: Log, e: XmlElement) -> None:
         kit.check_no_attrib(log, e, ('toggle',))
         kit.confirm_attrib_value(log, e, 'toggle', ('yes', None))
 
@@ -60,7 +61,7 @@ class ExtLinkModel(kit.TagModelBase[Element]):
         super().__init__('ext-link')
         self.content_model = content_model
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
             log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
@@ -90,7 +91,7 @@ class ListModel(kit.TagModelBase[Element]):
         kit.check_no_attrib(log, xe, ['list-type'])
         list_type = kit.get_enum_value(log, xe, 'list-type', bp.ListTypeCode)
         ret = bp.List(list_type)
-        sess = kit.ArrayContentSession(log)
+        sess = ArrayContentSession(log)
         sess.bind(self._list_content_model, ret.append)
         sess.parse_content(xe)
         return ret
@@ -137,7 +138,7 @@ class TableCellModel(kit.TagModelBase[Element]):
         self.content_model = content_model
         self._ok_attrib_keys = {'align', 'colspan', 'rowspan'}
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Element | None:
         align_attribs = {'left', 'right', 'center', 'justify', None}
         kit.confirm_attrib_value(log, e, 'align', align_attribs)
         assert e.tag == self.tag
