@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     AttribView: TypeAlias = lxml.etree._Attrib | Mapping[str, str]
 
 
+Log: TypeAlias = Callable[[fc.FormatIssue], None]
 IssueCallback: TypeAlias = Callable[[fc.FormatIssue], None]
 EnumT = TypeVar('EnumT', bound=StrEnum)
 
@@ -87,7 +88,7 @@ def prep_array_elements(log: IssueCallback, e: XmlElement) -> None:
         log(fc.IgnoredText.issue(e))
     for s in e:
         if s.tail and s.tail.strip():
-            log(fc.IgnoredText.issue(e))
+            log(fc.IgnoredTail.issue(s))
         s.tail = None
 
 
@@ -96,34 +97,12 @@ if TYPE_CHECKING:
 
 
 class Parser(ABC):
-    def __init__(self, log: IssueCallback):
-        self.log = log
-
     @abstractmethod
     def match(self, xe: XmlElement) -> ParseFunc | None: ...
 
     def parse_element(self, e: XmlElement) -> bool:
         fun = self.match(e)
         return False if fun is None else fun(e)
-
-    def parse_array_content(self, e: XmlElement) -> None:
-        prep_array_elements(self.log, e)
-        for s in e:
-            if not self.parse_element(s):
-                self.log(fc.UnsupportedElement.issue(s))
-
-
-class UnionParser(Parser):
-    def __init__(self, log: IssueCallback, parsers: Iterable[Parser] = ()):
-        super().__init__(log)
-        self._parsers = list(parsers)
-
-    def match(self, xe: XmlElement) -> ParseFunc | None:
-        for p in self._parsers:
-            fun = p.match(xe)
-            if fun is not None:
-                return fun
-        return None
 
 
 DestT = TypeVar('DestT')
@@ -171,79 +150,132 @@ def load_int(
         return None
 
 
-class Binder(ABC, Generic[DestT]):
-    @abstractmethod
-    def bind(self, log: IssueCallback, dest: DestT) -> Parser: ...
-
-    def as_binders(self) -> Iterable[Binder[DestT]]:
-        return [self]
-
-    def once(self: Binder[DestT]) -> Binder[DestT]:
-        return OnlyOnceBinder(self)
-
-    def __or__(self, other: Binder[DestT]) -> Binder[DestT]:
-        union = list(self.as_binders()) + list(other.as_binders())
-        return UnionBinder(union)
-
-    def parse_array_content(
-        self, log: IssueCallback, xe: XmlElement, dest: DestT
-    ) -> None:
-        parser = self.bind(log, dest)
-        parser.parse_array_content(xe)
-
-
-class UnionBinder(Binder[DestT]):
-    def __init__(self, binders: Iterable[Binder[DestT]] = ()):
-        self._binders = list(binders)
-
-    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        parsers = [b.bind(log, dest) for b in self._binders]
-        return UnionParser(log, parsers)
-
-    def as_binders(self) -> Iterable[Binder[DestT]]:
-        return self._binders
-
-    def __ior__(self, other: Binder[DestT]) -> UnionBinder[DestT]:
-        self._binders.extend(other.as_binders())
-        return self
+class Binder(Protocol, Generic[DestConT]):
+    def bound_parser(self, log: Log, dest: DestConT, /) -> Parser: ...
 
 
 class StatelessParser(Parser, Generic[DestT]):
-    def __init__(self, log: IssueCallback, dest: DestT, binder: ParserBinder[DestT]):
-        super().__init__(log)
-        self.dest = dest
-        self._binder = binder
+    def __init__(self, match_fun: ParseFunc, parse_fun: ParseFunc):
+        self.match_fun = match_fun
+        self.parse_fun = parse_fun
 
     def match(self, xe: XmlElement) -> ParseFunc | None:
-        if self._binder.match(xe):
-            return self._parse
+        if self.match_fun(xe):
+            return self.parse_fun
         return None
 
-    def _parse(self, e: XmlElement) -> bool:
-        return self._binder.parse(self.log, e, self.dest)
+
+class TagBinderBase(ABC, Binder[DestT]):
+    def __init__(self, tag: str | StartTag | None = None):
+        if tag is None:
+            tag = getattr(type(self), 'TAG')
+        self.stag = StartTag(tag)
+
+    @abstractmethod
+    def read(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> None: ...
+
+    @property
+    def tag(self) -> str:
+        return self.stag.tag
+
+    def match(self, xe: XmlElement) -> bool:
+        return match_start_tag(xe, self.stag)
+
+    def bound_parser(self, log: Log, dest: DestT) -> Parser:
+        def parse_fun(xe: XmlElement) -> bool:
+            self.read(log, xe, dest)
+            return True
+
+        return StatelessParser(self.match, parse_fun)
 
 
-class ParserBinder(Binder[DestT]):
+Sink: TypeAlias = Callable[[ParsedT], None]
+
+
+class Model(ABC, Binder[Sink[ParsedT]]):
     @abstractmethod
     def match(self, xe: XmlElement) -> bool: ...
 
     @abstractmethod
-    def parse(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> bool: ...
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool: ...
 
-    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        return StatelessParser(log, dest, self)
+    def bound_parser(self, log: Log, dest: Sink[ParsedT]) -> Parser:
+        def parse_fun(xe: XmlElement) -> bool:
+            return self.parse(log, xe, dest)
+
+        return StatelessParser(self.match, parse_fun)
+
+    def as_models(self) -> Iterable[Model[ParsedT]]:
+        return [self]
+
+    def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
+        union = list(self.as_models()) + list(other.as_models())
+        return UnionModel(union)
 
 
-class ReadBinder(ParserBinder[DestT]):
+class UnionModel(Model[ParsedT]):
+    def __init__(self, binders: Iterable[Model[ParsedT]] = ()):
+        self._binders = list(binders)
+
+    def match(self, xe: XmlElement) -> bool:
+        return any(b.match(xe) for b in self._binders)
+
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
+        for b in self._binders:
+            if b.match(xe):
+                return b.parse(log, xe, dest)
+        return False
+
+    def as_models(self) -> Iterable[Model[ParsedT]]:
+        return self._binders
+
+    def __ior__(self, other: Model[ParsedT]) -> UnionModel[ParsedT]:
+        self._binders.extend(other.as_models())
+        return self
+
+
+class LoadModel(Model[ParsedT]):
     @abstractmethod
-    def read(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> None: ...
+    def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None: ...
 
-    def parse(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> bool:
-        self.read(log, xe, dest)
-        return True
+    def load_if_match(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
+        if self.match(e):
+            return self.load(log, e)
+        else:
+            return None
+
+    def parse(self, log: IssueCallback, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
+        parsed = self.load(log, xe)
+        if parsed is not None:
+            if isinstance(parsed, Element) and xe.tail:
+                parsed.tail = xe.tail
+            # mypy v1.9 has issue below but not v1.15
+            dest(parsed)  # type: ignore[arg-type, unused-ignore]
+        return parsed is not None
 
 
-class TagReader(ReadBinder[DestT]):
+class ModModel(LoadModel[ParsedT]):
+    @property
+    @abstractmethod
+    def parsed_type(self) -> type[ParsedT]: ...
+
+    @abstractmethod
+    def mod(self, log: Log, xe: XmlElement, target: ParsedT) -> None: ...
+
+    def load(self, log: Log, xe: XmlElement) -> ParsedT | None:
+        out = self.parsed_type()
+        self.mod(log, xe, out)
+        return out
+
+    def bind_mod(self, log: Log, target: ParsedT) -> Parser:
+        def parse_fun(xe: XmlElement) -> bool:
+            self.mod(log, xe, target)
+            return True
+
+        return StatelessParser(self.match, parse_fun)
+
+
+class TagModelBase(LoadModel[ParsedT]):
     def __init__(self, tag: str | StartTag | None = None):
         if tag is None:
             tag = getattr(type(self), 'TAG')
@@ -257,46 +289,7 @@ class TagReader(ReadBinder[DestT]):
         return match_start_tag(xe, self.stag)
 
 
-class SingleElementBinder(TagReader[DestT]):
-    def __init__(self, tag: str, content_binder: Binder[DestT]):
-        super().__init__(tag)
-        self.content_binder = content_binder
-
-    def read(self, log: IssueCallback, xe: XmlElement, dest: DestT) -> None:
-        check_no_attrib(log, xe)
-        self.content_binder.parse_array_content(log, xe, dest)
-
-
-Sink: TypeAlias = Callable[[ParsedT], None]
-Model: TypeAlias = Binder[Sink[ParsedT]]
-UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
-
-
-class LoadModel(ReadBinder[Sink[ParsedT]]):
-    @abstractmethod
-    def load(self, log: IssueCallback, e: XmlElement) -> ParsedT | None: ...
-
-    def load_if_match(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
-        if self.match(e):
-            return self.load(log, e)
-        else:
-            return None
-
-    def read(self, log: IssueCallback, xe: XmlElement, dest: Sink[ParsedT]) -> None:
-        if self.match(xe):
-            self.parse(log, xe, dest)
-
-    def parse(self, log: IssueCallback, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
-        parsed = self.load(log, xe)
-        if parsed is not None:
-            if isinstance(parsed, Element) and xe.tail:
-                parsed.tail = xe.tail
-            # mypy v1.9 has issue below but not v1.15
-            dest(parsed)  # type: ignore[arg-type, unused-ignore]
-        return parsed is not None
-
-
-class TagModelBase(LoadModel[ParsedT]):
+class TagModModelBase(ModModel[ParsedT]):
     def __init__(self, tag: str | StartTag | None = None):
         if tag is None:
             tag = getattr(type(self), 'TAG')
@@ -324,8 +317,8 @@ def tag_model(tag: str, loader: Loader[ParsedT]) -> Model[ParsedT]:
 
 
 class OnlyOnceParser(Parser):
-    def __init__(self, parser: Parser):
-        super().__init__(parser.log)
+    def __init__(self, log: Log, parser: Parser):
+        self.log = log
         self._parser = parser
         self._parse_done = False
 
@@ -334,8 +327,6 @@ class OnlyOnceParser(Parser):
         return None if fun is None else self._parse
 
     def _parse(self, e: XmlElement) -> bool:
-        if not isinstance(e.tag, str):
-            return False
         parse_func = self._parser.match(e)
         if parse_func is None:
             return False
@@ -350,44 +341,90 @@ class OnlyOnceBinder(Binder[DestT]):
     def __init__(self, binder: Binder[DestT]):
         self.binder = binder
 
-    def bind(self, log: IssueCallback, dest: DestT) -> Parser:
-        return OnlyOnceParser(self.binder.bind(log, dest))
+    def bound_parser(self, log: IssueCallback, dest: DestT) -> Parser:
+        return OnlyOnceParser(log, self.binder.bound_parser(log, dest))
+
+
+class Outcome(Protocol[ParsedCovT]):
+    @property
+    def out(self) -> ParsedCovT | None: ...
 
 
 @dataclass
-class Result(Generic[ParsedT]):
+class SinkDestination(Outcome[ParsedT]):
     out: ParsedT | None = None
 
     def __call__(self, parsed: ParsedT) -> None:
         self.out = parsed
 
 
-class ContentParser(UnionParser):
-    def __init__(self, log: IssueCallback):
-        super().__init__(log)
+class Session(ABC):
+    def __init__(self, log: Log):
+        self.log = log
+        self._parsers: list[Parser] = []
 
-    def one(self, model: Model[ParsedT]) -> Result[ParsedT]:
-        ret = Result[ParsedT]()
-        sink: Sink[ParsedT] = ret
-        self.bind(model.once(), sink)
-        return ret
-
-    def every(self, binder: Binder[Sink[ParsedT]]) -> Sequence[ParsedT]:
-        ret: list[ParsedT] = list()
-        self.bind(binder, ret.append)
-        return ret
+    def _add_parser(self, p: Parser) -> None:
+        self._parsers.append(p)
 
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
-        self._parsers.append(binder.bind(self.log, dest))
+        self._add_parser(binder.bound_parser(self.log, dest))
+
+    def bind_mod(self, model: ModModel[ParsedT], target: ParsedT) -> None:
+        self._add_parser(model.bind_mod(self.log, target))
 
 
-class SingleSubElementLoader(Loader[ParsedT]):
-    def __init__(self, model: Model[ParsedT]):
-        self._model = model
+class ArrayContentSession(Session):
+    def bind_once(self, binder: Binder[DestT], dest: DestT) -> None:
+        once = OnlyOnceBinder(binder)
+        self._add_parser(once.bound_parser(self.log, dest))
 
-    def __call__(self, log: IssueCallback, e: XmlElement) -> ParsedT | None:
-        check_no_attrib(log, e)
-        cp = ContentParser(log)
-        result = cp.one(self._model)
-        cp.parse_array_content(e)
-        return result.out
+    def one(self, model: Model[ParsedT]) -> Outcome[ParsedT]:
+        ret = SinkDestination[ParsedT]()
+        once = OnlyOnceBinder(model)
+        self._add_parser(once.bound_parser(self.log, ret))
+        return ret
+
+    def every(self, model: Model[ParsedT]) -> Sequence[ParsedT]:
+        ret: list[ParsedT] = list()
+        parser = model.bound_parser(self.log, ret.append)
+        self._add_parser(parser)
+        return ret
+
+    def parse_content(self, e: XmlElement) -> None:
+        prep_array_elements(self.log, e)
+        for s in e:
+            if not any(p.parse_element(s) for p in self._parsers):
+                self.log(fc.UnsupportedElement.issue(s))
+
+
+class ContentBinder(ABC, Generic[DestT]):
+    def __init__(self, dest_type: type[DestT]):
+        self.dest_type = dest_type
+
+    @abstractmethod
+    def binds(self, sess: Session, dest: DestT) -> None: ...
+
+
+class MergedElementsContentBinder(ContentBinder[DestT]):
+    def __init__(self, child_model: ModModel[DestT]) -> None:
+        super().__init__(child_model.parsed_type)
+        self.child_model = child_model
+
+    def binds(self, sess: Session, dest: DestT) -> None:
+        sess.bind_mod(self.child_model, dest)
+
+
+class ContentInElementModel(TagModModelBase[ParsedT]):
+    def __init__(self, tag: str, content: ContentBinder[ParsedT]):
+        super().__init__(tag)
+        self.content = content
+
+    @property
+    def parsed_type(self) -> type[ParsedT]:
+        return self.content.dest_type
+
+    def mod(self, log: Log, xe: XmlElement, target: ParsedT) -> None:
+        check_no_attrib(log, xe, self.stag.attrib.keys())
+        sess = ArrayContentSession(log)
+        self.content.binds(sess, target)
+        sess.parse_content(xe)

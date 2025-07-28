@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from .. import baseprint as bp
 from .. import condition as fc
@@ -9,15 +9,17 @@ from ..tree import Element, MarkupElement
 from . import kit
 from .tree import (
     DataElementModel,
-    EModel,
     TextElementModel,
     EmptyElementModel,
     parse_mixed_content,
 )
-from .kit import IssueCallback
+from .kit import IssueCallback, Log, Model
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
+
+
+EModel: TypeAlias = Model[Element]
 
 
 def disp_quote_model(p_elements: EModel) -> EModel:
@@ -82,15 +84,15 @@ class ListModel(kit.TagModelBase[Element]):
         # %list-item-model
         p = TextElementModel({'p'}, p_elements_model)
         list_item_content = p | self
-        self._list_content_model = DataElementModel(
-            'list-item', list_item_content
-        )
+        self._list_content_model = DataElementModel('list-item', list_item_content)
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
-        kit.check_no_attrib(log, e, ['list-type'])
-        list_type = kit.get_enum_value(log, e, 'list-type', bp.ListTypeCode)
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
+        kit.check_no_attrib(log, xe, ['list-type'])
+        list_type = kit.get_enum_value(log, xe, 'list-type', bp.ListTypeCode)
         ret = bp.List(list_type)
-        self._list_content_model.parse_array_content(log, e, ret.append)
+        sess = kit.ArrayContentSession(log)
+        sess.bind(self._list_content_model, ret.append)
+        sess.parse_content(xe)
         return ret
 
 

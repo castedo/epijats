@@ -17,15 +17,14 @@ from ..tree import (
 
 from . import kit
 from .kit import (
-    TagModelBase,
-    Binder,
-    ContentParser,
+    ArrayContentSession,
     IssueCallback,
-    tag_model,
+    Log,
     Model,
-    Parser,
     Sink,
+    TagModelBase,
     UnionModel,
+    tag_model,
 )
 from .htmlish import (
     ExtLinkModel,
@@ -37,9 +36,7 @@ from .htmlish import (
     table_wrap_model,
 )
 from .tree import (
-    EModel,
-    MixedContentBinder,
-    MixedContentLoader,
+    MixedContentModel,
     TextElementModel,
     parse_mixed_content,
 )
@@ -192,7 +189,7 @@ class CitationTupleModel(kit.LoadModel[Element]):
 
 
 class CrossReferenceModel(kit.TagModelBase[Element]):
-    def __init__(self, content_model: EModel):
+    def __init__(self, content_model: Model[Element]):
         super().__init__('xref')
         self.content_model = content_model
 
@@ -213,32 +210,28 @@ class CrossReferenceModel(kit.TagModelBase[Element]):
         return ret
 
 
-def mixed_element_model(tag: str) -> Model[MixedContent]:
-    return tag_model(tag, MixedContentLoader(base_hypertext_model()))
-
-
-def article_title_model() -> Model[MixedContent]:
+def article_title_model() -> kit.ModModel[MixedContent]:
     """
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article-title.html
     """
-    return mixed_element_model('article-title')
+    return MixedContentModel('article-title', base_hypertext_model())
 
 
-def title_model() -> Model[MixedContent]:
+def title_model() -> kit.ModModel[MixedContent]:
     """
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/title.html
     """
-    content_model = base_hypertext_model() | break_model()
-    return tag_model('title', MixedContentLoader(content_model))
+    child_model = base_hypertext_model() | break_model()
+    return MixedContentModel('title', child_model)
 
 
-def hypertext_element_binder(tag: str) -> Binder[MixedContent]:
-    return MixedContentBinder(tag, base_hypertext_model())
+def hypertext_element_model(tag: str) -> kit.ModModel[MixedContent]:
+    return MixedContentModel(tag, base_hypertext_model())
 
 
 def title_group_model() -> Model[MixedContent]:
-    loader = kit.SingleSubElementLoader(article_title_model())
-    return tag_model('title-group', loader)
+    content = kit.MergedElementsContentBinder(article_title_model())
+    return kit.ContentInElementModel('title-group', content)
 
 
 def orcid_model() -> Model[bp.Orcid]:
@@ -261,9 +254,9 @@ def load_orcid(log: IssueCallback, e: XmlElement) -> bp.Orcid | None:
 
 def load_author_group(log: IssueCallback, e: XmlElement) -> list[bp.Author] | None:
     kit.check_no_attrib(log, e)
-    acp = ContentParser(log)
-    ret = acp.every(tag_model('contrib', load_author))
-    acp.parse_array_content(e)
+    sess = ArrayContentSession(log)
+    ret = sess.every(tag_model('contrib', load_author))
+    sess.parse_content(e)
     return list(ret)
 
 
@@ -273,10 +266,10 @@ def person_name_model() -> Model[bp.PersonName]:
 
 def load_person_name(log: IssueCallback, e: XmlElement) -> bp.PersonName | None:
     kit.check_no_attrib(log, e)
-    p = ContentParser(log)
-    surname = p.one(tag_model('surname', kit.load_string))
-    given_names = p.one(tag_model('given-names', kit.load_string))
-    p.parse_array_content(e)
+    sess = ArrayContentSession(log)
+    surname = sess.one(tag_model('surname', kit.load_string))
+    given_names = sess.one(tag_model('given-names', kit.load_string))
+    sess.parse_content(e)
     if not surname.out and not given_names.out:
         log(fc.MissingContent.issue(e))
         return None
@@ -289,11 +282,11 @@ def load_author(log: IssueCallback, e: XmlElement) -> bp.Author | None:
     if not kit.confirm_attrib_value(log, e, 'contrib-type', ['author']):
         return None
     kit.check_no_attrib(log, e, ['contrib-type', 'id'])
-    p = ContentParser(log)
-    name = p.one(person_name_model())
-    email = p.one(tag_model('email', kit.load_string))
-    orcid = p.one(orcid_model())
-    p.parse_array_content(e)
+    sess = ArrayContentSession(log)
+    name = sess.one(person_name_model())
+    email = sess.one(tag_model('email', kit.load_string))
+    orcid = sess.one(orcid_model())
+    sess.parse_content(e)
     if name.out is None:
         log(fc.MissingContent.issue(e, "Missing name"))
         return None
@@ -301,42 +294,35 @@ def load_author(log: IssueCallback, e: XmlElement) -> bp.Author | None:
 
 
 class AutoCorrectModel(Model[Element]):
-    def __init__(self, p_elements: EModel):
-        self.p_elements = p_elements
+    def __init__(self, p_child: Model[Element]):
+        self.p_child = p_child
 
-    def bind(self, log: IssueCallback, dest: Sink[Element]) -> Parser:
-        return AutoCorrectParser(log, dest, self.p_elements)
+    def match(self, xe: XmlElement) -> bool:
+        return self.p_child.match(xe)
 
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
+        def _correct(parsed_p_child: Element) -> None:
+            correction = make_paragraph("")
+            correction.content.append(parsed_p_child)
+            dest(correction)
 
-class AutoCorrectParser(Parser):
-    def __init__(self, log: IssueCallback, dest: Sink[Element], p_elements: EModel):
-        super().__init__(log)
-        self.dest = dest
-        self._parser = p_elements.bind(log, self._correct)
-
-    def _correct(self, parsed_p_element: Element) -> None:
-        correction = make_paragraph("")
-        correction.content.append(parsed_p_element)
-        self.dest(correction)
-
-    def match(self, xe: XmlElement) -> kit.ParseFunc | None:
-        return self._parser.match(xe)
+        parser = self.p_child.bound_parser(log, _correct)
+        return parser.parse_element(xe)
 
 
-class ProtoSectionContentBinder(Binder[bp.ProtoSection]):
+class ProtoSectionBinder(kit.ContentBinder[bp.ProtoSection]):
     def __init__(self, p_elements: Model[Element], p_level: Model[Element]):
+        super().__init__(bp.ProtoSection)
         self.p_elements = p_elements
         self.p_level = p_level
 
-    def bind(self, log: IssueCallback, dest: bp.ProtoSection) -> Parser:
-        ret = ContentParser(log)
-        ret.bind(self.p_level, dest.presection.append)
-        ret.bind(AutoCorrectModel(self.p_elements), dest.presection.append)
-        ret.bind(SectionModel(self.p_elements), dest.subsections.append)
-        return ret
+    def binds(self, sess: kit.Session, target: bp.ProtoSection) -> None:
+        sess.bind(self.p_level, target.presection.append)
+        sess.bind(AutoCorrectModel(self.p_elements), target.presection.append)
+        sess.bind(SectionModel(self.p_elements), target.subsections.append)
 
 
-def abstract_binder() -> Binder[bp.ProtoSection]:
+def abstract_model() -> kit.ModModel[bp.ProtoSection]:
     """<abstract> Abstract
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
@@ -344,8 +330,8 @@ def abstract_binder() -> Binder[bp.ProtoSection]:
 
     p_child = p_child_model()
     just_para = TextElementModel({'p'}, p_child)
-    content = ProtoSectionContentBinder(p_child, just_para)
-    return kit.SingleElementBinder('abstract', content)
+    content = ProtoSectionBinder(p_child, just_para)
+    return kit.ContentInElementModel('abstract', content)
 
 
 class SectionModel(TagModelBase[bp.Section]):
@@ -353,21 +339,19 @@ class SectionModel(TagModelBase[bp.Section]):
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
 
-    def __init__(self, p_elements: EModel):
+    def __init__(self, p_elements: Model[Element]):
         super().__init__('sec')
         p_level = p_level_model(p_elements)
-        self._proto = ProtoSectionContentBinder(p_elements, p_level)
+        self._proto = ProtoSectionBinder(p_elements, p_level)
 
-    def load(self, log: IssueCallback, e: XmlElement) -> bp.Section | None:
+    def load(self, log: Log, e: XmlElement) -> bp.Section | None:
         kit.check_no_attrib(log, e, ['id'])
         ret = bp.Section([], [], e.attrib.get('id'), MixedContent())
-        cp = ContentParser(log)
-        title = cp.one(title_model())
-        cp.bind(self._proto, ret)
-        cp.parse_array_content(e)
-        if title.out:
-            ret.title = title.out
-        else:
+        sess = ArrayContentSession(log)
+        self._proto.binds(sess, ret)
+        sess.bind_mod(title_model(), ret.title)
+        sess.parse_content(e)
+        if ret.title.blank():
             log(fc.FormatIssue(fc.MissingContent('title', 'sec')))
         return ret
 
@@ -386,14 +370,14 @@ class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
         ret: list[bp.PersonName | str] = []
         k = 'person-group-type'
         kit.check_no_attrib(log, e, [k])
-        cp = ContentParser(log)
-        cp.bind(tag_model('name', load_person_name), ret.append)
-        cp.bind(tag_model('string-name', kit.load_string), ret.append)
-        cp.parse_array_content(e)
+        sess = ArrayContentSession(log)
+        sess.bind(tag_model('name', load_person_name), ret.append)
+        sess.bind(tag_model('string-name', kit.load_string), ret.append)
+        sess.parse_content(e)
         return ret
 
 
-def base_hypertext_model() -> EModel:
+def base_hypertext_model() -> Model[Element]:
     """Base hypertext model"""
 
     only_formatted_text = UnionModel[Element]()
@@ -407,7 +391,7 @@ def base_hypertext_model() -> EModel:
     return hypertext
 
 
-def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
+def p_child_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
     """Paragraph (child) elements (subset of Article Authoring JATS)
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     """
@@ -431,7 +415,7 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> EModel:
     return p_elements
 
 
-def p_level_model(p_elements: EModel) -> EModel:
+def p_level_model(p_elements: Model[Element]) -> Model[Element]:
     """Paragraph-level elements (subset of Article Authoring JATS)
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/para-level.html
     """
@@ -457,7 +441,7 @@ CC_URLS = {
 }
 
 
-class LicenseRefBinder(kit.TagReader[bp.License]):
+class LicenseRefBinder(kit.TagBinderBase[bp.License]):
     TAG = "{http://www.niso.org/schemas/ali/1.0/}license_ref"
 
     def read(self, log: IssueCallback, xe: XmlElement, dest: bp.License) -> None:
@@ -480,10 +464,10 @@ class LicenseModel(kit.TagModelBase[bp.License]):
     def load(self, log: IssueCallback, e: XmlElement) -> bp.License | None:
         ret = bp.License(MixedContent(), "", None)
         kit.check_no_attrib(log, e)
-        ap = ContentParser(log)
-        ap.bind(hypertext_element_binder('license-p').once(), ret.license_p)
-        ap.bind(LicenseRefBinder().once(), ret)
-        ap.parse_array_content(e)
+        sess = ArrayContentSession(log)
+        sess.bind_mod(hypertext_element_model('license-p'), ret.license_p)
+        sess.bind_once(LicenseRefBinder(), ret)
+        sess.parse_content(e)
         return None if ret.blank() else ret
 
 
@@ -492,10 +476,10 @@ class PermissionsModel(kit.TagModelBase[bp.Permissions]):
 
     def load(self, log: IssueCallback, e: XmlElement) -> bp.Permissions | None:
         kit.check_no_attrib(log, e)
-        ap = ContentParser(log)
-        statement = ap.one(mixed_element_model('copyright-statement'))
-        license = ap.one(LicenseModel())
-        ap.parse_array_content(e)
+        sess = ArrayContentSession(log)
+        statement = sess.one(hypertext_element_model('copyright-statement'))
+        license = sess.one(LicenseModel())
+        sess.parse_content(e)
         if license.out is None:
             return None
         if statement.out and not statement.out.blank():
@@ -505,18 +489,18 @@ class PermissionsModel(kit.TagModelBase[bp.Permissions]):
         return bp.Permissions(license.out, copyright)
 
 
-class ArticleMetaBinder(kit.TagReader[bp.Baseprint]):
+class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
     TAG = 'article-meta'
 
     def read(self, log: IssueCallback, xe: XmlElement, dest: bp.Baseprint) -> None:
         kit.check_no_attrib(log, xe)
-        cp = ContentParser(log)
-        title = cp.one(title_group_model())
-        authors = cp.one(tag_model('contrib-group', load_author_group))
+        sess = ArrayContentSession(log)
+        title = sess.one(title_group_model())
+        authors = sess.one(tag_model('contrib-group', load_author_group))
         abstract = bp.ProtoSection()
-        cp.bind(abstract_binder().once(), abstract)
-        permissions = cp.one(PermissionsModel())
-        cp.parse_array_content(xe)
+        sess.bind_mod(abstract_model(), abstract)
+        permissions = sess.one(PermissionsModel())
+        sess.parse_content(xe)
         if title.out:
             dest.title = title.out
         if authors.out is not None:
@@ -527,25 +511,25 @@ class ArticleMetaBinder(kit.TagReader[bp.Baseprint]):
             dest.permissions = permissions.out
 
 
-class ArticleFrontBinder(kit.TagReader[bp.Baseprint]):
+class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
     TAG = 'front'
 
-    def read(self, log: IssueCallback, e: XmlElement, dest: bp.Baseprint) -> None:
-        kit.check_no_attrib(log, e)
-        cp = ContentParser(log)
-        cp.bind(ArticleMetaBinder().once(), dest)
-        cp.parse_array_content(e)
+    def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
+        kit.check_no_attrib(log, xe)
+        sess = ArrayContentSession(log)
+        sess.bind_once(ArticleMetaBinder(), dest)
+        sess.parse_content(xe)
 
 
-def body_binder(biblio: BiblioRefPool | None) -> Binder[bp.ProtoSection]:
+def body_model(biblio: BiblioRefPool | None) -> kit.ModModel[bp.ProtoSection]:
     """<body> Body of the Document
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/body.html
     """
     p_child = p_child_model(biblio)
     p_level = p_level_model(p_child)
-    content = ProtoSectionContentBinder(p_child, p_level)
-    return kit.SingleElementBinder('body', content)
+    content = ProtoSectionBinder(p_child, p_level)
+    return kit.ContentInElementModel('body', content)
 
 
 class PositiveIntModel(TagModelBase[int]):
@@ -564,10 +548,10 @@ class PositiveIntModel(TagModelBase[int]):
 
 
 class DateBuilder:
-    def __init__(self, cp: ContentParser):
-        self.year = cp.one(tag_model('year', kit.load_int))
-        self.month = cp.one(PositiveIntModel('month', 12))
-        self.day = cp.one(PositiveIntModel('day', 31))
+    def __init__(self, sess: ArrayContentSession):
+        self.year = sess.one(tag_model('year', kit.load_int))
+        self.month = sess.one(PositiveIntModel('month', 12))
+        self.day = sess.one(PositiveIntModel('day', 31))
 
     def build(self) -> bp.Date | None:
         ret = None
@@ -589,17 +573,17 @@ class AccessDateModel(TagModelBase[bp.Date]):
     def __init__(self) -> None:
         super().__init__('date-in-citation')
 
-    def load(self, log: IssueCallback, e: XmlElement) -> bp.Date | None:
-        kit.check_no_attrib(log, e, ['content-type'])
-        if e.attrib.get('content-type') != 'access-date':
+    def load(self, log: Log, xe: XmlElement) -> bp.Date | None:
+        kit.check_no_attrib(log, xe, ['content-type'])
+        if xe.attrib.get('content-type') != 'access-date':
             return None
-        cp = ContentParser(log)
-        date = DateBuilder(cp)
-        cp.parse_array_content(e)
+        sess = ArrayContentSession(log)
+        date = DateBuilder(sess)
+        sess.parse_content(xe)
         return date.build()
 
 
-class PubIdBinder(kit.TagReader[dict[bp.PubIdType, str]]):
+class PubIdBinder(kit.TagBinderBase[dict[bp.PubIdType, str]]):
     """<pub-id> Publication Identifier for a Cited Publication
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/pub-id.html
@@ -658,24 +642,24 @@ def load_edition(log: IssueCallback, e: XmlElement) -> int | None:
         return None
 
 
-class ElementCitationBinder(kit.TagReader[bp.BiblioRefItem]):
+class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
     TAG = 'element-citation'
 
-    def read(self, log: IssueCallback, e: XmlElement, dest: bp.BiblioRefItem) -> None:
+    def read(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:
         kit.check_no_attrib(log, e)
-        cp = ContentParser(log)
-        source = cp.one(tag_model('source', kit.load_string))
-        title = cp.one(tag_model('article-title', kit.load_string))
-        authors = cp.one(PersonGroupModel('author'))
-        editors = cp.one(PersonGroupModel('editor'))
-        edition = cp.one(tag_model('edition', load_edition))
-        date = DateBuilder(cp)
-        access_date = cp.one(AccessDateModel())
+        sess = ArrayContentSession(log)
+        source = sess.one(tag_model('source', kit.load_string))
+        title = sess.one(tag_model('article-title', kit.load_string))
+        authors = sess.one(PersonGroupModel('author'))
+        editors = sess.one(PersonGroupModel('editor'))
+        edition = sess.one(tag_model('edition', load_edition))
+        date = DateBuilder(sess)
+        access_date = sess.one(AccessDateModel())
         fields = {}
         for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
-            fields[key] = cp.one(tag_model(key, kit.load_string))
-        cp.bind(PubIdBinder(), dest.pub_ids)
-        cp.parse_array_content(e)
+            fields[key] = sess.one(tag_model(key, kit.load_string))
+        sess.bind(PubIdBinder(), dest.pub_ids)
+        sess.parse_content(e)
         dest.source = source.out
         dest.article_title = title.out
         if authors.out:
@@ -699,15 +683,15 @@ class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):
     def __init__(self) -> None:
         super().__init__('ref')
 
-    def load(self, log: IssueCallback, e: XmlElement) -> bp.BiblioRefItem | None:
+    def load(self, log: Log, xe: XmlElement) -> bp.BiblioRefItem | None:
         ret = bp.BiblioRefItem()
-        kit.check_no_attrib(log, e, ['id'])
-        cp = ContentParser(log)
+        kit.check_no_attrib(log, xe, ['id'])
+        sess = ArrayContentSession(log)
         label = PositiveIntModel('label', 1048576, strip_trailing_period=True)
-        cp.one(label)  # ignoring if it's a valid integer
-        cp.bind(ElementCitationBinder().once(), ret)
-        cp.parse_array_content(e)
-        ret.id = e.attrib.get('id', "")
+        sess.one(label)  # ignoring if it's a valid integer
+        sess.bind_once(ElementCitationBinder(), ret)
+        sess.parse_content(xe)
+        ret.id = xe.attrib.get('id', "")
         return ret
 
 
@@ -717,11 +701,23 @@ class RefListModel(TagModelBase[bp.BiblioRefList]):
 
     def load(self, log: IssueCallback, e: XmlElement) -> bp.BiblioRefList | None:
         kit.check_no_attrib(log, e)
-        cp = ContentParser(log)
-        title = cp.one(title_model())
-        references = cp.every(BiblioRefItemModel())
-        cp.parse_array_content(e)
+        sess = ArrayContentSession(log)
+        title = sess.one(title_model())
+        references = sess.every(BiblioRefItemModel())
+        sess.parse_content(e)
         return bp.BiblioRefList(title.out, list(references))
+
+
+def pop_load_sub_back(log: Log, xe: XmlElement) -> bp.BiblioRefList | None:
+    back = xe.find("back")
+    if back is None:
+        return None
+    kit.check_no_attrib(log, back)
+    sess = kit.ArrayContentSession(log)
+    result = sess.one(RefListModel())
+    sess.parse_content(back)
+    xe.remove(back)  # type: ignore[arg-type]
+    return result.out
 
 
 def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
@@ -733,17 +729,13 @@ def load_article(log: IssueCallback, e: XmlElement) -> bp.Baseprint | None:
     kit.confirm_attrib_value(log, e, lang, ['en', None])
     kit.check_no_attrib(log, e, [lang])
     ret = bp.Baseprint()
-    back = e.find("back")
     back_log = list[fc.FormatIssue]()
-    if back is not None:
-        back_loader = kit.SingleSubElementLoader(RefListModel())
-        ret.ref_list = back_loader(back_log.append, back)
-        e.remove(back)  # type: ignore[arg-type]
+    ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
-    cp = ContentParser(log)
-    cp.bind(ArticleFrontBinder().once(), ret)
-    cp.bind(body_binder(biblio), ret.body)
-    cp.parse_array_content(e)
+    sess = ArrayContentSession(log)
+    sess.bind_once(ArticleFrontBinder(), ret)
+    sess.bind_mod(body_model(biblio), ret.body)
+    sess.parse_content(e)
     if ret.ref_list:
         assert biblio
         ret.ref_list.references = biblio.used

@@ -82,6 +82,7 @@ class MathmlElementModel(kit.TagModelBase[Element]):
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/mml-math.html
     """
+
     def __init__(self, mathml_tag: str):
         super().__init__(MATHML_NAMESPACE_PREFIX + mathml_tag)
         self._model = AnyMathmlModel()
@@ -98,16 +99,17 @@ class FormulaAlternativesModel(kit.TagModelBase[Element]):
 
     https://jats.nlm.nih.gov/publishing/tag-library/1.4/element/alternatives.html
     """
+
     def __init__(self, formula_style: FormulaStyle):
         super().__init__('alternatives')
         self.formula_style = formula_style
 
     def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e)
-        cp = kit.ContentParser(log)
+        cp = kit.ArrayContentSession(log)
         tex = cp.one(kit.tag_model('tex-math', kit.load_string))
         mathml = cp.one(MathmlElementModel('math'))
-        cp.parse_array_content(e)
+        cp.parse_content(e)
         if not tex.out:
             return None
         ret = FormulaElement(self.formula_style)
@@ -119,9 +121,17 @@ class FormulaAlternativesModel(kit.TagModelBase[Element]):
         return ret
 
 
-def formula_model(formula_style: FormulaStyle) -> kit.Model[Element]:
-    alts = FormulaAlternativesModel(formula_style)
-    return kit.tag_model(formula_style.jats_tag, kit.SingleSubElementLoader(alts))
+class FormulaModel(kit.TagModelBase[Element]):
+    def __init__(self, formula_style: FormulaStyle):
+        super().__init__(formula_style.jats_tag)
+        self.child_model = FormulaAlternativesModel(formula_style)
+
+    def load(self, log: IssueCallback, xe: XmlElement) -> Element | None:
+        kit.check_no_attrib(log, xe)
+        sess = kit.ArrayContentSession(log)
+        result = sess.one(self.child_model)
+        sess.parse_content(xe)
+        return result.out
 
 
 def inline_formula_model() -> kit.Model[Element]:
@@ -129,7 +139,7 @@ def inline_formula_model() -> kit.Model[Element]:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/inline-formula.html
     """
-    return formula_model(FormulaStyle.INLINE)
+    return FormulaModel(FormulaStyle.INLINE)
 
 
 def disp_formula_model() -> kit.Model[Element]:
@@ -137,4 +147,4 @@ def disp_formula_model() -> kit.Model[Element]:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-formula.html
     """
-    return formula_model(FormulaStyle.DISPLAY)
+    return FormulaModel(FormulaStyle.DISPLAY)

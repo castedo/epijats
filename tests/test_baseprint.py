@@ -10,7 +10,7 @@ import lxml.etree
 import epijats.parse.jats as _
 from epijats import html
 from epijats import baseprint as bp
-from epijats.baseprint import Baseprint, List, ProtoSection
+from epijats.baseprint import Baseprint, List
 from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
@@ -19,6 +19,10 @@ from epijats.xml import XmlFormatter
 
 if TYPE_CHECKING:
     from epijats.xml import XmlElement
+
+
+def assert_not(x):
+    assert not x
 
 
 XML = XmlFormatter(use_lxml=True)
@@ -73,7 +77,7 @@ def test_minimalish():
     got = parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
     assert got.authors == [bp.Author(bp.PersonName("Wang"))]
-    expect = ProtoSection()
+    expect = bp.ProtoSection()
     expect.presection.append(make_paragraph('A simple test.'))
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
@@ -306,9 +310,8 @@ def test_author_restyle():
     assert str_from_element(ele) == expect
 
 
-def test_abstract_restyle():
-    binder = _.abstract_binder()
-    issues: list[fc.FormatIssue] = []
+def test_abstract_restyle() -> None:
+    model = _.abstract_model()
 
     bad_style = """\
 <abstract>
@@ -320,9 +323,8 @@ def test_abstract_restyle():
     </list>
                 <p>OK</p>
 </abstract>"""
-    bdom = ProtoSection()
-    binder.bind(issues.append, bdom).parse_element(lxml_element_from_str(bad_style))
-    assert not issues
+    bdom = bp.ProtoSection()
+    model.mod(assert_not, lxml_element_from_str(bad_style), bdom)
     restyled = """\
 <abstract>
   <p>OK</p>
@@ -336,9 +338,8 @@ def test_abstract_restyle():
     xe = XML.root(restyle.abstract(bdom))
     assert str_from_xml_element(xe) == restyled
 
-    roundtrip = ProtoSection()
-    binder.bind(issues.append, roundtrip).parse_element(xe)
-    assert not issues
+    roundtrip = bp.ProtoSection()
+    model.mod(assert_not, xe, roundtrip)
     assert roundtrip == bdom
 
     expect_html = """<p>OK</p>

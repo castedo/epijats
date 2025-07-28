@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 
 from .. import condition as fc
 from ..tree import (
@@ -14,21 +14,19 @@ from ..tree import (
 from . import kit
 from .kit import (
     IssueCallback,
-    Loader,
+    Log,
+    Model,
 )
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
-EModel: TypeAlias = kit.Model[Element]
-
-
 def parse_mixed_content(
-    log: IssueCallback, e: XmlElement, emodel: EModel, dest: MixedContent
+    log: Log, e: XmlElement, emodel: Model[Element], dest: MixedContent
 ) -> None:
     dest.append_text(e.text)
-    eparser = emodel.bind(log, dest.append)
+    eparser = emodel.bound_parser(log, dest.append)
     for s in e:
         if not eparser.parse_element(s):
             log(fc.UnsupportedElement.issue(s))
@@ -48,20 +46,24 @@ class EmptyElementModel(kit.TagModelBase[Element]):
 
 
 class DataElementModel(kit.TagModelBase[Element]):
-    def __init__(self, tag: str, content_model: EModel, *, attrib: set[str] = set()):
+    def __init__(
+        self, tag: str, content_model: Model[Element], *, attrib: set[str] = set()
+    ):
         super().__init__(tag)
         self.content_model = content_model
         self._ok_attrib_keys = attrib
 
-    def load(self, log: IssueCallback, e: XmlElement) -> Element | None:
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
         ret = DataElement(self.tag)
-        kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
-        self.content_model.parse_array_content(log, e, ret.append)
+        kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, ret.xml.attrib)
+        sess = kit.ArrayContentSession(log)
+        sess.bind(self.content_model, ret.append)
+        sess.parse_content(xe)
         return ret
 
 
 class TextElementModel(kit.LoadModel[Element]):
-    def __init__(self, tags: set[str], content_model: EModel):
+    def __init__(self, tags: set[str], content_model: Model[Element]):
         self._tags = tags
         self.content_model = content_model
 
@@ -80,25 +82,18 @@ class TextElementModel(kit.LoadModel[Element]):
         return ret
 
 
-class MixedContentLoader(Loader[MixedContent]):
-    def __init__(self, model: EModel):
-        self.model = model
-
-    def __call__(self, log: IssueCallback, e: XmlElement) -> MixedContent | None:
-        kit.check_no_attrib(log, e)
-        ret = MixedContent()
-        parse_mixed_content(log, e, self.model, ret)
-        return ret
-
-
-class MixedContentBinder(kit.TagReader[MixedContent]):
-    def __init__(self, tag: str, content_model: EModel):
+class MixedContentModel(kit.TagModModelBase[MixedContent]):
+    def __init__(self, tag: str, child_model: Model[Element]):
         super().__init__(tag)
-        self.content_model = content_model
+        self.child_model = child_model
 
-    def read(self, log: IssueCallback, xe: XmlElement, dest: MixedContent) -> None:
+    @property
+    def parsed_type(self) -> type[MixedContent]:
+        return MixedContent
+
+    def mod(self, log: Log, xe: XmlElement, target: MixedContent) -> None:
         kit.check_no_attrib(log, xe)
-        if dest.blank():
-            parse_mixed_content(log, xe, self.content_model, dest)
+        if target.blank():
+            parse_mixed_content(log, xe, self.child_model, target)
         else:
             log(fc.ExcessElement.issue(xe))

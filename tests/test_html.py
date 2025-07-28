@@ -1,13 +1,16 @@
 import os, pytest
 from pathlib import Path
 
-from epijats import condition as fc
 from epijats.html import HtmlGenerator
 from epijats.parse import jats, kit, tree
 from epijats.tree import MixedContent
 from epijats.xml import XmlFormatter
 
 from .test_baseprint import lxml_element_from_str
+
+
+def assert_not(x):
+    assert not x
 
 
 XML = XmlFormatter(use_lxml=True)
@@ -23,14 +26,13 @@ def html_from_element(src: tree.Element) -> str:
     return html.content_to_str(content)
 
 
-def parse_element(src: str | Path, model: tree.EModel):
+def parse_element(src: str | Path, model: kit.Model[kit.Element]):
     if isinstance(src, Path):
         with open(src, "r") as f:
             src = f.read().strip()
 
-    issues: list[fc.FormatIssue] = []
-    result = kit.Result[tree.Element]()
-    parser = model.once().bind(issues.append, result)
+    result = kit.SinkDestination[tree.Element]()
+    parser = model.bound_parser(assert_not, result)
 
     e = lxml_element_from_str(src)
     assert isinstance(e.tag, str)
@@ -38,7 +40,6 @@ def parse_element(src: str | Path, model: tree.EModel):
     assert parse_func
     assert parse_func(e)
 
-    assert not issues
     assert isinstance(result.out, tree.Element)
     return result.out
 
