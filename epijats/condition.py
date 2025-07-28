@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from .typeshed import JSONType
     from .xml import XmlElement
     import xml.etree.ElementTree, lxml.etree
+
     QName: TypeAlias = xml.etree.ElementTree.QName | lxml.etree.QName
 
 
@@ -89,7 +90,8 @@ class ElementFormatCondition(FormatCondition):
         return FormatIssue(klas(e.tag, ptag), sourceline, info)
 
     def as_pod(self) -> JSONType:
-        return [type(self).__name__, str(self.tag), str(self.parent)]
+        parent = str(self.parent) if self.parent else None
+        return [type(self).__name__, str(self.tag), parent]
 
 
 @dataclass(frozen=True)
@@ -135,6 +137,31 @@ class InvalidInteger(ElementFormatCondition):
 
 class InvalidCitation(ElementFormatCondition):
     """Invalid citation"""
+
+
+@dataclass(frozen=True)
+class MissingChild(FormatCondition):
+    """Missing child element"""
+
+    tag: str | bytes | bytearray | QName
+    parent: str | bytes | bytearray | QName | None
+    child: str | bytes | bytearray | QName
+
+    def __str__(self) -> str:
+        parent = "" if self.parent is None else repr(self.parent)
+        return "{} {}/{!r}/{!r}".format(self.__doc__, parent, self.tag, self.child)
+
+    @classmethod
+    def issue(klas, e: XmlElement, child: str, info: str | None = None) -> FormatIssue:
+        getparent = getattr(e, 'getparent', None)
+        parent = getparent() if getparent else None
+        ptag = None if parent is None else parent.tag
+        sourceline = getattr(e, 'sourceline', None)
+        return FormatIssue(klas(e.tag, ptag, child), sourceline, info)
+
+    def as_pod(self) -> JSONType:
+        parent = str(self.parent) if self.parent else None
+        return [type(self).__name__, str(self.child), str(self.tag), parent]
 
 
 @dataclass(frozen=True)

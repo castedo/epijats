@@ -258,6 +258,7 @@ def load_orcid(log: Log, e: XmlElement) -> bp.Orcid | None:
 
 def load_author_group(log: Log, e: XmlElement) -> list[bp.Author] | None:
     kit.check_no_attrib(log, e)
+    kit.check_required_child(log, e, 'contrib')
     sess = ArrayContentSession(log)
     ret = sess.every(tag_model('contrib', load_author))
     sess.parse_content(e)
@@ -275,7 +276,7 @@ def load_person_name(log: Log, e: XmlElement) -> bp.PersonName | None:
     given_names = sess.one(tag_model('given-names', kit.load_string))
     sess.parse_content(e)
     if not surname.out and not given_names.out:
-        log(fc.MissingContent.issue(e))
+        log(fc.MissingContent.issue(e, "Missing surname or given-names element."))
         return None
     return bp.PersonName(surname.out, given_names.out)
 
@@ -355,8 +356,11 @@ class SectionModel(TagModelBase[bp.Section]):
         self._proto.binds(sess, ret)
         sess.bind_mono(title_model(), ret.title)
         sess.parse_content(e)
-        if ret.title.blank():
-            log(fc.FormatIssue(fc.MissingContent('title', 'sec')))
+        title_element = e.find('title')
+        if title_element is None:
+            log(fc.MissingChild.issue(e, 'title'))
+        elif ret.title.blank():
+            log(fc.MissingContent.issue(title_element))
         return ret
 
 
@@ -496,6 +500,7 @@ class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
 
     def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
         kit.check_no_attrib(log, xe)
+        kit.check_required_child(log, xe, 'title-group')
         sess = ArrayContentSession(log)
         title = sess.one(title_group_model())
         authors = sess.one(tag_model('contrib-group', load_author_group))
@@ -507,7 +512,7 @@ class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
             dest.title = title.out
         if authors.out is not None:
             dest.authors = authors.out
-        if not abstract.has_no_content():
+        if abstract.has_content():
             dest.abstract = abstract
         if permissions.out is not None:
             dest.permissions = permissions.out
@@ -518,6 +523,7 @@ class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
 
     def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
         kit.check_no_attrib(log, xe)
+        kit.check_required_child(log, xe, 'article-meta')
         sess = ArrayContentSession(log)
         sess.bind_once(ArticleMetaBinder(), dest)
         sess.parse_content(xe)
@@ -732,6 +738,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     back_log = list[fc.FormatIssue]()
     ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
+    kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession(log)
     sess.bind_once(ArticleFrontBinder(), ret)
     sess.bind_mono(body_model(biblio), ret.body)
@@ -741,11 +748,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
         ret.ref_list.references = biblio.used
     if ret.title.blank():
         log(fc.FormatIssue(fc.MissingContent('article-title', 'title-group')))
-    if not len(ret.authors):
-        log(fc.FormatIssue(fc.MissingContent('contrib', 'contrib-group')))
-    if not ret.abstract or ret.abstract.has_no_content():
-        log(fc.FormatIssue(fc.MissingContent('abstract', 'article-meta')))
-    if ret.body.has_no_content():
+    if not ret.body.has_content():
         log(fc.FormatIssue(fc.MissingContent('body', 'article')))
     for issue in back_log:
         log(issue)

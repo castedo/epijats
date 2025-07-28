@@ -44,6 +44,14 @@ def check_no_attrib(log: Log, e: XmlElement, ignore: Iterable[str] = []) -> None
             log(fc.UnsupportedAttribute.issue(e, k))
 
 
+def check_required_child(log: Log, xe: XmlElement, tags: Iterable[str] | str) -> None:
+    if isinstance(tags, str):
+        tags = [tags]
+    for child_tag in tags:
+        if xe.find(child_tag) is None:
+            log(fc.MissingChild.issue(xe, child_tag))
+
+
 def confirm_attrib_value(
     log: Log, e: XmlElement, key: str, ok: Iterable[str | None]
 ) -> bool:

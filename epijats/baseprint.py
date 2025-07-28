@@ -134,8 +134,8 @@ class ProtoSection:
         self.presection = []
         self.subsections = []
 
-    def has_no_content(self) -> bool:
-        return not len(self.presection) and not len(self.subsections)
+    def has_content(self) -> bool:
+        return bool(self.presection) or bool(self.subsections)
 
 
 @dataclass

@@ -356,13 +356,12 @@ def test_minimal_with_issues():
     bp = parse_baseprint_root(XML.ET.fromstring("<article/>"), issues.add)
     print(issues)
     assert bp == Baseprint()
-    assert len(issues) == 4
     assert set(i.condition for i in issues) == { 
+        fc.MissingChild('article', None, 'front'),
         fc.MissingContent('article-title', 'title-group'),
-        fc.MissingContent('contrib', 'contrib-group'),
-        fc.MissingContent('abstract', 'article-meta'),
         fc.MissingContent('body', 'article'),
     }
+    assert len(issues) == 3
     expect = """\
 <article>
   <front>
