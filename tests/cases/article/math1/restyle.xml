@@ -34,7 +34,7 @@
         <list-item>
           <p>"<inline-formula>
               <alternatives>
-                <tex-math>⟦ x \in S ⟧</tex-math>
+                <tex-math>&#10214; x \in S &#10215;</tex-math>
               </alternatives>
             </inline-formula>" is Iverson bracket notation for the indicator function of <inline-formula>
               <alternatives>
@@ -44,7 +44,7 @@
             </inline-formula>, namely
           <disp-formula>
               <alternatives>
-                <tex-math>⟦ x \in S ⟧ =
+                <tex-math>&#10214; x \in S &#10215; =
                   \begin{cases}
                     1 &amp; \text{if } x \in S  \\
                     0 &amp; \text{otherwise.}

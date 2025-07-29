@@ -8,14 +8,14 @@
         <contrib contrib-type="author">
           <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
           <name>
-            <surname>Sagües</surname>
-            <given-names>Begoña José</given-names>
+            <surname>Sag&#252;es</surname>
+            <given-names>Bego&#241;a Jos&#233;</given-names>
           </name>
           <email>begona@example.com</email>
         </contrib>
       </contrib-group>
       <permissions>
-        <copyright-statement>© 2022, Ellerman et al</copyright-statement>
+        <copyright-statement>&#169; 2022, Ellerman et al</copyright-statement>
         <license>
           <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
           <license-p>This document is distributed under a Creative Commons
@@ -30,7 +30,7 @@ Attribution 4.0 International license.</license-p>
   <body>
     <sec id="summary">
       <title>Summary</title>
-      <p>Begoña José Sagües is test.</p>
+      <p>Bego&#241;a Jos&#233; Sag&#252;es is test.</p>
     </sec>
   </body>
 </article>

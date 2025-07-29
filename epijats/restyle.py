@@ -183,4 +183,4 @@ def write_baseprint(
     os.makedirs(dest, exist_ok=True)
     with open(dest / "article.xml", "wb") as f:
         tree = XML.ET.ElementTree(root)
-        tree.write(f, encoding="utf-8")
+        tree.write(f)

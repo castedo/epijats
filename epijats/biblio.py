@@ -192,4 +192,5 @@ class CiteprocBiblioFormatter(BiblioFormatter):
 
     def to_str(self, refs: Sequence[bp.BiblioRefItem]) -> str:
         e = self.to_element(refs)
-        return self._ET.tostring(e, encoding='unicode')  # type: ignore[no-any-return]
+        ret = self._ET.tostring(e, encoding='unicode', method='html')
+        return ret  # type: ignore[no-any-return]

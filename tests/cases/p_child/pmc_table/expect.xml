@@ -8,12 +8,12 @@
     </colgroup>
     <thead>
       <tr>
-        <th align="left" colspan="1" rowspan="2"> </th>
+        <th align="left" colspan="1" rowspan="2">&#160;</th>
         <th colspan="3" rowspan="1">Authors (Year)</th>
       </tr>
       <tr>
         <th colspan="1" rowspan="1">Gordon et al (2022)<sup>(40)</sup></th>
-        <th colspan="1" rowspan="1">Martínez-Alés et al (2022)<sup>(41)</sup></th>
+        <th colspan="1" rowspan="1">Mart&#237;nez-Al&#233;s et al (2022)<sup>(41)</sup></th>
         <th colspan="1" rowspan="1">Tamminga et al (2022)<sup>(30)</sup></th>
       </tr>
     </thead>
@@ -25,7 +25,7 @@
         <td align="center" colspan="1" rowspan="1">Believes that</td>
       </tr>
       <tr>
-        <td colspan="1" rowspan="2"> </td>
+        <td colspan="1" rowspan="2">&#160;</td>
         <td align="center" colspan="3" rowspan="1">
           <bold>Authors (Year)</bold>
         </td>

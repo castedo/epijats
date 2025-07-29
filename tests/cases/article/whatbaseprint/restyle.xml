@@ -1,0 +1,94 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>What is a baseprint?</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
+          <name>
+            <surname>Ellerman</surname>
+            <given-names>E. Castedo</given-names>
+          </name>
+          <email>castedo@castedo.com</email>
+        </contrib>
+      </contrib-group>
+      <abstract>
+        <p>A baseprint is a digitally encoded document
+        created to disseminate research
+        across independent websites
+        in both PDF and HTML formats.
+        Compared to PDF files, baseprints offer advantages for research communication
+        by combining features of preprints and blog posts.
+        A preliminary type of baseprint is based on JATS4R (JATS XML) and Software Heritage IDs.
+        However, as of 2022,
+        the technology for working with baseprints is new and still under development,
+        and
+        the tools for working with baseprints are not yet user-friendly.</p>
+        <p><bold>AUDIENCE</bold>: Developers and early adopters of tools and services for research communication.</p>
+        <p><bold>STAGE</bold>: Edition 2 planned. Feedback welcome.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <sec id="summary">
+      <title>Summary</title>
+      <p>Multiple independent websites
+      can automatically generate
+      both a PDF file and an HTML page
+      from a baseprint digitally encoded in JATS XML.
+      JATS XML is often used to encode journal articles
+      published in both PDF and HTML formats,
+      many of which appear on both the publisher&#8217;s website and PubMed Central,
+      a US government agency website for scientific literature.</p>
+      <p>Baseprints provide features of preprints and blog posts
+      through the generation of PDF files and HTML pages.
+      The following table summarizes
+      the advantages of baseprints over PDF preprints and blog posts:</p>
+      <table-wrap>
+        <table>
+          <thead>
+            <tr>
+              <th align="left">Feature</th>
+              <th align="center">PDF preprint</th>
+              <th align="center">Blog post</th>
+              <th align="center">JATS XML</th>
+              <th align="center">Baseprint</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td align="left">Designed for different displays</td>
+              <td align="center"></td>
+              <td align="center">Yes</td>
+              <td align="center">Yes</td>
+              <td align="center">Yes</td>
+            </tr>
+            <tr>
+              <td align="left">Clone documents across multiple websites</td>
+              <td align="center">Yes</td>
+              <td align="center"></td>
+              <td align="center"></td>
+              <td align="center">Yes</td>
+            </tr>
+            <tr>
+              <td align="left">Document metadata like journal articles</td>
+              <td align="center"></td>
+              <td align="center"></td>
+              <td align="center">Yes</td>
+              <td align="center">Yes</td>
+            </tr>
+            <tr>
+              <td align="left">Target of intrinsic identifier</td>
+              <td align="center"></td>
+              <td align="center"></td>
+              <td align="center"></td>
+              <td align="center">Yes</td>
+            </tr>
+          </tbody>
+        </table>
+      </table-wrap>
+    </sec>
+  </body>
+</article>

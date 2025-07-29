@@ -143,4 +143,4 @@ class XmlFormatter(ElementFormatter):
 
     def to_str(self, src: PureElement) -> str:
         e = self.root(src)
-        return self.ET.tostring(e, encoding='unicode')  # type: ignore[no-any-return]
+        return self.ET.tostring(e).decode()  # type: ignore[no-any-return]

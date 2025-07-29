@@ -1,5 +1,5 @@
 <inline-formula>
   <alternatives>
-    <tex-math>⟦ x \in S ⟧</tex-math>
+    <tex-math>&#10214; x \in S &#10215;</tex-math>
   </alternatives>
 </inline-formula>

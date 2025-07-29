@@ -1,0 +1,75 @@
+<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/">
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Lineal admixture time: an interdisciplinary definition</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-5014-4809</contrib-id>
+          <name>
+            <surname>Ellerman</surname>
+            <given-names>E. Castedo</given-names>
+          </name>
+          <email>castedo@castedo.com</email>
+        </contrib>
+      </contrib-group>
+      <permissions>
+        <copyright-statement>&#169; 2023, Ellerman et al</copyright-statement>
+        <license>
+          <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-p>This document is distributed under a Creative Commons Attribution 4.0 International license.</license-p>
+        </license>
+      </permissions>
+      <abstract>
+        <p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
+        <p><bold>OBJECTIVES:</bold></p>
+        <p>
+          <list list-type="bullet">
+            <list-item>
+              <p>Define <italic>lineal admixture time</italic>.</p>
+            </list-item>
+            <list-item>
+              <p>Invite discussion and feedback, especially regarding questions at the end of
+              this document.</p>
+            </list-item>
+            <list-item>
+              <p>Facilitate the discovery of mathematical tools, using this definition, that
+              are useful to downstream empirical research.</p>
+            </list-item>
+          </list>
+        </p>
+        <p><bold>SIGNIFICANCE:</bold>
+This definition is interpretable within empirical research without assuming
+particular mathematical models of demographic or genetic processes.</p>
+        <p><bold>DOWNSTREAM RESEARCH:</bold>
+The estimation of the timing and extent of interbreeding between previously
+separated populations.</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <sec id="background">
+      <title>Background</title>
+      <p>The genealogies of a population reflect population events of the
+ past.</p>
+    </sec>
+    <sec id="definition-of-lineal-admixture-time">
+      <title>Definition of lineal admixture time</title>
+      <p>We define <italic>lineal admixture time</italic> per lineage. This measure in time duration
+   depends on two reference time points:</p>
+      <list list-type="order">
+        <list-item>
+          <p>a past time horizon when all ancestors are members of separate non-admixed
+          subpopulations, and</p>
+        </list-item>
+        <list-item>
+          <p>an observation time, such as the present.</p>
+        </list-item>
+      </list>
+      <p>Given a lineage, the <bold>lineal admixture time</bold> is defined as:</p>
+      <p><italic>the amount of time since fertilization of the first admixed individual in the
+     lineage</italic>.</p>
+    </sec>
+  </body>
+</article>

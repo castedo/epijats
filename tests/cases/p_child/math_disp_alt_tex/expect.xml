@@ -1,6 +1,6 @@
 <disp-formula>
   <alternatives>
-    <tex-math>⟦ x \in S ⟧ =
+    <tex-math>&#10214; x \in S &#10215; =
  \begin{cases}
    1 &amp; \text{if } x \in S  \\
    0 &amp; \text{otherwise.}
