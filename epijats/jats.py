@@ -40,6 +40,8 @@ def author_as_pod(self: baseprint.Author) -> JSONType:
         ret['surname'] = self.name.surname
     if self.name.given_names:
         ret['given-names'] = self.name.given_names
+    if self.name.suffix:
+        ret['suffix'] = self.name.suffix
     if self.email:
         ret['email'] = [self.email]
     if self.orcid:

@@ -27,6 +27,8 @@ def person_name(src: baseprint.PersonName) -> DataElement:
         ret.append(MarkupElement('surname', src.surname))
     if src.given_names:
         ret.append(MarkupElement('given-names', src.given_names))
+    if src.suffix:
+        ret.append(MarkupElement('suffix', src.suffix))
     return ret
 
 

@@ -77,6 +77,7 @@ class Orcid:
 class PersonName:
     surname: str | None
     given_names: str | None = None
+    suffix: str | None = None
 
     def __post_init__(self) -> None:
         if not self.surname and not self.given_names:

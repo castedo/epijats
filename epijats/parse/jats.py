@@ -208,6 +208,7 @@ class CrossReferenceModel(kit.TagModelBase[Element]):
             return None
         ref_type = e.attrib.get("ref-type")
         if ref_type == "bibr":
+            log(fc.InvalidAttributeValue.issue(e, 'ref-type', 'bibr'))
             warn("CitationModel not handling xref ref-type bibr")
         ret = bp.CrossReference(rid, ref_type)
         parse_mixed_content(log, e, self.content_model, ret.content)
@@ -221,11 +222,11 @@ def article_title_model() -> kit.MonoModel[MixedContent]:
     return MixedContentModel('article-title', base_hypertext_model())
 
 
-def title_model() -> kit.MonoModel[MixedContent]:
+def title_model(biblio: BiblioRefPool | None = None) -> kit.MonoModel[MixedContent]:
     """
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/title.html
     """
-    child_model = base_hypertext_model() | break_model()
+    child_model = base_hypertext_model(biblio) | break_model()
     return MixedContentModel('title', child_model)
 
 
@@ -274,11 +275,12 @@ def load_person_name(log: Log, e: XmlElement) -> bp.PersonName | None:
     sess = ArrayContentSession(log)
     surname = sess.one(tag_model('surname', kit.load_string))
     given_names = sess.one(tag_model('given-names', kit.load_string))
+    suffix = sess.one(tag_model('suffix', kit.load_string))
     sess.parse_content(e)
     if not surname.out and not given_names.out:
         log(fc.MissingContent.issue(e, "Missing surname or given-names element."))
         return None
-    return bp.PersonName(surname.out, given_names.out)
+    return bp.PersonName(surname.out, given_names.out, suffix.out)
 
 
 def load_author(log: Log, e: XmlElement) -> bp.Author | None:
@@ -316,15 +318,20 @@ class AutoCorrectModel(Model[Element]):
 
 
 class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
-    def __init__(self, p_elements: Model[Element], p_level: Model[Element]):
+    def __init__(self,
+        p_child: Model[Element],
+        p_level: Model[Element],
+        biblio: BiblioRefPool | None = None,
+    ):
         super().__init__(bp.ProtoSection)
-        self.p_elements = p_elements
+        self.p_child = p_child
         self.p_level = p_level
+        self._biblio = biblio
 
     def binds(self, sess: ArrayContentSession, target: bp.ProtoSection) -> None:
         sess.bind(self.p_level, target.presection.append)
-        sess.bind(AutoCorrectModel(self.p_elements), target.presection.append)
-        sess.bind(SectionModel(self.p_elements), target.subsections.append)
+        sess.bind(AutoCorrectModel(self.p_child), target.presection.append)
+        sess.bind(SectionModel(self.p_child, self._biblio), target.subsections.append)
 
 
 def abstract_model() -> kit.MonoModel[bp.ProtoSection]:
@@ -344,17 +351,18 @@ class SectionModel(TagModelBase[bp.Section]):
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
 
-    def __init__(self, p_elements: Model[Element]):
+    def __init__(self, p_child: Model[Element], biblio: BiblioRefPool | None):
         super().__init__('sec')
-        p_level = p_level_model(p_elements)
-        self._proto = ProtoSectionBinder(p_elements, p_level)
+        p_level = p_level_model(p_child)
+        self._proto = ProtoSectionBinder(p_child, p_level, biblio)
+        self._biblio = biblio
 
     def load(self, log: Log, e: XmlElement) -> bp.Section | None:
         kit.check_no_attrib(log, e, ['id'])
         ret = bp.Section([], [], e.attrib.get('id'), MixedContent())
         sess = ArrayContentSession(log)
         self._proto.binds(sess, ret)
-        sess.bind_mono(title_model(), ret.title)
+        sess.bind_mono(title_model(self._biblio), ret.title)
         sess.parse_content(e)
         title_element = e.find('title')
         if title_element is None:
@@ -383,13 +391,16 @@ class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
         return ret
 
 
-def base_hypertext_model() -> Model[Element]:
+def base_hypertext_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
     """Base hypertext model"""
 
     only_formatted_text = UnionModel[Element]()
     only_formatted_text |= formatted_text_model(only_formatted_text)
 
     hypertext = UnionModel[Element]()
+    if biblio:
+        hypertext |= AutoCorrectCitationModel(biblio)
+        hypertext |= CitationTupleModel(biblio)
     hypertext |= ExtLinkModel(only_formatted_text)
     hypertext |= CrossReferenceModel(only_formatted_text)
     hypertext |= inline_formula_model()
@@ -401,16 +412,13 @@ def p_child_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
     """Paragraph (child) elements (subset of Article Authoring JATS)
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     """
-    hypertext = base_hypertext_model()
+    hypertext = base_hypertext_model(biblio)
     # NOTE: open issue whether xref should be allowed in preformatted
     preformatted = TextElementModel({'code', 'preformat'}, hypertext)
 
     # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     # %p-elements
     p_elements = UnionModel[Element]()
-    if biblio:
-        p_elements |= AutoCorrectCitationModel(biblio)
-        p_elements |= CitationTupleModel(biblio)
     p_elements |= hypertext
     p_elements |= disp_formula_model()
     p_elements |= preformatted
@@ -536,7 +544,7 @@ def body_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
     """
     p_child = p_child_model(biblio)
     p_level = p_level_model(p_child)
-    content = ProtoSectionBinder(p_child, p_level)
+    content = ProtoSectionBinder(p_child, p_level, biblio)
     return ContentInElementModel('body', content)
 
 

@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from importlib import resources
 from html import escape
 from typing import TYPE_CHECKING, cast
+from warnings import warn
 
 import citeproc
 
@@ -170,7 +171,8 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             c = citeproc.Citation([citeproc.CitationItem(ref_item.id)])
             biblio.register(c)
         divs = self._divs_from_citeproc_bibliography(biblio)
-        assert len(divs) == len(refs)
+        if len(divs) != len(refs):
+            warn("Unable to generate HTML for proper number of references")
         ret: XmlElement = self._ET.Element('ol')
         ret.text = "\n"
         for i in range(len(divs)):
