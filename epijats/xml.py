@@ -5,7 +5,6 @@ from typing import Protocol, TYPE_CHECKING, TypeAlias
 import xml.etree.ElementTree
 
 from .tree import (
-    CdataElement,
     CitationTuple,
     EmptyElement,
     MarkupElement,
@@ -46,16 +45,6 @@ def get_ET(*, use_lxml: bool) -> ModuleType:
             ret.register_namespace(prefix, name)
         _NAMESPACES_REGISTERED[use_lxml] = True
     return ret
-
-
-def ET_CDATA_text(src: CdataElement, dest: XmlElement) -> None:
-    if isinstance(dest, xml.etree.ElementTree.Element):
-        dest.text = src.content
-    else:
-        from typing import cast
-        import lxml.etree
-
-        dest.text = cast(str, lxml.etree.CDATA(src.content))
 
 
 class ElementFormatter(Protocol):
@@ -140,9 +129,7 @@ class XmlFormatter(ElementFormatter):
 
     def to_one_only(self, src: PureElement, level: int) -> XmlElement:
         ret: XmlElement = self.ET.Element(src.xml.tag, src.xml.attrib)
-        if isinstance(src, CdataElement):
-            ET_CDATA_text(src, ret)
-        elif isinstance(src, CitationTuple):
+        if isinstance(src, CitationTuple):
             self.citation.format_content(src, level, ret)
         else:
             self.common.format_content(src, level, ret)

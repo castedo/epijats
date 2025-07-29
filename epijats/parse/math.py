@@ -8,7 +8,7 @@ from ..math import (
     FormulaElement,
     FormulaStyle,
 )
-from ..tree import CdataElement, Element, StartTag
+from ..tree import Element, StartTag
 
 from . import kit
 from .content import ArrayContentSession
@@ -65,15 +65,6 @@ class AnyMathmlModel(kit.LoadModel[Element]):
             ret = MathmlElement(StartTag(e.tag, dict(e.attrib)))
             parse_mixed_content(log, e, self, ret.content)
         return ret
-
-
-class TexMathElementModel(kit.TagModelBase[Element]):
-    def __init__(self) -> None:
-        super().__init__('tex-math')
-
-    def load(self, log: Log, e: XmlElement) -> Element | None:
-        tex = kit.load_string_content(log, e)
-        return CdataElement(self.tag, tex)
 
 
 class MathmlElementModel(kit.TagModelBase[Element]):

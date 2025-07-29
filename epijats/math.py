@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Iterator
 
-from .tree import CdataElement, DataElement, Element, MarkupElement, StartTag
+from .tree import DataElement, Element, MarkupElement, StartTag
 
 
 MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
@@ -39,7 +39,7 @@ class FormulaElement(Element):
     def __iter__(self) -> Iterator[Element]:
         alts = DataElement("alternatives")
         if self.tex:
-            alts.append(CdataElement('tex-math', self.tex))
+            alts.append(MarkupElement('tex-math', self.tex))
         if self.mathml:
             alts.append(self.mathml)
         return iter((alts,))

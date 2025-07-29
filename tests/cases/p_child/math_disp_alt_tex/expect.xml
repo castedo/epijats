@@ -1,0 +1,9 @@
+<disp-formula>
+  <alternatives>
+    <tex-math>⟦ x \in S ⟧ =
+ \begin{cases}
+   1 &amp; \text{if } x \in S  \\
+   0 &amp; \text{otherwise.}
+ \end{cases}</tex-math>
+  </alternatives>
+</disp-formula>
