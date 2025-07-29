@@ -25,18 +25,14 @@ IGNORE_CLASS = (
 
 IGNORE = {
   fc.MissingContent(tag='abstract', parent='article-meta'),
-  fc.UnsupportedElement(tag='aff', parent='article-meta'),
-  fc.UnsupportedElement(tag='aff', parent='contrib-group'),
   fc.UnsupportedElement(tag='article-categories', parent='article-meta'),
   fc.UnsupportedElement(tag='article-id', parent='article-meta'),
   fc.UnsupportedElement(tag='author-notes', parent='article-meta'),
-  fc.UnsupportedElement(tag='citation-alternatives', parent='ref'),
   fc.UnsupportedElement(tag='copyright-holder', parent='permissions'),
   fc.UnsupportedElement(tag='copyright-year', parent='permissions'),
   fc.UnsupportedElement(tag='counts', parent='article-meta'),
   fc.UnsupportedElement(tag='custom-meta-group', parent='article-meta'),
   fc.UnsupportedElement(tag='elocation-id', parent='article-meta'),
-  fc.UnsupportedElement(tag='elocation-id', parent='element-citation'),
   fc.UnsupportedElement(tag='ext-link', parent='comment'),
   fc.UnsupportedElement(tag='ext-link', parent='element-citation'),
   fc.UnsupportedElement(tag='fpage', parent='article-meta'),
@@ -51,60 +47,59 @@ IGNORE = {
   fc.UnsupportedElement(tag='processing-meta', parent='article'),
   fc.UnsupportedElement(tag='pub-date', parent='article-meta'),
   fc.UnsupportedElement(tag='related-article', parent='article-meta'),
-  fc.UnsupportedElement(tag='role', parent='contrib'),
   fc.UnsupportedElement(tag='self-uri', parent='article-meta'),
   fc.UnsupportedElement(tag='volume', parent='article-meta'),
-  fc.UnsupportedElement(tag='xref', parent='contrib'),
 }
 
 PENALTY = {
   1: {
+    fc.ExcessElement(tag='comment', parent='element-citation'),
+    fc.IgnoredText(tag='date-in-citation', parent='element-citation'),
+    fc.InvalidInteger(tag='month', parent='element-citation'),
     fc.UnsupportedElement(tag='address', parent='contrib'),
+    fc.UnsupportedElement(tag='aff', parent='contrib-group'),
     fc.UnsupportedElement(tag='conf-loc', parent='element-citation'),
     fc.UnsupportedElement(tag='degrees', parent='contrib'),
     fc.UnsupportedElement(tag='italic', parent='comment'),
+    fc.UnsupportedElement(tag='role', parent='contrib'),
+    fc.UnsupportedElement(tag='size', parent='element-citation'),
+    fc.UnsupportedElement(tag='sup', parent='article-title'),
+    fc.UnsupportedElement(tag='sup', parent='source'),
     fc.UnsupportedElement(tag='supplement', parent='element-citation'),
     fc.UnsupportedElement(tag='title', parent='abstract'),
     fc.UnsupportedElement(tag='uri', parent='license-p'),
-  },
-  3: {
-    fc.IgnoredText(tag='date-in-citation', parent='element-citation'),
-    fc.InvalidInteger(tag='month', parent='element-citation'),
-    fc.UnsupportedElement(tag='size', parent='element-citation'),
+    fc.UnsupportedElement(tag='xref', parent='contrib'),
   },
   10: {
+    fc.ExcessElement(tag='contrib-group', parent='article-meta'),
+    fc.UnsupportedElement(tag='ack', parent='back'),
+    fc.UnsupportedElement(tag='aff', parent='article-meta'),
     fc.UnsupportedElement(tag='collab', parent='element-citation'),
     fc.UnsupportedElement(tag='collab', parent='person-group'),
-    fc.UnsupportedElement(tag='etal', parent='person-group'),
-  },
-  20: {
-    fc.UnsupportedElement(tag='ack', parent='back'),
-    fc.UnsupportedElement(tag='caption', parent='fig'),
-    fc.UnsupportedElement(tag='fig', parent='body'),
-    fc.UnsupportedElement(tag='fig', parent='sec'),
-    fc.UnsupportedElement(tag='inline-graphic', parent='alternatives'),
-    fc.UnsupportedElement(tag='graphic', parent='fig'),
-    fc.UnsupportedElement(tag='graphic', parent='p'),
-    fc.UnsupportedElement(tag='label', parent='fig'),
     fc.UnsupportedElement(tag='part-title', parent='element-citation'),
-    fc.UnsupportedElement(tag='sup', parent='article-title'),
-    fc.UnsupportedElement(tag='sup', parent='source'),
+    fc.UnsupportedElement(tag='sc', parent='p'),
     fc.UnsupportedElement(tag='table-wrap-foot', parent='table-wrap'),
   },
   100: {
+    fc.UnsupportedElement(tag='caption', parent='fig'),
+    fc.UnsupportedElement(tag='fig', parent='body'),
+    fc.UnsupportedElement(tag='fig', parent='sec'),
+    fc.UnsupportedElement(tag='fn-group', parent='back'),
+    fc.UnsupportedElement(tag='graphic', parent='fig'),
+    fc.UnsupportedElement(tag='graphic', parent='p'),
+    fc.UnsupportedElement(tag='inline-graphic', parent='alternatives'),
+    fc.UnsupportedElement(tag='label', parent='fig'),
+  },
+  1000: {
     fc.ExcessElement(tag='abstract', parent='article-meta'),
-    fc.ExcessElement(tag='comment', parent='element-citation'),
-    fc.ExcessElement(tag='contrib-group', parent='article-meta'),
     fc.UnsupportedAttributeValue(tag="xref", attribute="ref-type", value="bibr"),
     fc.UnsupportedElement(tag='bio', parent='back'),
     fc.UnsupportedElement(tag='boxed-text', parent='sec'),
     fc.UnsupportedElement(tag='citation-alternatives', parent='ref'),
-    fc.UnsupportedElement(tag='fn-group', parent='back'),
     fc.UnsupportedElement(tag='glossary', parent='back'),
     fc.UnsupportedElement(tag='inline-supplementary-material', parent='p'),
     fc.UnsupportedElement(tag='mixed-citation', parent='ref'),
     fc.UnsupportedElement(tag='notes', parent='back'),
-    fc.UnsupportedElement(tag='sc', parent='p'),
     fc.UnsupportedElement(tag='sec', parent='back'),
     fc.UnsupportedElement(tag='supplementary-material', parent='p'),
     fc.UnsupportedElement(tag='supplementary-material', parent='sec'),
@@ -117,9 +112,6 @@ PENALTY = {
 
 
 def get_penalty(c: fc.FormatCondition) -> int:
-    assert isinstance(c.tag, str)
-    if c.tag.startswith('{http://www.w3.org/1998/Math/MathML}'):
-        return 100
     ret = -1
     for num, conditions in PENALTY.items():
         if c in conditions and num > ret:
@@ -133,6 +125,7 @@ def get_penalty(c: fc.FormatCondition) -> int:
 class TestCase:
     path: Path
     penalty: int = 0
+    mathml: bool = False
     conditions: set = field(default_factory=set)
     tbd: set = field(default_factory=set)
 
@@ -152,9 +145,12 @@ class TestCase:
     def parse(self):
         parse_baseprint_root(self.root, self.handle_issue)
         for c in self.conditions:
+            assert isinstance(c.tag, str)
+            if c.tag.startswith('{http://www.w3.org/1998/Math/MathML}'):
+                self.mathml = True
             penalty = get_penalty(c)
             self.penalty += penalty
-            if penalty >= 10:
+            if penalty >= 1:
                 self.tbd.add(c)
 
 
@@ -164,6 +160,7 @@ class Tally:
     type_count = Counter()
     jid_count = Counter()
     forgo_jid_count = Counter()
+    mathml_jid_count = Counter()
 
     def test_article(self, fp: Path) -> None:
         if not fp.exists():
@@ -176,13 +173,17 @@ class Tally:
             return
 #        print(t.path)
         t.parse()
-        if t.penalty >= 100:
+        if t.penalty >= 1000:
             self.count.update(['FORGO'])
             self.forgo_jid_count.update([t.jid])
             return
+        if t.mathml:
+            self.count.update(['MATHML'])
+            self.mathml_jid_count.update([t.jid])
+            return
         self.type_count.update([t.article_type])
         self.jid_count.update([t.jid])
-        self.penalty_dist.update([t.penalty if t.penalty < 20 else 20])
+        self.penalty_dist.update([t.penalty if t.penalty < 100 else 100])
         pp({
             'path': str(t.path),
             'type': t.article_type,
@@ -196,12 +197,14 @@ class Tally:
         pprint(self.count)
         print("Forgone article journal distribution:")
         pprint(self.forgo_jid_count)
+        print("MathML article journal distribution:")
+        pprint(self.mathml_jid_count)
         print("TBD article type distribution:")
         pprint(self.type_count)
         print("TBD article journal distribution:")
         pprint(self.jid_count)
         print("TBD article penalty distribution (truncated):")
-        pprint(self.penalty_dist)
+        pprint(dict(self.penalty_dist))
 
 
 JUMP = 1

@@ -1,0 +1,37 @@
+[
+  {
+    "author": [
+      {
+        "family": "Headrick",
+        "given": "A"
+      },
+      {
+        "family": "Ou",
+        "given": "Z"
+      },
+      {
+        "family": "Asaki",
+        "given": "SY"
+      },
+      {
+        "literal": "others"
+      }
+    ],
+    "DOI": "10.1093/europace/euae047",
+    "PMID": "38366154",
+    "container-title": "Europace",
+    "id": "r1",
+    "issue": "2",
+    "issued": {
+      "date-parts": [
+        [
+          2024
+        ]
+      ]
+    },
+    "page": "euae047",
+    "title": "Intracardiac echocardiography in paediatric and congenital cardiac ablation shortens procedure duration and improves success without complications",
+    "type": "",
+    "volume": "26"
+  }
+]

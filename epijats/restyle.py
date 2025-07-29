@@ -5,7 +5,7 @@ from pathlib import Path
 
 from . import baseprint
 from . import baseprint as bp
-from .tree import DataElement, MarkupElement, MixedContent, StartTag
+from .tree import DataElement, EmptyElement, MarkupElement, MixedContent, StartTag
 from .xml import XmlFormatter
 
 
@@ -106,13 +106,15 @@ def append_date_parts(src: baseprint.Date | None, dest: DataElement) -> None:
                 dest.append(MarkupElement('day', f"{src.day:02}"))
 
 
-def biblio_person_group(group_type: str, src: list[bp.PersonName | str]) -> DataElement:
+def biblio_person_group(group_type: str, src: bp.PersonGroup) -> DataElement:
     ret = DataElement(StartTag('person-group', {'person-group-type': group_type}))
-    for person in src:
+    for person in src.persons:
         if isinstance(person, bp.PersonName):
             ret.append(person_name(person))
         else:
             ret.append(MarkupElement('string-name', person))
+    if src.etal:
+        ret.append(EmptyElement('etal'))
     return ret
 
 

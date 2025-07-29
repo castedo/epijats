@@ -1,0 +1,23 @@
+[
+  "DoctypeDeclaration",
+  ["UnsupportedAttribute", "article", "dtd-version"],
+  ["UnsupportedAttribute", "article", "article-type"],
+  ["UnsupportedElement", "processing-meta", "article"],
+  ["UnsupportedElement", "journal-meta", "front"],
+  ["UnsupportedElement", "article-id", "article-meta"],
+  ["UnsupportedElement", "article-categories", "article-meta"],
+  ["UnsupportedElement", "degrees", "contrib"],
+  ["UnsupportedElement", "xref", "contrib"],
+  ["UnsupportedElement", "aff", "contrib-group"],
+  ["UnsupportedElement", "author-notes", "article-meta"],
+  ["UnsupportedElement", "pub-date", "article-meta"],
+  ["UnsupportedElement", "volume", "article-meta"],
+  ["UnsupportedElement", "issue", "article-meta"],
+  ["UnsupportedElement", "fpage", "article-meta"],
+  ["UnsupportedElement", "lpage", "article-meta"],
+  ["UnsupportedElement", "history", "article-meta"],
+  ["UnsupportedElement", "copyright-year", "permissions"],
+  ["UnsupportedAttribute", "{http://www.niso.org/schemas/ali/1.0/}license_ref", "specific-use"],
+  ["UnsupportedElement", "kwd-group", "article-meta"],
+  ["UnsupportedAttribute", "element-citation", "publication-type"]
+]

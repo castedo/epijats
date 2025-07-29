@@ -40,6 +40,7 @@ from .htmlish import (
     table_wrap_model,
 )
 from .tree import (
+    EmptyElementModel,
     MixedContentModel,
     TextElementModel,
     parse_mixed_content,
@@ -372,7 +373,7 @@ class SectionModel(TagModelBase[bp.Section]):
         return ret
 
 
-class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
+class PersonGroupModel(TagModelBase[bp.PersonGroup]):
     """<person-group> Person Group for a Cited Publication
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/person-group.html
     """
@@ -380,14 +381,16 @@ class PersonGroupModel(TagModelBase[list[bp.PersonName | str]]):
     def __init__(self, group_type: str) -> None:
         super().__init__(StartTag('person-group', {'person-group-type': group_type}))
 
-    def load(self, log: Log, e: XmlElement) -> list[bp.PersonName | str] | None:
-        ret: list[bp.PersonName | str] = []
+    def load(self, log: Log, e: XmlElement) -> bp.PersonGroup | None:
+        ret = bp.PersonGroup()
         k = 'person-group-type'
         kit.check_no_attrib(log, e, [k])
         sess = ArrayContentSession(log)
-        sess.bind(tag_model('name', load_person_name), ret.append)
-        sess.bind(tag_model('string-name', kit.load_string), ret.append)
+        sess.bind(tag_model('name', load_person_name), ret.persons.append)
+        sess.bind(tag_model('string-name', kit.load_string), ret.persons.append)
+        etal = sess.one(EmptyElementModel('etal'))
         sess.parse_content(e)
+        ret.etal = bool(etal.out)
         return ret
 
 
@@ -686,6 +689,9 @@ class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
         for key, parser in fields.items():
             if parser.out:
                 dest.biblio_fields[key] = parser.out
+        if 'elocation-id' in dest.biblio_fields and 'fpage' in dest.biblio_fields:
+            msg = "fpage field might prevent display of elocation-id or vice-versa"
+            log(fc.ElementFormatCondition.issue(e, msg))
 
 
 class BiblioRefItemModel(TagModelBase[bp.BiblioRefItem]):

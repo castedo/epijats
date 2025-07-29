@@ -158,10 +158,26 @@ class PubIdType(StrEnum):
 
 
 @dataclass
+class PersonGroup:
+    persons: list[PersonName | str]
+    etal: bool
+
+    def __init__(self) -> None:
+        self.persons = []
+        self.etal = False
+
+    def empty(self) -> bool:
+        return not self.persons and not self.etal
+
+    def __bool__(self) -> bool:
+        return not self.empty()
+
+
+@dataclass
 class BiblioRefItem:
     id: str
-    authors: list[PersonName | str]
-    editors: list[PersonName | str]
+    authors: PersonGroup
+    editors: PersonGroup
     article_title: str | None
     source: str | None
     edition: int | None
@@ -173,6 +189,7 @@ class BiblioRefItem:
     BIBLIO_FIELD_KEYS: ClassVar[list[str]] = [
         'volume',
         'issue',
+        'elocation-id',
         'publisher-name',
         'publisher-loc',
         'fpage',
@@ -185,8 +202,8 @@ class BiblioRefItem:
 
     def __init__(self) -> None:
         self.id = ""
-        self.authors = []
-        self.editors = []
+        self.authors = PersonGroup()
+        self.editors = PersonGroup()
         self.article_title = None
         self.source = None
         self.edition = None

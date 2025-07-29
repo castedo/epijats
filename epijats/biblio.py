@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib import resources
 from html import escape
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, assert_type
 from warnings import warn
 
 import citeproc
@@ -58,6 +58,24 @@ def date_parts(src: bp.Date) -> JSONType:
     return {'date-parts': [parts]}
 
 
+def person_group(src: bp.PersonGroup) -> JSONType:
+    ret = list['JSONType']()
+    for person in src.persons:
+        a: dict[str, JSONType] = {}
+        if isinstance(person, bp.PersonName):
+            if person.surname:
+                a['family'] = escape(person.surname, quote=False)
+            if person.given_names:
+                a['given'] = escape(person.given_names, quote=False)
+        else:
+            assert_type(person, str)
+            a['literal'] = escape(str(person), quote=False)
+        ret.append(a)
+    if src.etal:
+        ret.append({'literal': 'others'})
+    return ret
+
+
 class CsljsonItem(dict[str, 'JSONType']):
     def __init__(self) -> None:
         self['type'] = ''
@@ -79,19 +97,6 @@ class CsljsonItem(dict[str, 'JSONType']):
                     self[key] = hyperlink(value, "https://doi.org/")
         return self
 
-    def append_author(self, src: bp.PersonName | str) -> None:
-        authors = cast(list['JSONType'], self.setdefault('author', []))
-        a: dict[str, JSONType] = {}
-        if isinstance(src, bp.PersonName):
-            if src.surname:
-                a['family'] = escape(src.surname, quote=False)
-            if src.given_names:
-                a['given'] = escape(src.given_names, quote=False)
-        else:
-            assert isinstance(src, str)
-            a['literal'] = escape(str(src), quote=False)
-        authors.append(a)
-
     def assign_csjson_titles(self, src: bp.BiblioRefItem) -> None:
         if src.article_title:
             self.set_str('container-title', src.source)
@@ -111,14 +116,18 @@ class CsljsonItem(dict[str, 'JSONType']):
             ret['issued'] = date_parts(src.date)
         if src.access_date:
             ret['accessed'] = date_parts(src.access_date)
-        for person in src.authors:
-            ret.append_author(person)
+        if src.authors:
+            ret['author'] = person_group(src.authors)
+        if src.editors:
+            ret['editor'] = person_group(src.editors)
         ret.set_str('edition', src.edition)
         if fpage := src.biblio_fields.get('fpage'):
             page = fpage
             if lpage := src.biblio_fields.get('lpage'):
                 page += f"-{lpage}"
             ret.set_str('page', page)
+        elif elocation := src.biblio_fields.get('elocation-id'):
+            ret.set_str('page', elocation)
         for pub_id_type, value in src.pub_ids.items():
             ret.set_str(pub_id_type.upper(), value)
         return ret
@@ -155,6 +164,8 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         ret: list[XmlElement] = []
         for item in biblio.bibliography():
             s = str(item).replace("..\n", ".\n").strip()
+            s = s.replace("others.\n", "et al.\n")
+            s = s.replace("and et al.\n", "et al.\n")
             div = self._ET.fromstring("<div>" + s + "</div>")
             put_tags_on_own_lines(div)
             div.tail = "\n"
