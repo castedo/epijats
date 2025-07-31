@@ -56,6 +56,7 @@ PENALTY = {
     fc.ExcessElement(tag='comment', parent='element-citation'),
     fc.IgnoredText(tag='date-in-citation', parent='element-citation'),
     fc.InvalidInteger(tag='month', parent='element-citation'),
+    fc.MissingContent(tag='body', parent='article'),
     fc.UnsupportedElement(tag='address', parent='contrib'),
     fc.UnsupportedElement(tag='aff', parent='contrib-group'),
     fc.UnsupportedElement(tag='conf-loc', parent='element-citation'),
@@ -168,7 +169,7 @@ class Tally:
             self.count.update(['NOTFOUND'])
             return
         t = TestCase(fp)
-        if t.article_type in ['correction', 'retraction', 'news']:
+        if t.article_type in ['correction', 'retraction', 'news', 'abstract']:
             self.count.update(['SKIPPED'])
             return
 #        print(t.path)
@@ -184,12 +185,13 @@ class Tally:
         self.type_count.update([t.article_type])
         self.jid_count.update([t.jid])
         self.penalty_dist.update([t.penalty if t.penalty < 100 else 100])
-        pp({
-            'path': str(t.path),
-            'type': t.article_type,
-            'penalty': t.penalty,
-            'tbd': t.tbd,
-        }, width=88)
+        if t.penalty < 100:
+            pp({
+                'path': str(t.path),
+                'type': t.article_type,
+                'penalty': t.penalty,
+                'tbd': t.tbd,
+            }, width=88)
         self.count.update(['TBD'])
 
     def print(self) -> None:

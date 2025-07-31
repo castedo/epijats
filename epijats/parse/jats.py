@@ -660,6 +660,11 @@ def load_edition(log: Log, e: XmlElement) -> int | None:
 
 
 class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
+    """<element-citation> Element Citation
+
+    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/element-citation.html
+    """
+
     TAG = 'element-citation'
 
     def read(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:

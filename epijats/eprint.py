@@ -9,6 +9,7 @@ import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
+from warnings import warn
 
 # WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
 # file has relative URLs in anchor hrefs.
@@ -22,10 +23,16 @@ class EprinterConfig:
         self,
         *,
         dsi_domain: str | None = None,
+        dsi_base_url: str | None = None,
         math_css_url: str | None = None,
     ):
-        self.dsi_domain = dsi_domain
         self.math_css_url = math_css_url
+        if dsi_base_url:
+            warn("use dsi_domain instead of dsi_base_url", DeprecationWarning)
+            if not dsi_domain:
+                assert dsi_base_url.startswith('https://perm.pub')
+                dsi_domain = "perm.pub" 
+        self.dsi_domain = dsi_domain
         self.embed_web_fonts = True
         self.show_pdf_icon = False
         self.header_banner_msg: str | None = None
