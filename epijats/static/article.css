@@ -295,7 +295,7 @@
 
 /* Titles */
 
-.eprint h1, .eprint h2, .eprint h3, .eprint h4 {
+.eprint h1, .eprint h2, .eprint h3, .eprint h4, .eprint h5, .eprint h6 {
   font-weight: 300;
   line-height: 1;
   margin: 1.4em 0 0.6em 0;
@@ -316,19 +316,23 @@
   margin: 0.5em 0 0;
   width: 2em;
 }
-.eprint h2,
-.eprint h1#bibliography {
-  font-size: 1.8em;
-  letter-spacing: -0.02em;
+.eprint h2 {
+  font-size: 2em;
 }
 .eprint section.abstract h2 {
   margin-top: 0;
 }
 .eprint h3 {
-  font-size: 1.45em;
+  font-size: 1.68em;
 }
 .eprint h4 {
-  font-size: 1.25em;
+  font-size: 1.41em;
+}
+.eprint h5 {
+  font-size: 1.19em;
+}
+.eprint h6 {
+  font-size: 1em;
 }
 
 

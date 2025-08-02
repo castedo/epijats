@@ -289,7 +289,7 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
         return None
     if not kit.confirm_attrib_value(log, e, 'contrib-type', ['author']):
         return None
-    kit.check_no_attrib(log, e, ['contrib-type', 'id'])
+    kit.check_no_attrib(log, e, ['contrib-type'])
     sess = ArrayContentSession(log)
     name = sess.one(person_name_model())
     email = sess.one(tag_model('email', kit.load_string))

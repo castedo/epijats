@@ -42,8 +42,6 @@ packages = [
   "epijats.csl",
   "epijats.pandoc",
   "epijats.static",
-  "epijats.static.katex",
-  "epijats.static.katex.fonts",
   "epijats.templates",
   "epijats.templates.epijats",
 ]
