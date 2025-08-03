@@ -442,6 +442,7 @@ def p_level_model(p_elements: Model[Element]) -> Model[Element]:
     p_level |= disp_formula_model()
     p_level |= TextElementModel({'code', 'preformat'}, hypertext)
     p_level |= ListModel(p_elements)
+    p_level |= def_list_model(hypertext, p_elements)
     p_level |= disp_quote_model(p_elements)
     p_level |= table_wrap_model(p_elements)
     return p_level
