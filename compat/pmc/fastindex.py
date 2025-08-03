@@ -90,3 +90,16 @@ def make_index(pmc: Path, begin: date, end: date):
         entries += read_pmc_txt_filelist(oa_noncomm, (begin, end))
     with open(pickle_path, 'wb') as f:
         pickle.dump(entries, f)
+
+
+def paths_from_args(*, journal_list: str =None, args=None) -> list[Path]:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="PubMed Central Data Probe")
+    parser.add_argument("pmcpath", type=Path, help="path to PMC S3 data dump")
+    args = parser.parse_args(args)
+    index = FastIndex(args.pmcpath)
+    if journal_list is None:
+        return list(index.path(e) for e in index.entries)
+    else:
+        return list(index.journal_list_paths(journal_list))

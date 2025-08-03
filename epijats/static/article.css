@@ -87,11 +87,6 @@
   hyphenate-limit-chars: 9 3;
 }
 
-.eprint dd::after {
-  content: '\A';
-  white-space: pre-line;
-}
-
 .eprint ol,
 .eprint ul {
   padding-left: 1.7em;
