@@ -1,0 +1,35 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Cite in Abstract</article-title>
+      </title-group>
+      <abstract>
+        <p>JATS<sup>
+            <xref rid="ref-1" ref-type="bibr">1</xref>
+          </sup></p>
+        <sec>
+          <title>Sections too</title>
+          <p>JATS<sup>
+              <xref rid="ref-1" ref-type="bibr">1</xref>
+            </sup></p>
+        </sec>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <p>JATS<sup>
+        <xref rid="ref-1" ref-type="bibr">1</xref>
+      </sup></p>
+  </body>
+  <back>
+    <ref-list>
+      <ref id="ref-1">
+        <element-citation>
+          <article-title>Journal Article Tag Suite</article-title>
+          <uri>https://jats.nlm.nih.gov/</uri>
+        </element-citation>
+      </ref>
+    </ref-list>
+  </back>
+</article>

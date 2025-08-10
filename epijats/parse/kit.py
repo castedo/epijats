@@ -201,17 +201,16 @@ class Model(ABC, Binder[Sink[ParsedT]]):
 
         return StatelessParser(self.match, parse_fun)
 
-    def as_models(self) -> Iterable[Model[ParsedT]]:
-        return [self]
-
     def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
-        union = list(self.as_models()) + list(other.as_models())
-        return UnionModel(union)
+        ret = UnionModel[ParsedT]()
+        ret |= self
+        ret |= other
+        return ret
 
 
 class UnionModel(Model[ParsedT]):
-    def __init__(self, binders: Iterable[Model[ParsedT]] = ()):
-        self._binders = list(binders)
+    def __init__(self) -> None:
+        self._binders: list[Model[ParsedT]] = []
 
     def match(self, xe: XmlElement) -> bool:
         return any(b.match(xe) for b in self._binders)
@@ -222,11 +221,14 @@ class UnionModel(Model[ParsedT]):
                 return b.parse(log, xe, dest)
         return False
 
-    def as_models(self) -> Iterable[Model[ParsedT]]:
-        return self._binders
+    def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
+        ret = UnionModel[ParsedT]()
+        ret._binders = list(self._binders)
+        ret._binders.append(other)
+        return ret
 
     def __ior__(self, other: Model[ParsedT]) -> UnionModel[ParsedT]:
-        self._binders.extend(other.as_models())
+        self._binders.append(other)
         return self
 
 

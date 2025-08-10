@@ -223,11 +223,13 @@ def article_title_model() -> kit.MonoModel[MixedContent]:
     return MixedContentModel('article-title', base_hypertext_model())
 
 
-def title_model(biblio: BiblioRefPool | None = None) -> kit.MonoModel[MixedContent]:
+def title_model(hypertext: Model[Element] | None = None) -> kit.MonoModel[MixedContent]:
     """
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/title.html
     """
-    child_model = base_hypertext_model(biblio) | break_model()
+    if hypertext is None:
+        hypertext = base_hypertext_model()
+    child_model = hypertext | break_model()
     return MixedContentModel('title', child_model)
 
 
@@ -320,30 +322,30 @@ class AutoCorrectModel(Model[Element]):
 
 class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
     def __init__(self,
-        p_child: Model[Element],
+        hypertext_model: Model[Element],
         p_level: Model[Element],
-        biblio: BiblioRefPool | None = None,
     ):
         super().__init__(bp.ProtoSection)
-        self.p_child = p_child
+        self.hypertext_model = hypertext_model
+        self.p_child = p_child_model(hypertext_model)
         self.p_level = p_level
-        self._biblio = biblio
 
     def binds(self, sess: ArrayContentSession, target: bp.ProtoSection) -> None:
         sess.bind(self.p_level, target.presection.append)
         sess.bind(AutoCorrectModel(self.p_child), target.presection.append)
-        sess.bind(SectionModel(self.p_child, self._biblio), target.subsections.append)
+        sess.bind(SectionModel(self.hypertext_model), target.subsections.append)
 
 
-def abstract_model() -> kit.MonoModel[bp.ProtoSection]:
+def abstract_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
     """<abstract> Abstract
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
     """
 
-    p_child = p_child_model()
+    hypertext = base_hypertext_model(biblio)
+    p_child = p_child_model(hypertext)
     just_para = TextElementModel({'p'}, p_child)
-    content = ProtoSectionBinder(p_child, just_para)
+    content = ProtoSectionBinder(hypertext, just_para)
     return ContentInElementModel('abstract', content)
 
 
@@ -352,18 +354,18 @@ class SectionModel(TagModelBase[bp.Section]):
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
 
-    def __init__(self, p_child: Model[Element], biblio: BiblioRefPool | None):
+    def __init__(self, hypertext_model: Model[Element]):
         super().__init__('sec')
-        p_level = p_level_model(p_child)
-        self._proto = ProtoSectionBinder(p_child, p_level, biblio)
-        self._biblio = biblio
+        p_level = p_level_model(hypertext_model)
+        self._title_model = title_model(hypertext_model)
+        self._proto = ProtoSectionBinder(hypertext_model, p_level)
 
     def load(self, log: Log, e: XmlElement) -> bp.Section | None:
         kit.check_no_attrib(log, e, ['id'])
         ret = bp.Section([], [], e.attrib.get('id'), MixedContent())
         sess = ArrayContentSession(log)
         self._proto.binds(sess, ret)
-        sess.bind_mono(title_model(self._biblio), ret.title)
+        sess.bind_mono(self._title_model, ret.title)
         sess.parse_content(e)
         title_element = e.find('title')
         if title_element is None:
@@ -411,41 +413,36 @@ def base_hypertext_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
     return hypertext
 
 
-def p_child_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
+def block_non_p_model(hypertext: Model[Element]) -> Model[Element]:
+    block = UnionModel[Element]()
+    p_elements = hypertext | block
+    block |= disp_formula_model()
+    # NOTE: open issue whether xref should be allowed in preformatted
+    block |= TextElementModel({'code', 'preformat'}, hypertext)
+    block |= ListModel(p_elements)
+    block |= def_list_model(hypertext, p_elements)
+    block |= disp_quote_model(p_elements)
+    block |= table_wrap_model(p_elements)
+    return block
+
+
+def p_child_model(hypertext: Model[Element] | None = None) -> Model[Element]:
     """Paragraph (child) elements (subset of Article Authoring JATS)
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     """
-    hypertext = base_hypertext_model(biblio)
-    # NOTE: open issue whether xref should be allowed in preformatted
-    preformatted = TextElementModel({'code', 'preformat'}, hypertext)
 
-    # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
-    # %p-elements
-    p_elements = UnionModel[Element]()
-    p_elements |= hypertext
-    p_elements |= disp_formula_model()
-    p_elements |= preformatted
-    p_elements |= ListModel(p_elements)
-    p_elements |= def_list_model(hypertext, p_elements)
-    p_elements |= disp_quote_model(p_elements)
-    p_elements |= table_wrap_model(p_elements)
-    return p_elements
+    if hypertext is None:
+        hypertext = base_hypertext_model()
+    return hypertext | block_non_p_model(hypertext)
 
 
-def p_level_model(p_elements: Model[Element]) -> Model[Element]:
+def p_level_model(hypertext: Model[Element]) -> Model[Element]:
     """Paragraph-level elements (subset of Article Authoring JATS)
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/para-level.html
     """
-    hypertext = base_hypertext_model()
-    p_level = UnionModel[Element]()
-    p_level |= TextElementModel({'p'}, p_elements)
-    p_level |= disp_formula_model()
-    p_level |= TextElementModel({'code', 'preformat'}, hypertext)
-    p_level |= ListModel(p_elements)
-    p_level |= def_list_model(hypertext, p_elements)
-    p_level |= disp_quote_model(p_elements)
-    p_level |= table_wrap_model(p_elements)
-    return p_level
+
+    block = block_non_p_model(hypertext)
+    return block | TextElementModel({'p'}, hypertext | block)
 
 
 CC_URLS = {
@@ -508,7 +505,9 @@ class PermissionsModel(kit.TagModelBase[bp.Permissions]):
 
 
 class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
-    TAG = 'article-meta'
+    def __init__(self, biblio: BiblioRefPool | None):
+        super().__init__('article-meta')
+        self._abstract_model = abstract_model(biblio)
 
     def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
         kit.check_no_attrib(log, xe)
@@ -517,7 +516,7 @@ class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
         title = sess.one(title_group_model())
         authors = sess.one(tag_model('contrib-group', load_author_group))
         abstract = bp.ProtoSection()
-        sess.bind_mono(abstract_model(), abstract)
+        sess.bind_mono(self._abstract_model, abstract)
         permissions = sess.one(PermissionsModel())
         sess.parse_content(xe)
         if title.out:
@@ -531,13 +530,15 @@ class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
 
 
 class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
-    TAG = 'front'
+    def __init__(self, biblio: BiblioRefPool | None):
+        super().__init__('front')
+        self._meta_model = ArticleMetaBinder(biblio)
 
     def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'article-meta')
         sess = ArrayContentSession(log)
-        sess.bind_once(ArticleMetaBinder(), dest)
+        sess.bind_once(self._meta_model, dest)
         sess.parse_content(xe)
 
 
@@ -546,9 +547,11 @@ def body_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/body.html
     """
-    p_child = p_child_model(biblio)
+
+    hypertext = base_hypertext_model(biblio)
+    p_child = p_child_model(hypertext)
     p_level = p_level_model(p_child)
-    content = ProtoSectionBinder(p_child, p_level, biblio)
+    content = ProtoSectionBinder(hypertext, p_level)
     return ContentInElementModel('body', content)
 
 
@@ -760,7 +763,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
     kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession(log)
-    sess.bind_once(ArticleFrontBinder(), ret)
+    sess.bind_once(ArticleFrontBinder(biblio), ret)
     sess.bind_mono(body_model(biblio), ret.body)
     sess.parse_content(e)
     if ret.ref_list:

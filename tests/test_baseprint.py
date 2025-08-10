@@ -309,7 +309,7 @@ def test_author_restyle():
 
 
 def test_abstract_restyle() -> None:
-    model = _.abstract_model()
+    model = _.abstract_model(None)
 
     bad_style = """\
 <abstract>

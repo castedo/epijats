@@ -41,6 +41,7 @@ packages = [
   "epijats",
   "epijats.csl",
   "epijats.pandoc",
+  "epijats.parse",
   "epijats.static",
   "epijats.templates",
   "epijats.templates.epijats",
