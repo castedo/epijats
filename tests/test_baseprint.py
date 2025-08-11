@@ -14,7 +14,7 @@ from epijats.baseprint import Baseprint, List
 from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
-from epijats.tree import Element, make_paragraph
+from epijats.tree import Element, MarkupElement
 from epijats.xml import XmlFormatter
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ def test_minimalish():
     assert not issues
     assert got.authors == [bp.Author(bp.PersonName("Wang"))]
     expect = bp.ProtoSection()
-    expect.presection.append(make_paragraph('A simple test.'))
+    expect.presection.append(MarkupElement('p', 'A simple test.'))
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
 
@@ -326,11 +326,11 @@ def test_abstract_restyle() -> None:
     restyled = """\
 <abstract>
   <p>OK</p>
-  <p><list list-type="bullet">
-      <list-item>
-        <p>Restyle!</p>
-      </list-item>
-    </list></p>
+  <list list-type="bullet">
+    <list-item>
+      <p>Restyle!</p>
+    </list-item>
+  </list>
   <p>OK</p>
 </abstract>"""
     xe = XML.root(restyle.abstract(bdom))
@@ -341,11 +341,11 @@ def test_abstract_restyle() -> None:
     assert roundtrip == bdom
 
     expect_html = """<p>OK</p>
-<p><ul>
-    <li>
-      <p>Restyle!</p>
-    </li>
-  </ul></p>
+<ul>
+  <li>
+    <p>Restyle!</p>
+  </li>
+</ul>
 <p>OK</p>
 """
     assert HTML.proto_section_to_str(bdom) == expect_html

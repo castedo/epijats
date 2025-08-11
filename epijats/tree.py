@@ -141,7 +141,3 @@ class CitationTuple(Element):
 
     def __len__(self) -> int:
         return len(self._citations)
-
-
-def make_paragraph(text: str) -> MarkupElement:
-    return MarkupElement('p', text)

@@ -12,7 +12,6 @@ from ..tree import (
     Element,
     MixedContent,
     StartTag,
-    make_paragraph,
 )
 
 from . import kit
@@ -25,7 +24,6 @@ from .content import (
 from .kit import (
     Log,
     Model,
-    Sink,
     TagModelBase,
     UnionModel,
     tag_model,
@@ -33,6 +31,7 @@ from .kit import (
 from .htmlish import (
     ExtLinkModel,
     ListModel,
+    HtmlParagraphModel,
     break_model,
     def_list_model,
     disp_quote_model,
@@ -303,36 +302,14 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
     return bp.Author(name.out, email.out, orcid.out)
 
 
-class AutoCorrectModel(Model[Element]):
-    def __init__(self, p_child: Model[Element]):
-        self.p_child = p_child
-
-    def match(self, xe: XmlElement) -> bool:
-        return self.p_child.match(xe)
-
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
-        def _correct(parsed_p_child: Element) -> None:
-            correction = make_paragraph("")
-            correction.content.append(parsed_p_child)
-            dest(correction)
-
-        parser = self.p_child.bound_parser(log, _correct)
-        return parser.parse_element(xe)
-
-
 class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
-    def __init__(self,
-        hypertext_model: Model[Element],
-        p_level: Model[Element],
-    ):
+    def __init__(self, hypertext_model: Model[Element]):
         super().__init__(bp.ProtoSection)
         self.hypertext_model = hypertext_model
-        self.p_child = p_child_model(hypertext_model)
-        self.p_level = p_level
 
     def binds(self, sess: ArrayContentSession, target: bp.ProtoSection) -> None:
-        sess.bind(self.p_level, target.presection.append)
-        sess.bind(AutoCorrectModel(self.p_child), target.presection.append)
+        p_level = p_level_model(self.hypertext_model)
+        sess.bind(p_level, target.presection.append)
         sess.bind(SectionModel(self.hypertext_model), target.subsections.append)
 
 
@@ -342,10 +319,7 @@ def abstract_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSectio
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
     """
 
-    hypertext = base_hypertext_model(biblio)
-    p_child = p_child_model(hypertext)
-    just_para = TextElementModel({'p'}, p_child)
-    content = ProtoSectionBinder(hypertext, just_para)
+    content = ProtoSectionBinder(base_hypertext_model(biblio))
     return ContentInElementModel('abstract', content)
 
 
@@ -356,9 +330,8 @@ class SectionModel(TagModelBase[bp.Section]):
 
     def __init__(self, hypertext_model: Model[Element]):
         super().__init__('sec')
-        p_level = p_level_model(hypertext_model)
         self._title_model = title_model(hypertext_model)
-        self._proto = ProtoSectionBinder(hypertext_model, p_level)
+        self._proto = ProtoSectionBinder(hypertext_model)
 
     def load(self, log: Log, e: XmlElement) -> bp.Section | None:
         kit.check_no_attrib(log, e, ['id'])
@@ -442,7 +415,7 @@ def p_level_model(hypertext: Model[Element]) -> Model[Element]:
     """
 
     block = block_non_p_model(hypertext)
-    return block | TextElementModel({'p'}, hypertext | block)
+    return block | HtmlParagraphModel(hypertext, block)
 
 
 CC_URLS = {
@@ -549,9 +522,7 @@ def body_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
     """
 
     hypertext = base_hypertext_model(biblio)
-    p_child = p_child_model(hypertext)
-    p_level = p_level_model(p_child)
-    content = ProtoSectionBinder(hypertext, p_level)
+    content = ProtoSectionBinder(hypertext)
     return ContentInElementModel('body', content)
 
 

@@ -78,6 +78,11 @@ class ExtLinkModel(kit.TagModelBase[Element]):
             return ret
 
 
+class HtmlParagraphModel(TextElementModel):
+    def __init__(self, hypertext_model: EModel, block_model: EModel):
+        super().__init__({'p'}, hypertext_model | block_model)
+
+
 class ListModel(kit.TagModelBase[Element]):
     def __init__(self, p_elements_model: EModel):
         super().__init__('list')
