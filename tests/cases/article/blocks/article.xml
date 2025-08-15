@@ -1,0 +1,72 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Block elements</article-title>
+      </title-group>
+    </article-meta>
+  </front>
+  <body>
+    <preformat>Preformated</preformat>
+    <disp-quote>
+      <p>A quote</p>
+    </disp-quote>
+    <list list-type="bullet">
+      <list-item>
+        <p>one</p>
+      </list-item>
+      <list-item>
+        <p>two</p>
+      </list-item>
+    </list>
+    <def-list>
+      <def-item>
+        <term>Term</term>
+        <def>
+          <p>English</p>
+        </def>
+      </def-item>
+      <def-item>
+        <term>Termino</term>
+        <def>
+          <p>Spanish</p>
+        </def>
+      </def-item>
+    </def-list>
+    <sec id="restyled-sub-paragraph-blocks">
+      <title>Restyled sub-paragraph blocks</title>
+      <p>Preformat
+        <preformat>Preformated</preformat>
+   quote
+        <disp-quote>
+          <p>A quote</p>
+        </disp-quote>
+     list
+        <list list-type="bullet">
+          <list-item>
+            <p>one</p>
+          </list-item>
+          <list-item>
+            <p>two</p>
+          </list-item>
+        </list>
+  <bold>definition</bold> list
+        <def-list>
+          <def-item>
+            <term>Term</term>
+            <def>
+              <p>English</p>
+            </def>
+          </def-item>
+          <def-item>
+            <term>Termino</term>
+            <def>
+              <p>Spanish</p>
+            </def>
+          </def-item>
+        </def-list>
+     and more!
+      </p>
+    </sec>
+  </body>
+</article>

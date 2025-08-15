@@ -94,9 +94,20 @@ if TYPE_CHECKING:
 
 class Parser(ABC):
     @abstractmethod
-    def match(self, xe: XmlElement) -> ParseFunc | None: ...
+    def match(self, xe: XmlElement) -> ParseFunc | None:
+        """Test whether Parser handles an element, without issue logging."""
+        ...
 
     def parse_element(self, e: XmlElement) -> bool:
+        """Try parsing element.
+
+        Logs issues if XmlElement is matched/handled.
+
+        Returns:
+          True if parser matches/handles the XmlElement and parsed successfully.
+          False if parser does not match/handle the XmlElement or parsing failed.
+        """
+
         fun = self.match(e)
         return False if fun is None else fun(e)
 

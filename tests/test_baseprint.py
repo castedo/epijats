@@ -314,11 +314,11 @@ def test_abstract_restyle() -> None:
     bad_style = """\
 <abstract>
     <p>OK</p>
-                <list list-type="bullet">
+      <p>  CHOP  <list list-type="bullet">
         <list-item>
             <p>Restyle!</p>
         </list-item>
-    </list>
+    </list></p>
                 <p>OK</p>
 </abstract>"""
     bdom = bp.ProtoSection()
@@ -326,6 +326,7 @@ def test_abstract_restyle() -> None:
     restyled = """\
 <abstract>
   <p>OK</p>
+  <p>  CHOP  </p>
   <list list-type="bullet">
     <list-item>
       <p>Restyle!</p>
@@ -341,6 +342,7 @@ def test_abstract_restyle() -> None:
     assert roundtrip == bdom
 
     expect_html = """<p>OK</p>
+<p>  CHOP  </p>
 <ul>
   <li>
     <p>Restyle!</p>

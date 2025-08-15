@@ -25,20 +25,20 @@
         <p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
         <p><bold>OBJECTIVES:</bold></p>
         <p>
-          <list list-type="bullet">
-            <list-item>
-              <p>Define <italic>lineal admixture time</italic>.</p>
-            </list-item>
-            <list-item>
-              <p>Invite discussion and feedback, especially regarding questions at the end of
+          </p>
+        <list list-type="bullet">
+          <list-item>
+            <p>Define <italic>lineal admixture time</italic>.</p>
+          </list-item>
+          <list-item>
+            <p>Invite discussion and feedback, especially regarding questions at the end of
               this document.</p>
-            </list-item>
-            <list-item>
-              <p>Facilitate the discovery of mathematical tools, using this definition, that
+          </list-item>
+          <list-item>
+            <p>Facilitate the discovery of mathematical tools, using this definition, that
               are useful to downstream empirical research.</p>
-            </list-item>
-          </list>
-        </p>
+          </list-item>
+        </list>
         <p><bold>SIGNIFICANCE:</bold>
 This definition is interpretable within empirical research without assuming
 particular mathematical models of demographic or genetic processes.</p>

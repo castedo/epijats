@@ -4,17 +4,17 @@ from typing import TYPE_CHECKING, TypeAlias
 
 from .. import baseprint as bp
 from .. import condition as fc
-from ..tree import Element, MarkupElement
+from ..tree import Element, MarkupElement, MixedContent
 
 from . import kit
 from .content import ArrayContentSession
 from .tree import (
     DataElementModel,
-    TextElementModel,
     EmptyElementModel,
+    TextElementModel,
     parse_mixed_content,
 )
-from .kit import Log, Model
+from .kit import Log, Model, Sink
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
@@ -78,9 +78,56 @@ class ExtLinkModel(kit.TagModelBase[Element]):
             return ret
 
 
-class HtmlParagraphModel(TextElementModel):
-    def __init__(self, hypertext_model: EModel, block_model: EModel):
-        super().__init__({'p'}, hypertext_model | block_model)
+class PendingParagraph:
+    def __init__(self, dest: Sink[Element]):
+        self.dest = dest
+        self._pending: MarkupElement | None = None
+
+    def close(self) -> None:
+        if self._pending is not None:
+            self.dest(self._pending)
+            self._pending = None
+
+    @property
+    def content(self) -> MixedContent:
+        if self._pending is None:
+            self._pending = MarkupElement('p')
+        return self._pending.content
+
+
+class HtmlParagraphModel(Model[Element]):
+    def __init__(self, hypertext_model: Model[Element], block_model: Model[Element]):
+        self.hypertext_model = hypertext_model
+        self.block_model = block_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'p'
+
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
+        if xe.tag != 'p':
+            return False
+        kit.check_no_attrib(log, xe)
+        paragraph_dest = PendingParagraph(dest)
+        if xe.text:
+            paragraph_dest.content.append_text(xe.text)
+        for s in xe:
+            if self.block_model.match(s):
+                paragraph_dest.close()
+                self.block_model.parse(log, s, dest)
+                if s.tail and s.tail.strip():
+                    paragraph_dest.content.append_text(s.tail)
+            else:
+                content_dest = paragraph_dest.content
+                if self.hypertext_model.match(s):
+                    self.hypertext_model.parse(log, s, content_dest.append)
+                else:
+                    log(fc.UnsupportedElement.issue(s))
+                    parse_mixed_content(log, s, self.hypertext_model, content_dest)
+                    content_dest.append_text(s.tail)
+        paragraph_dest.close()
+        if xe.tail:
+            log(fc.IgnoredTail.issue(xe))
+        return True
 
 
 class ListModel(kit.TagModelBase[Element]):
