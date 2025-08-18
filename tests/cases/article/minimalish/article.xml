@@ -1,0 +1,22 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>!</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>!</surname>
+          </name>
+        </contrib>
+      </contrib-group>
+      <abstract>
+        <p>!</p>
+      </abstract>
+    </article-meta>
+  </front>
+  <body>
+    <p>!</p>
+  </body>
+</article>

@@ -386,17 +386,19 @@ def base_hypertext_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
     return hypertext
 
 
-def block_non_p_model(hypertext: Model[Element]) -> Model[Element]:
-    block = UnionModel[Element]()
-    p_elements = hypertext | block
-    block |= disp_formula_model()
-    # NOTE: open issue whether xref should be allowed in preformatted
-    block |= TextElementModel({'code', 'preformat'}, hypertext)
-    block |= ListModel(p_elements)
-    block |= def_list_model(hypertext, p_elements)
-    block |= disp_quote_model(p_elements)
-    block |= table_wrap_model(p_elements)
-    return block
+class CoreModels:
+    def __init__(self, hypertext_model: Model[Element] | None) -> None:
+        if hypertext_model is None:
+            hypertext_model = base_hypertext_model()
+        self.hypertext = hypertext_model
+        self.block = UnionModel[Element]()
+        self.p_child = self.hypertext | self.block
+        self.block |= disp_formula_model()
+        self.block |= TextElementModel({'code', 'preformat'}, self.hypertext)
+        self.block |= ListModel(self.hypertext, self.p_child)
+        self.block |= def_list_model(self.hypertext, self.p_child)
+        self.block |= disp_quote_model(self.p_child)
+        self.block |= table_wrap_model(self.p_child)
 
 
 def p_child_model(hypertext: Model[Element] | None = None) -> Model[Element]:
@@ -404,9 +406,8 @@ def p_child_model(hypertext: Model[Element] | None = None) -> Model[Element]:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
     """
 
-    if hypertext is None:
-        hypertext = base_hypertext_model()
-    return hypertext | block_non_p_model(hypertext)
+    models = CoreModels(hypertext)
+    return models.p_child
 
 
 def p_level_model(hypertext: Model[Element]) -> Model[Element]:
@@ -414,8 +415,8 @@ def p_level_model(hypertext: Model[Element]) -> Model[Element]:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/para-level.html
     """
 
-    block = block_non_p_model(hypertext)
-    return block | HtmlParagraphModel(hypertext, block)
+    models = CoreModels(hypertext)
+    return models.block | HtmlParagraphModel(hypertext, models.block)
 
 
 CC_URLS = {

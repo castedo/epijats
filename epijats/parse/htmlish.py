@@ -131,12 +131,15 @@ class HtmlParagraphModel(Model[Element]):
 
 
 class ListModel(kit.TagModelBase[Element]):
-    def __init__(self, p_elements_model: EModel):
+    def __init__(self,
+        hypertext_model: Model[Element],
+        block_model: Model[Element],
+    ):
         super().__init__('list')
         # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
         # %list-item-model
-        p = TextElementModel({'p'}, p_elements_model)
-        list_item_content = p | self
+        p = TextElementModel({'p'}, hypertext_model | block_model)
+        list_item_content = p | self | def_list_model(hypertext_model, block_model)
         self._list_content_model = DataElementModel('list-item', list_item_content)
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:

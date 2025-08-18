@@ -1,0 +1,12 @@
+<list list-type="bullet">
+  <list-item>
+    <p>Def <italic>time</italic>.</p>
+  </list-item>
+  <list-item>
+    <p>Foo
+bar.</p>
+  </list-item>
+  <list-item>
+    <p>Baz</p>
+  </list-item>
+</list>

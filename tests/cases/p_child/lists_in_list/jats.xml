@@ -1,0 +1,23 @@
+<list list-type="order">
+  <list-item>
+    <list list-type="bullet">
+      <list-item>
+        <p>Foo</p>
+      </list-item>
+    </list>
+    <def-list>
+      <def-item>
+        <term>One</term>
+        <def>
+          <p>1, uno</p>
+        </def>
+      </def-item>
+      <def-item>
+        <term>Two</term>
+        <def>
+          <p>2, dos</p>
+        </def>
+      </def-item>
+    </def-list>
+  </list-item>
+</list>
