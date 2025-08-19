@@ -395,8 +395,8 @@ class CoreModels:
         self.p_child = self.hypertext | self.block
         self.block |= disp_formula_model()
         self.block |= TextElementModel({'code', 'preformat'}, self.hypertext)
-        self.block |= ListModel(self.hypertext, self.p_child)
-        self.block |= def_list_model(self.hypertext, self.p_child)
+        self.block |= ListModel(self.hypertext, self.block)
+        self.block |= def_list_model(self.hypertext, self.block)
         self.block |= disp_quote_model(self.p_child)
         self.block |= table_wrap_model(self.p_child)
 

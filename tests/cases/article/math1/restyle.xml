@@ -42,7 +42,9 @@
                 <mml:math display="inline"><mml:mi>S</mml:mi></mml:math>
               </alternatives>
             </inline-formula>, namely
-          <disp-formula>
+          </p>
+          <p specific-use="wrapper">
+            <disp-formula>
               <alternatives>
                 <tex-math>&#10214; x \in S &#10215; =
                   \begin{cases}
@@ -50,7 +52,8 @@
                     0 &amp; \text{otherwise.}
                   \end{cases}</tex-math>
               </alternatives>
-            </disp-formula></p>
+            </disp-formula>
+          </p>
         </list-item>
       </list>
     </sec>

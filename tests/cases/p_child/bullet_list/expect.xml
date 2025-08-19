@@ -1,0 +1,37 @@
+<list list-type="bullet">
+  <list-item>
+    <p>Def <italic>time</italic>.</p>
+  </list-item>
+  <list-item>
+    <p>Foo
+bar.</p>
+  </list-item>
+  <list-item>
+    <p>Just <bold>inline</bold> text
+        </p>
+    <p specific-use="wrapper">
+      <preformat>and</preformat>
+    </p>
+    <p specific-use="wrapper">
+      <code>block</code>
+    </p>
+    <p specific-use="wrapper">
+      <disp-quote>
+        <p>content</p>
+      </disp-quote>
+    </p>
+    <list>
+      <list-item>
+        <p>and lists that</p>
+      </list-item>
+    </list>
+    <def-list>
+      <def-item>
+        <term>do not</term>
+        <def>
+          <p>need to be wrapped in p</p>
+        </def>
+      </def-item>
+    </def-list>
+  </list-item>
+</list>

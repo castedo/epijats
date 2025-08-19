@@ -11,6 +11,7 @@ from ..tree import (
     EmptyElement,
     MarkupElement,
     MixedContent,
+    StartTag,
 )
 
 from . import kit
@@ -47,11 +48,13 @@ class EmptyElementModel(kit.TagModelBase[Element]):
 
 class DataElementModel(kit.TagModelBase[Element]):
     def __init__(
-        self, tag: str, content_model: Model[Element], *, attrib: set[str] = set()
+        self, tag: str | StartTag,
+        content_model: Model[Element],
+        *, optional_attrib: set[str] = set(),
     ):
         super().__init__(tag)
         self.content_model = content_model
-        self._ok_attrib_keys = attrib
+        self._ok_attrib_keys = optional_attrib | set(self.stag.attrib.keys())
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:
         ret = DataElement(self.tag)

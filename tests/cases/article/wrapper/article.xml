@@ -1,0 +1,60 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>&lt;p specific-use="wrapper"&gt; testing</article-title>
+      </title-group>
+    </article-meta>
+  </front>
+  <body>
+    <p>List items with block elements</p>
+    <list>
+      <list-item>
+        <p specific-use="wrapper">
+          <preformat>{ orange code block }</preformat>
+        </p>
+        <p specific-use="wrapper">
+          <code>{ orange code block }</code>
+        </p>
+        <p specific-use="wrapper">
+          <disp-quote>
+            <p>orange block quote</p>
+          </disp-quote>
+        </p>
+      </list-item>
+    </list>
+    <p>Definitions with block elements</p>
+    <def-list>
+      <def-item>
+        <term>orange</term>
+        <def>
+          <p>orange fruit</p>
+          <p specific-use="wrapper">
+            <preformat>{ orange code block }</preformat>
+          </p>
+          <p specific-use="wrapper">
+            <code>{ orange code block }</code>
+          </p>
+          <p specific-use="wrapper">
+            <disp-quote>
+              <p>orange block quote</p>
+            </disp-quote>
+          </p>
+        </def>
+      </def-item>
+      <def-item>
+        <term>orange</term>
+        <def>
+          <p>orange fruit</p>
+          <p specific-use="wrapper">
+            <list>
+              <list-item>
+                <p>sublist</p>
+              </list-item>
+            </list>
+          </p>
+        </def>
+      </def-item>
+    </def-list>
+  </body>
+</article>

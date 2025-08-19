@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TypeAlias
 
 from .. import baseprint as bp
 from .. import condition as fc
-from ..tree import Element, MarkupElement, MixedContent
+from ..tree import Element, MarkupElement, MixedContent, StartTag, WrapperElement
 
 from . import kit
 from .content import ArrayContentSession
@@ -96,9 +96,14 @@ class PendingParagraph:
 
 
 class HtmlParagraphModel(Model[Element]):
-    def __init__(self, hypertext_model: Model[Element], block_model: Model[Element]):
+    def __init__(self,
+        hypertext_model: Model[Element],
+        non_p_child_model: Model[Element] | None,
+        wrap_model: Model[Element] | None = None,
+    ):
         self.hypertext_model = hypertext_model
-        self.block_model = block_model
+        self.non_p_child_model = non_p_child_model
+        self.wrap_model = wrap_model
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'p'
@@ -111,9 +116,16 @@ class HtmlParagraphModel(Model[Element]):
         if xe.text:
             paragraph_dest.content.append_text(xe.text)
         for s in xe:
-            if self.block_model.match(s):
+            if self.non_p_child_model and self.non_p_child_model.match(s):
                 paragraph_dest.close()
-                self.block_model.parse(log, s, dest)
+                self.non_p_child_model.parse(log, s, dest)
+                if s.tail and s.tail.strip():
+                    paragraph_dest.content.append_text(s.tail)
+            elif self.wrap_model and self.wrap_model.match(s):
+                paragraph_dest.close()
+                wrapper = WrapperElement()
+                self.wrap_model.parse(log, s, wrapper.append)
+                dest(wrapper)
                 if s.tail and s.tail.strip():
                     paragraph_dest.content.append_text(s.tail)
             else:
@@ -130,6 +142,11 @@ class HtmlParagraphModel(Model[Element]):
         return True
 
 
+class WrapperParagraphModel(DataElementModel):
+    def __init__(self, block_model: Model[Element]):
+        super().__init__(StartTag('p', {'specific-use': 'wrapper'}), block_model)
+
+
 class ListModel(kit.TagModelBase[Element]):
     def __init__(self,
         hypertext_model: Model[Element],
@@ -138,8 +155,10 @@ class ListModel(kit.TagModelBase[Element]):
         super().__init__('list')
         # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
         # %list-item-model
-        p = TextElementModel({'p'}, hypertext_model | block_model)
-        list_item_content = p | self | def_list_model(hypertext_model, block_model)
+        listidae = self | def_list_model(hypertext_model, block_model)
+        wrapper_p = WrapperParagraphModel(block_model)
+        html_p = HtmlParagraphModel(hypertext_model, listidae , block_model)
+        list_item_content = listidae | wrapper_p | html_p
         self._list_content_model = DataElementModel('list-item', list_item_content)
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:
@@ -160,30 +179,33 @@ def def_term_model(term_text: EModel) -> EModel:
     return TextElementModel({'term'}, term_text)
 
 
-def def_def_model(p_elements: EModel) -> EModel:
+def def_def_model(def_child: EModel) -> EModel:
     """<def> Definition List: Definition
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
-    p = TextElementModel({'p'}, p_elements)
-    return DataElementModel('def', p)
+    return DataElementModel('def', def_child)
 
 
-def def_item_model(term_text: EModel, p_elements: EModel) -> EModel:
+def def_item_model(term_text: EModel, def_child: EModel) -> EModel:
     """<def-item> Definition List: Definition Item
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
     """
-    content_model = def_term_model(term_text) | def_def_model(p_elements)
+    content_model = def_term_model(term_text) | def_def_model(def_child)
     return DataElementModel('def-item', content_model)
 
 
-def def_list_model(term_text: EModel, p_elements: EModel) -> EModel:
+def def_list_model(
+    hypertext_model: Model[Element], block_model: Model[Element],
+) -> EModel:
     """<def-list> Definition List
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-list.html
     """
-    content_model = def_item_model(term_text, p_elements)
+    wrapper_p = WrapperParagraphModel(block_model)
+    html_p = HtmlParagraphModel(hypertext_model, None, block_model)
+    content_model = def_item_model(hypertext_model, wrapper_p | html_p)
     return DataElementModel('def-list', content_model)
 
 
@@ -206,7 +228,7 @@ class TableCellModel(kit.TagModelBase[Element]):
 
 def table_wrap_model(p_elements: EModel) -> EModel:
     col = EmptyElementModel('col', attrib={'span', 'width'})
-    colgroup = DataElementModel('colgroup', col, attrib={'span', 'width'})
+    colgroup = DataElementModel('colgroup', col, optional_attrib={'span', 'width'})
     br = break_model()
     th = TableCellModel(p_elements | br, header=True)
     td = TableCellModel(p_elements | br, header=False)
@@ -214,6 +236,6 @@ def table_wrap_model(p_elements: EModel) -> EModel:
     thead = DataElementModel('thead', tr)
     tbody = DataElementModel('tbody', tr)
     table = DataElementModel(
-        'table', colgroup | thead | tbody, attrib={'frame', 'rules'}
+        'table', colgroup | thead | tbody, optional_attrib={'frame', 'rules'}
     )
     return DataElementModel('table-wrap', table)

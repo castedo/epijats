@@ -7,7 +7,7 @@ from warnings import warn
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .math import FormulaElement
-from .tree import Citation, CitationTuple, MixedContent, PureElement
+from .tree import Citation, CitationTuple, MixedContent, PureElement, WrapperElement
 from .xml import CommonContentFormatter, get_ET, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
@@ -92,12 +92,25 @@ class DefaultHtmlizer(BaseHtmlizer):
             ret = E('a', {'href': src.href})
         elif isinstance(src, bp.List):
             ret = E('ol' if src.list_type == bp.ListTypeCode.ORDER else 'ul')
-        elif src.xml.tag == 'table-wrap':
-            ret = E('div', {'class': "table-wrap"})
+        else:
+            return False
+        self.common.format_content(src, level, ret)
+        dest.append(ret)
+        return True
+
+
+class TableHtmlizer(BaseHtmlizer):
+    def __init__(self, html: ElementFormatter):
+        super().__init__(html)
+
+    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+        ret: XmlElement
+        if src.xml.tag == 'table-wrap':
+            ret = ET.Element('div', {'class': "table-wrap"})
         elif src.xml.tag == 'table':
             ret = self.table(src, level)
         elif src.xml.tag in ('col', 'colgroup'):
-            ret = E(src.xml.tag, dict(sorted(src.xml.attrib.items())))
+            ret = ET.Element(src.xml.tag, dict(sorted(src.xml.attrib.items())))
         elif src.xml.tag in ('th', 'td'):
             ret = self.table_cell(src, level)
         else:
@@ -163,12 +176,28 @@ class MathHtmlizer(Htmlizer):
         return True
 
 
+class ParagraphWrapperhHtmlizer(BaseHtmlizer):
+    def __init__(self, html: ElementFormatter):
+        super().__init__(html)
+
+    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+        if not isinstance(src, WrapperElement):
+            return False
+        ret = ET.Element('div', {'class': 'jats-p-wrapper'})
+        self.common.format_content(src, level, ret)
+        dest.append(ret)
+        return True
+
+
 class HtmlGenerator:
     def __init__(self) -> None:
         self._math = MathHtmlizer()
         self._html = UnionHtmlizer()
         self._html |= self._math
+        self._html |= ParagraphWrapperhHtmlizer(self._html)
+        self._html |= TableHtmlizer(self._html)
         self._html |= CitationTupleHtmlizer(self._html)
+        self._html |= TableHtmlizer(self._html)
         self._html |= DefaultHtmlizer(self._html)
         self._markup = MarkupFormatter(self._html)
 

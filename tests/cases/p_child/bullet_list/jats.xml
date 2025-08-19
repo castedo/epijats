@@ -7,6 +7,25 @@
 bar.</p>
   </list-item>
   <list-item>
-    <p>Baz</p>
+    <p>Just <bold>inline</bold> text
+        <preformat>and</preformat>
+        <code>block</code>
+        <disp-quote>
+          <p>content</p>
+        </disp-quote>
+        <list>
+          <list-item>
+            <p>and lists that</p>
+          </list-item>
+        </list>
+        <def-list>
+          <def-item>
+            <term>do not</term>
+            <def>
+              <p>need to be wrapped in p</p>
+            </def>
+          </def-item>
+        </def-list>
+      </p>
   </list-item>
 </list>
