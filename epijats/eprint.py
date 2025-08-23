@@ -35,14 +35,18 @@ class Eprint:
     _gen: Any = None
 
     def __init__(
-        self, webstract: Webstract, tmp: Path, config: EprinterConfig | None = None
+        self,
+        webstract: Webstract,
+        tmp: Never | None = None,
+        config: EprinterConfig | None = None,
     ):
         from .jinja import PackagePageGenerator
 
+        if tmp is not None:
+            warn("tmp argument not used", DeprecationWarning)
         if config is None:
             config = EprinterConfig()
         self._add_pdf = config.show_pdf_icon
-        self._tmp = Path(tmp)
         self._html_ctx: dict[str, str | bool | None] = dict()
         for key in [
             'math_css_url',
@@ -102,8 +106,9 @@ class Eprint:
         os.remove(HACK_WEASY_PATH)
 
     def make_pdf(self, target: Path) -> None:
-        html_path = self.make_html_dir(self._tmp)
-        Eprint.stable_html_to_pdf(html_path, target, self._source_date_epoch())
+        with tempfile.TemporaryDirectory() as tmpdir:
+            html_path = self.make_html_dir(Path(tmpdir))
+            Eprint.stable_html_to_pdf(html_path, target, self._source_date_epoch())
 
     def make_html_and_pdf(self, html_target: Never, pdf_target: None = None) -> None:
         warn("Call method make and set EprinterConfig.show_pdf_icon", DeprecationWarning)
@@ -136,11 +141,11 @@ def eprint_dir(
     target_dir: Path | str,
     pdf_target: Never | None = None,
 ) -> None:
+    src = Path(src)
     target_dir = Path(target_dir)
     if pdf_target is not None:
         msg = "pdf_target argument is ignored; use EprinterConfig.show_pdf_icon"
         warn(msg, DeprecationWarning)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        webstract = webstract_from_jats(src)
-        eprint = Eprint(webstract, Path(tmpdir), config)
-        eprint.make(target_dir)
+    webstract = webstract_from_jats(src)
+    eprint = Eprint(webstract, config=config)
+    eprint.make(target_dir)

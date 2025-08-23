@@ -1,4 +1,4 @@
-import argparse, logging, tempfile
+import argparse, logging
 from pathlib import Path
 from sys import stderr
 from typing import Any
@@ -7,7 +7,6 @@ from warnings import warn
 from . import Eprint, EprinterConfig
 from . import restyle
 from .jats import webstract_from_jats
-from .parse import parse_baseprint
 
 
 def weasyprint_setup() -> bool:
@@ -69,11 +68,9 @@ class Main:
         return self.restyle() if self.outform == "jats" else self.convert()
 
     def restyle(self) -> int:
-        bdom = parse_baseprint(self.inpath)
-        if bdom is None:
+        if not restyle.restyle_xml(self.inpath, self.outpath):
             print(f"Invalid XML file {self.inpath}", file=stderr)
             return 1
-        restyle.write_baseprint(bdom, self.outpath)
         return 0
 
     def convert(self) -> int:
@@ -84,17 +81,16 @@ class Main:
         if self.outform in ["html+pdf", "pdf"]:
             if not weasyprint_setup():
                 return 1
-        with tempfile.TemporaryDirectory() as tempdir:
-            if self.outform == "html+pdf":
-                config.show_pdf_icon = True
-            eprint = Eprint(webstract, Path(tempdir) / "html", config)
-            if self.outform in ["html", "html+pdf"]:
-                eprint.make(self.outpath)
-            elif self.outform == "pdf":
-                if not self.outpath.suffix == ".pdf":
-                    msg = "Writing PDF to filename without .pdf suffix: {}"
-                    print(msg.format(self.outpath.name), file=stderr)
-                eprint.make_pdf(self.outpath)
+        if self.outform == "html+pdf":
+            config.show_pdf_icon = True
+        eprint = Eprint(webstract, config=config)
+        if self.outform in ["html", "html+pdf"]:
+            eprint.make(self.outpath)
+        elif self.outform == "pdf":
+            if not self.outpath.suffix == ".pdf":
+                msg = "Writing PDF to filename without .pdf suffix: {}"
+                print(msg.format(self.outpath.name), file=stderr)
+            eprint.make_pdf(self.outpath)
         return 0
 
 
