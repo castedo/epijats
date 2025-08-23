@@ -89,31 +89,3 @@
   {% endfor %}
 </dl>
 {% endmacro %}
-
-
-{% macro pandoc_class_css() %}
-  <style>
-    /* bibliographic references */
-
-    article div.csl-entry {
-      clear: both;
-      break-inside: avoid;
-      word-break: break-word;
-    }
-    article .hanging div.csl-entry {
-      margin-left:2em;
-      text-indent:-2em;
-    }
-    article div.csl-left-margin {
-      min-width:2em;
-      float:left;
-    }
-    article div.csl-right-inline {
-      margin-left:2em;
-      padding-left:1em;
-    }
-    article div.csl-indent {
-      margin-left: 2em;
-    }
-  </style>
-{% endmacro %}

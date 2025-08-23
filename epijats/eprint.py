@@ -1,15 +1,14 @@
-from typing import Any
-
-from .util import copytree_nostat
-from .jats import webstract_from_jats
-from .webstract import Webstract
-
-#std library
 import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
+from typing import Any, Never
 from warnings import warn
+
+from .jats import webstract_from_jats
+from .util import copytree_nostat
+from .webstract import Webstract
+
 
 # WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
 # file has relative URLs in anchor hrefs.
@@ -23,15 +22,9 @@ class EprinterConfig:
         self,
         *,
         dsi_domain: str | None = None,
-        dsi_base_url: str | None = None,
         math_css_url: str | None = None,
     ):
         self.math_css_url = math_css_url
-        if dsi_base_url:
-            warn("use dsi_domain instead of dsi_base_url", DeprecationWarning)
-            if not dsi_domain:
-                assert dsi_base_url.startswith('https://perm.pub')
-                dsi_domain = "perm.pub" 
         self.dsi_domain = dsi_domain
         self.embed_web_fonts = True
         self.show_pdf_icon = False
@@ -39,7 +32,6 @@ class EprinterConfig:
 
 
 class Eprint:
-
     _gen: Any = None
 
     def __init__(
@@ -49,6 +41,7 @@ class Eprint:
 
         if config is None:
             config = EprinterConfig()
+        self._add_pdf = config.show_pdf_icon
         self._tmp = Path(tmp)
         self._html_ctx: dict[str, str | bool | None] = dict()
         for key in [
@@ -109,16 +102,21 @@ class Eprint:
         os.remove(HACK_WEASY_PATH)
 
     def make_pdf(self, target: Path) -> None:
-        self.make_html_and_pdf(self._tmp, target)
+        html_path = self.make_html_dir(self._tmp)
+        Eprint.stable_html_to_pdf(html_path, target, self._source_date_epoch())
 
-    def make_html_and_pdf(self, html_target: Path, pdf_target: Path) -> None:
-        html_path = self.make_html_dir(html_target)
-        Eprint.stable_html_to_pdf(html_path, pdf_target, self._source_date_epoch())
+    def make_html_and_pdf(self, html_target: Never, pdf_target: None = None) -> None:
+        warn("Call method make and set EprinterConfig.show_pdf_icon", DeprecationWarning)
+        self.make(html_target)
 
-    def make(self, html_target: Path, pdf_target: Path | None = None) -> None:
+    def make(self, html_target: Path, pdf_target: Never | None = None) -> None:
+        if pdf_target is not None:
+            msg = "pdf_target argument is ignored; use EprinterConfig.show_pdf_icon"
+            warn(msg, DeprecationWarning)
         html_path = self.make_html_dir(html_target)
-        if pdf_target:
-            Eprint.stable_html_to_pdf(html_path, pdf_target, self._source_date_epoch())
+        if self._add_pdf:
+            pdf_path = html_target / "article.pdf"
+            Eprint.stable_html_to_pdf(html_path, pdf_path, self._source_date_epoch())
 
     def _source_date_epoch(self) -> dict[str, str]:
         ret = dict()
@@ -136,11 +134,13 @@ def eprint_dir(
     config: EprinterConfig,
     src: Path | str,
     target_dir: Path | str,
-    pdf_target: Path | str | None = None,
+    pdf_target: Never | None = None,
 ) -> None:
     target_dir = Path(target_dir)
-    pdf_target = Path(pdf_target) if pdf_target else None
+    if pdf_target is not None:
+        msg = "pdf_target argument is ignored; use EprinterConfig.show_pdf_icon"
+        warn(msg, DeprecationWarning)
     with tempfile.TemporaryDirectory() as tmpdir:
         webstract = webstract_from_jats(src)
         eprint = Eprint(webstract, Path(tmpdir), config)
-        eprint.make(target_dir, pdf_target)
+        eprint.make(target_dir)

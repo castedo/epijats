@@ -1,7 +1,6 @@
 {% extends 'epijats/_common.html.jinja' %}
 
 {% macro article_main_css_style(static_dir="static") %}
-  {{- pandoc_class_css() }}
   <link href="{{ static_dir }}/webpaper.css" rel="stylesheet">
   <link href="{{ static_dir }}/article.css" rel="stylesheet">
 {% endmacro %}
