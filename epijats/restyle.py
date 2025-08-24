@@ -6,6 +6,7 @@ from pathlib import Path
 from . import baseprint
 from . import baseprint as bp
 from .parse import parse_baseprint
+from .parse.kit import Log, nolog
 from .tree import DataElement, EmptyElement, MarkupElement, MixedContent, StartTag
 from .xml import XmlFormatter
 
@@ -189,8 +190,8 @@ def write_baseprint(
         tree.write(f)
 
 
-def restyle_xml(src_xml: Path | str, target_dir: Path | str) -> bool:
-    bdom = parse_baseprint(Path(src_xml))
+def restyle_xml(src_xml: Path | str, target_dir: Path | str, log: Log = nolog) -> bool:
+    bdom = parse_baseprint(Path(src_xml), log)
     if bdom is None:
         return False
     write_baseprint(bdom, Path(target_dir))

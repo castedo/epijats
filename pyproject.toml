@@ -40,7 +40,6 @@ epijats = "epijats.__main__:main"
 packages = [
   "epijats",
   "epijats.csl",
-  "epijats.pandoc",
   "epijats.parse",
   "epijats.static",
   "epijats.templates",

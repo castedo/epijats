@@ -9,15 +9,11 @@ from .. import condition as fc
 from ..baseprint import Baseprint
 from ..xml import get_ET
 
-from .kit import Log, issue
+from .kit import Log, issue, nolog
 from .jats import load_article
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
-
-
-def nolog(issue: fc.FormatIssue) -> None:
-    pass
 
 
 def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> Baseprint | None:

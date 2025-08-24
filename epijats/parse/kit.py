@@ -20,6 +20,10 @@ Log: TypeAlias = Callable[[fc.FormatIssue], None]
 EnumT = TypeVar('EnumT', bound=StrEnum)
 
 
+def nolog(issue: fc.FormatIssue) -> None:
+    pass
+
+
 def issue(
     log: Log,
     condition: fc.FormatCondition,
