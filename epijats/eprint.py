@@ -2,7 +2,7 @@ import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
-from typing import Any, Never
+from typing import Any, Never, Protocol
 from warnings import warn
 
 from .jats import webstract_from_jats
@@ -31,6 +31,30 @@ class EprinterConfig:
         self.header_banner_msg: str | None = None
 
 
+class IssuesPage(Protocol):
+    @property
+    def has_issues(self) -> bool: ...
+
+    def write(self, dest_dir: Path) -> None: ...
+
+
+class SimpleIssuesPage(IssuesPage):
+    def __init__(self, webstract: Webstract):
+        from .jinja import PackagePageGenerator
+
+        self._gen = PackagePageGenerator()
+        self._issues = list(webstract.get("issues", []))
+
+    @property
+    def has_issues(self) -> bool:
+        return bool(self._issues)
+
+    def write(self, dest_dir: Path) -> None:
+        os.makedirs(dest_dir, exist_ok=True)
+        ctx = dict(doc=dict(issues=self._issues))
+        self._gen.render_file("issues.html.jinja", dest_dir / "index.html", ctx)
+
+
 class Eprint:
     _gen: Any = None
 
@@ -39,6 +63,8 @@ class Eprint:
         webstract: Webstract,
         tmp: Never | None = None,
         config: EprinterConfig | None = None,
+        *,
+        issues_page: IssuesPage | None = None,
     ):
         from .jinja import PackagePageGenerator
 
@@ -47,6 +73,7 @@ class Eprint:
         if config is None:
             config = EprinterConfig()
         self._add_pdf = config.show_pdf_icon
+        self.issues_page = issues_page
         self._html_ctx: dict[str, str | bool | None] = dict()
         for key in [
             'math_css_url',
@@ -56,6 +83,10 @@ class Eprint:
             'header_banner_msg',
         ]:
             self._html_ctx[key] = getattr(config, key, None)
+        if self.issues_page is None:
+            self._html_ctx['link_issues'] = False
+        else:
+            self._html_ctx['link_issues'] = self.issues_page.has_issues
         self.webstract = webstract
         if Eprint._gen is None:
             Eprint._gen = PackagePageGenerator()
@@ -66,7 +97,8 @@ class Eprint:
         ctx = dict(doc=self.webstract.facade, **self._html_ctx)
         assert self._gen
         self._gen.render_file("article.html.jinja", ret, ctx)
-        self._gen.render_file("issues.html.jinja", target / "issues.html", ctx)
+        if self.issues_page:
+            self.issues_page.write(target / "issues")
         Eprint._clone_static_dir(target / "static")
         self.webstract.source.copy_resources(target)
         return ret
@@ -140,6 +172,8 @@ def eprint_dir(
     src: Path | str,
     target_dir: Path | str,
     pdf_target: Never | None = None,
+    *,
+    issues_page: IssuesPage | None = None,
 ) -> None:
     src = Path(src)
     target_dir = Path(target_dir)
@@ -147,5 +181,5 @@ def eprint_dir(
         msg = "pdf_target argument is ignored; use EprinterConfig.show_pdf_icon"
         warn(msg, DeprecationWarning)
     webstract = webstract_from_jats(src)
-    eprint = Eprint(webstract, config=config)
+    eprint = Eprint(webstract, config=config, issues_page=issues_page)
     eprint.make(target_dir)

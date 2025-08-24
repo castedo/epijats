@@ -6,6 +6,7 @@ from warnings import warn
 
 from . import Eprint, EprinterConfig
 from . import restyle
+from .eprint import SimpleIssuesPage
 from .jats import webstract_from_jats
 
 
@@ -77,13 +78,14 @@ class Main:
         config = EprinterConfig(dsi_domain="perm.pub")
         config.embed_web_fonts = not self.no_web_fonts
         webstract = webstract_from_jats(self.inpath)
+        issues_page = SimpleIssuesPage(webstract)
         assert self.outform in ["html", "html+pdf", "pdf"]
+        if self.outform == "html+pdf":
+            config.show_pdf_icon = True
+        eprint = Eprint(webstract, config=config, issues_page=issues_page)
         if self.outform in ["html+pdf", "pdf"]:
             if not weasyprint_setup():
                 return 1
-        if self.outform == "html+pdf":
-            config.show_pdf_icon = True
-        eprint = Eprint(webstract, config=config)
         if self.outform in ["html", "html+pdf"]:
             eprint.make(self.outpath)
         elif self.outform == "pdf":
