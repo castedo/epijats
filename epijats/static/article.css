@@ -24,34 +24,6 @@
 }
 
 
-/* JATS default toggle formatting for italic
- * https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/attribute/toggle.html */
-
-.eprint em em {
-  font-style: normal;
-}
-
-.eprint em em em {
-  font-style: italic;
-}
-
-.eprint em em em em {
-  font-style: normal;
-}
-
-.eprint em em em em em {
-  font-style: italic;
-}
-
-.eprint em em em em em em {
-  font-style: normal;
-}
-
-.eprint em em em em em em em {
-  font-style: italic;
-}
-
-
 /* General formatting */
 
 .eprint {

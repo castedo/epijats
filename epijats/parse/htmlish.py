@@ -42,18 +42,9 @@ def break_model() -> EModel:
     return EmptyElementModel('break')
 
 
-class ItalicModel(TextElementModel):
-    def __init__(self, content_model: EModel):
-        super().__init__({'italic'}, content_model)
-
-    def check(self, log: Log, e: XmlElement) -> None:
-        kit.check_no_attrib(log, e, ('toggle',))
-        kit.confirm_attrib_value(log, e, 'toggle', ('yes', None))
-
-
 def formatted_text_model(content: EModel) -> EModel:
-    simple_tags = {'bold', 'monospace', 'sub', 'sup'}
-    return ItalicModel(content) | TextElementModel(simple_tags, content)
+    simple_tags = {'bold', 'italic', 'monospace', 'sub', 'sup'}
+    return TextElementModel(simple_tags, content)
 
 
 class ExtLinkModel(kit.TagModelBase[Element]):
