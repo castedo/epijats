@@ -1,0 +1,54 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>BpDF ed.1 JATS def list</article-title>
+      </title-group>
+    </article-meta>
+  </front>
+  <body>
+    <def-list>
+      <def-item>
+        <term>One</term>
+        <def>
+          <p>1, <bold>one</bold> uno</p>
+        </def>
+      </def-item>
+      <def-item>
+        <term>to wrapper paragraphs</term>
+        <def>
+          <p>Just <bold>inline</bold> text
+            </p>
+          <p specific-use="wrapper">
+            <preformat>and</preformat>
+          </p>
+          <p specific-use="wrapper">
+            <code>block</code>
+          </p>
+          <p specific-use="wrapper">
+            <disp-quote>
+              <p>content</p>
+            </disp-quote>
+          </p>
+          <p specific-use="wrapper">
+            <list>
+              <list-item>
+                <p>and even lists that</p>
+              </list-item>
+            </list>
+          </p>
+          <p specific-use="wrapper">
+            <def-list>
+              <def-item>
+                <term>oddly</term>
+                <def>
+                  <p>Need to be wrapped in p</p>
+                </def>
+              </def-item>
+            </def-list>
+          </p>
+        </def>
+      </def-item>
+    </def-list>
+  </body>
+</article>

@@ -9,8 +9,6 @@ from ..tree import (
     EmptyElement,
     MarkupElement,
     MixedContent,
-    StartTag,
-    WrapperElement,
 )
 
 from . import kit
@@ -36,7 +34,7 @@ def disp_quote_model(p_elements: EModel) -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-quote.html
     """
-    p = TextElementModel({'p'}, p_elements)
+    p = TextElementModel('p', p_elements)
     return DataElementModel('disp-quote', p)
 
 
@@ -58,8 +56,13 @@ def break_model() -> EModel:
 
 
 def formatted_text_model(content: EModel) -> EModel:
-    simple_tags = {'bold', 'italic', 'monospace', 'sub', 'sup'}
-    return TextElementModel(simple_tags, content)
+    ret = kit.UnionModel[Element]()
+    ret |= TextElementModel('bold', content)
+    ret |= TextElementModel('italic', content)
+    ret |= TextElementModel('monospace', content)
+    ret |= TextElementModel('sub', content)
+    ret |= TextElementModel('sup', content)
+    return ret
 
 
 class ExtLinkModel(kit.TagModelBase[Element]):
@@ -90,7 +93,7 @@ class PendingParagraph:
         self._pending: MarkupElement | None = None
 
     def close(self) -> None:
-        if self._pending is not None:
+        if self._pending is not None and not self._pending.content.blank():
             self.dest(self._pending)
             self._pending = None
 
@@ -106,11 +109,9 @@ class HtmlParagraphModel(Model[Element]):
         self,
         hypertext_model: Model[Element],
         non_p_child_model: Model[Element] | None,
-        wrap_model: Model[Element] | None = None,
     ):
         self.hypertext_model = hypertext_model
         self.non_p_child_model = non_p_child_model
-        self.wrap_model = wrap_model
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'p'
@@ -118,7 +119,8 @@ class HtmlParagraphModel(Model[Element]):
     def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
         if xe.tag != 'p':
             return False
-        kit.check_no_attrib(log, xe)
+        # ignore JATS <p specific-use> attribute from BpDF ed.1
+        kit.check_no_attrib(log, xe, ['specific-use'])
         paragraph_dest = PendingParagraph(dest)
         if xe.text:
             paragraph_dest.content.append_text(xe.text)
@@ -126,13 +128,6 @@ class HtmlParagraphModel(Model[Element]):
             if self.non_p_child_model and self.non_p_child_model.match(s):
                 paragraph_dest.close()
                 self.non_p_child_model.parse(log, s, dest)
-                if s.tail and s.tail.strip():
-                    paragraph_dest.content.append_text(s.tail)
-            elif self.wrap_model and self.wrap_model.match(s):
-                paragraph_dest.close()
-                wrapper = WrapperElement()
-                self.wrap_model.parse(log, s, wrapper.append)
-                dest(wrapper)
                 if s.tail and s.tail.strip():
                     paragraph_dest.content.append_text(s.tail)
             else:
@@ -149,11 +144,6 @@ class HtmlParagraphModel(Model[Element]):
         return True
 
 
-class WrapperParagraphModel(DataElementModel):
-    def __init__(self, block_model: Model[Element]):
-        super().__init__(StartTag('p', {'specific-use': 'wrapper'}), block_model)
-
-
 class ListModel(kit.TagModelBase[Element]):
     def __init__(
         self,
@@ -161,12 +151,8 @@ class ListModel(kit.TagModelBase[Element]):
         block_model: Model[Element],
     ):
         super().__init__('list')
-        # https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/list-item-model.html
-        # %list-item-model
-        listidae = self | def_list_model(hypertext_model, block_model)
-        wrapper_p = WrapperParagraphModel(block_model)
-        html_p = HtmlParagraphModel(hypertext_model, listidae, block_model)
-        list_item_content = listidae | wrapper_p | html_p
+        html_p = HtmlParagraphModel(hypertext_model, block_model)
+        list_item_content = block_model | html_p
         self._list_content_model = DataElementModel('list-item', list_item_content)
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:
@@ -184,7 +170,7 @@ def def_term_model(term_text: EModel) -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
-    return TextElementModel({'term'}, term_text)
+    return TextElementModel('term', term_text)
 
 
 def def_def_model(def_child: EModel) -> EModel:
@@ -207,13 +193,8 @@ def def_item_model(term_text: EModel, def_child: EModel) -> EModel:
 def def_list_model(
     hypertext_model: Model[Element], block_model: Model[Element]
 ) -> EModel:
-    """<def-list> Definition List
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-list.html
-    """
-    wrapper_p = WrapperParagraphModel(block_model)
-    html_p = HtmlParagraphModel(hypertext_model, None, block_model)
-    content_model = def_item_model(hypertext_model, wrapper_p | html_p)
+    html_p = HtmlParagraphModel(hypertext_model, block_model)
+    content_model = def_item_model(hypertext_model, block_model | html_p)
     return DataElementModel('def-list', content_model)
 
 

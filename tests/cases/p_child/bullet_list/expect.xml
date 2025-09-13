@@ -9,17 +9,11 @@ bar.</p>
   <list-item>
     <p>Just <bold>inline</bold> text
         </p>
-    <p specific-use="wrapper">
-      <preformat>and</preformat>
-    </p>
-    <p specific-use="wrapper">
-      <code>block</code>
-    </p>
-    <p specific-use="wrapper">
-      <disp-quote>
-        <p>content</p>
-      </disp-quote>
-    </p>
+    <preformat>and</preformat>
+    <code>block</code>
+    <disp-quote>
+      <p>content</p>
+    </disp-quote>
     <list>
       <list-item>
         <p>and lists that</p>

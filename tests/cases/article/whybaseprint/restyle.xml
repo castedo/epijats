@@ -59,8 +59,6 @@ while also having the option to discover newer versions.</p>
         </sup>
   or a web address URL.
   This document itself is archived as a Baseprint document succession with DSI:</p>
-      <p>
-  </p>
       <preformat>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc</preformat>
       <p>This is a <italic>base DSI</italic>, which identifies all snapshots within a Baseprint document succession,
   both current and future.
@@ -74,8 +72,6 @@ while also having the option to discover newer versions.</p>
   Usually, readers are interested in the latest edition in the Baseprint succession.</p>
       <p>An edition number can follow a <italic>base DSI</italic> to identify a specific static edition.
   For instance:</p>
-      <p>
-  </p>
       <preformat>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc/1.1</preformat>
     </sec>
     <sec id="conclusion">
@@ -100,8 +96,6 @@ while also having the option to discover newer versions.</p>
       <title>Changes</title>
       <sec id="from-edition-1.1-to-2.1">
         <title>From Edition 1.1 to 2.1</title>
-        <p>
-    </p>
         <list list-type="bullet">
           <list-item>
             <p>The &#8220;digital succession&#8221; terminology has been update to &#8220;Baseprint document succession&#8221;

@@ -48,9 +48,11 @@ class EmptyElementModel(kit.TagModelBase[Element]):
 
 class DataElementModel(kit.TagModelBase[Element]):
     def __init__(
-        self, tag: str | StartTag,
+        self,
+        tag: str | StartTag,
         content_model: Model[Element],
-        *, optional_attrib: set[str] = set(),
+        *,
+        optional_attrib: set[str] = set(),
     ):
         super().__init__(tag)
         self.content_model = content_model
@@ -66,22 +68,29 @@ class DataElementModel(kit.TagModelBase[Element]):
 
 
 class TextElementModel(kit.LoadModel[Element]):
-    def __init__(self, tags: set[str], content_model: Model[Element]):
-        self._tags = tags
+    def __init__(
+        self,
+        tag: str,
+        content_model: Model[Element],
+        *,
+        jats_tag: str | None = None,
+    ):
+        self.tag = tag
         self.content_model = content_model
+        self.jats_tag = jats_tag
 
     def match(self, xe: XmlElement) -> bool:
-        return xe.tag in self._tags
+        if self.jats_tag is not None and xe.tag == self.jats_tag:
+            return True
+        return xe.tag == self.tag
 
     def check(self, log: Log, e: XmlElement) -> None:
         kit.check_no_attrib(log, e)
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
-        ret = None
-        if isinstance(e.tag, str) and e.tag in self._tags:
-            self.check(log, e)
-            ret = MarkupElement(e.tag)
-            parse_mixed_content(log, e, self.content_model, ret.content)
+        self.check(log, e)
+        ret = MarkupElement(self.tag)
+        parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
 

@@ -43,17 +43,15 @@
               </alternatives>
             </inline-formula>, namely
           </p>
-          <p specific-use="wrapper">
-            <disp-formula>
-              <alternatives>
-                <tex-math>&#10214; x \in S &#10215; =
+          <disp-formula>
+            <alternatives>
+              <tex-math>&#10214; x \in S &#10215; =
                   \begin{cases}
                     1 &amp; \text{if } x \in S  \\
                     0 &amp; \text{otherwise.}
                   \end{cases}</tex-math>
-              </alternatives>
-            </disp-formula>
-          </p>
+            </alternatives>
+          </disp-formula>
         </list-item>
       </list>
     </sec>

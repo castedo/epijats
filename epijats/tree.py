@@ -141,9 +141,3 @@ class CitationTuple(Element):
 
     def __len__(self) -> int:
         return len(self._citations)
-
-
-@dataclass
-class WrapperElement(DataElement):
-    def __init__(self) -> None:
-        super().__init__(StartTag('p', {'specific-use': 'wrapper'}))

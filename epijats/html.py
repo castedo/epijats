@@ -7,7 +7,7 @@ from warnings import warn
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .math import FormulaElement
-from .tree import Citation, CitationTuple, MixedContent, PureElement, WrapperElement
+from .tree import Citation, CitationTuple, MixedContent, PureElement
 from .xml import CommonContentFormatter, get_ET, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
@@ -176,25 +176,11 @@ class MathHtmlizer(Htmlizer):
         return True
 
 
-class ParagraphWrapperhHtmlizer(BaseHtmlizer):
-    def __init__(self, html: ElementFormatter):
-        super().__init__(html)
-
-    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
-        if not isinstance(src, WrapperElement):
-            return False
-        ret = ET.Element('div', {'class': 'jats-p-wrapper'})
-        self.common.format_content(src, level, ret)
-        dest.append(ret)
-        return True
-
-
 class HtmlGenerator:
     def __init__(self) -> None:
         self._math = MathHtmlizer()
         self._html = UnionHtmlizer()
         self._html |= self._math
-        self._html |= ParagraphWrapperhHtmlizer(self._html)
         self._html |= TableHtmlizer(self._html)
         self._html |= CitationTupleHtmlizer(self._html)
         self._html |= TableHtmlizer(self._html)

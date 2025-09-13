@@ -238,8 +238,7 @@ class UnionModel(Model[ParsedT]):
 
     def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
         ret = UnionModel[ParsedT]()
-        ret._binders = list(self._binders)
-        ret._binders.append(other)
+        ret._binders = [self, other]
         return ret
 
     def __ior__(self, other: Model[ParsedT]) -> UnionModel[ParsedT]:
