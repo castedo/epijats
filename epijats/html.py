@@ -51,7 +51,7 @@ class UnionHtmlizer(BaseHtmlizer):
 
 HTML_FROM_XML = {
     'bold': 'strong',
-    'break': 'br',
+    'br': 'br',
     'code': 'pre',
     'def': 'dd',
     'def-list': 'dl',
@@ -231,10 +231,10 @@ class HtmlGenerator:
         title: MixedContent | None = None,
         xid: str | None = None,
         level: int = 0,
-    ) -> Iterable[str | XmlElement]:
+    ) -> Iterable[XmlElement]:
         if level < 6:
             level += 1
-        ret: list[str | XmlElement] = []
+        ret: list[XmlElement] = []
         if title:
             h = ET.Element(f"h{level}")
             if xid is not None:
@@ -244,10 +244,14 @@ class HtmlGenerator:
             ret.append(h)
         for p in src.presection:
             for sub in self._html.format(p, 0):
+                sub.tail = "\n"
                 ret.append(sub)
-                ret.append("\n")
         for ss in src.subsections:
-            ret.extend(self._proto_section_content(ss, ss.title, ss.id, level))
+            section = ET.Element("section")
+            section.text = "\n"
+            section.extend(self._proto_section_content(ss, ss.title, ss.id, level))
+            section.tail = "\n"
+            ret.append(section)
         return ret
 
     def html_references(self, src: bp.BiblioRefList, *, abridged: bool = False) -> str:
