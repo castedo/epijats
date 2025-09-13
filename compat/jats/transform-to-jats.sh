@@ -5,7 +5,7 @@ print_usage() {
     THIS_SCRIPT=$'\u001b[1m'"$(basename $0)"$'\u001b[0m'
     echo "Usage:"
     echo "  $THIS_SCRIPT baseprint_xml_file"
-    echo "    to transform a Baseprints XML file into PMC JATS XML style."
+    echo "    to transform a Baseprints XML file into PMC JATS XML."
 }
 
 SCRIPT_LOCATION=$(dirname "$0")
@@ -15,4 +15,4 @@ if [[ -z "$1" ]]; then
   exit 2
 fi
 
-xsltproc $SCRIPT_LOCATION/pmc-styler.xsl $1 | xmllint --format -
+xsltproc $SCRIPT_LOCATION/baseprint-to-jats.xsl $1 | xmllint --format -

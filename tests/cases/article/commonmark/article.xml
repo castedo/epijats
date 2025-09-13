@@ -1,0 +1,49 @@
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Commonmark.org help</article-title>
+      </title-group>
+    </article-meta>
+  </front>
+  <body>
+    <p><italic>Italic</italic></p>
+    <p><bold>Bold</bold></p>
+    <sec id="heading-1">
+      <title>Heading 1</title>
+      <sec id="heading-2">
+        <title>Heading 2</title>
+        <p><ext-link ext-link-type="uri" xlink:href="http://a.com">Link</ext-link></p>
+        <disp-quote>
+          <p>Blockquote</p>
+        </disp-quote>
+        <list list-type="bullet">
+          <list-item>
+            <p>List</p>
+          </list-item>
+          <list-item>
+            <p>List</p>
+          </list-item>
+          <list-item>
+            <p>List</p>
+          </list-item>
+        </list>
+        <list list-type="order">
+          <list-item>
+            <p>One</p>
+          </list-item>
+          <list-item>
+            <p>Two</p>
+          </list-item>
+          <list-item>
+            <p>Three</p>
+          </list-item>
+        </list>
+        <p><monospace>Inline code</monospace> with backticks</p>
+        <preformat># code block
+print '3 backticks or'
+print 'indent 4 spaces'</preformat>
+      </sec>
+    </sec>
+  </body>
+</article>

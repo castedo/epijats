@@ -1,8 +1,9 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
 
-  <xsl:output method="xml" encoding="UTF-8"
+  <xsl:output
+    method="xml"
     doctype-public="-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD with MathML3 v1.3 20210610//EN"
-    doctype-system="https://jats.nlm.nih.gov/archiving/1.3/JATS-archivearticle1-3-mathml3.dtd"/>
+    doctype-system="JATS-archivearticle1-3-mathml3.dtd"/>
 
   <xsl:template name="new-journal-meta">
     <journal-meta>
@@ -38,8 +39,7 @@
   <!-- default transformation: just copy nodes and attributes -->
   <xsl:template match="* | @*">
     <xsl:copy>
-      <xsl:apply-templates select="@*"/>
-      <xsl:apply-templates/>
+      <xsl:apply-templates select="node()|@*"/>
     </xsl:copy>
   </xsl:template>
 
@@ -78,6 +78,10 @@
       </xsl:if>
       <xsl:apply-templates select="*[not(self::title-group | self::contrib-group)]"/>
     </xsl:copy>
+  </xsl:template>
+
+  <xsl:template match="br">
+    <break/>
   </xsl:template>
 
 </xsl:stylesheet>

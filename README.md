@@ -2,12 +2,12 @@ epijats
 =======
 
 `epijats` converts [Baseprint](https://baseprints.singlesource.pub)
-JATS XML to HTML/PDF in three independent stages:
+XML to HTML/PDF in three independent stages:
 
 ```
-          Any JATS XML
+          XML (Baseprint or JATS)
 Stage 1:   ▼
-          Baseprint JATS XML
+          Baseprint XML
 Stage 2:   ▼
           HTML
 Stage 3:   ▼

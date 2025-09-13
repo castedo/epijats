@@ -4,7 +4,14 @@ from typing import TYPE_CHECKING, TypeAlias
 
 from .. import baseprint as bp
 from .. import condition as fc
-from ..tree import Element, MarkupElement, MixedContent, StartTag, WrapperElement
+from ..tree import (
+    Element,
+    EmptyElement,
+    MarkupElement,
+    MixedContent,
+    StartTag,
+    WrapperElement,
+)
 
 from . import kit
 from .content import ArrayContentSession
@@ -33,13 +40,21 @@ def disp_quote_model(p_elements: EModel) -> EModel:
     return DataElementModel('disp-quote', p)
 
 
+class BreakModel(kit.LoadModel[Element]):
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in ['br', 'break']
+
+    def load(self, log: Log, e: XmlElement) -> Element | None:
+        return EmptyElement('br')
+
+
 def break_model() -> EModel:
     """<break> Line Break
     Like HTML <br>.
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
     """
-    return EmptyElementModel('break')
+    return BreakModel()
 
 
 def formatted_text_model(content: EModel) -> EModel:
@@ -87,7 +102,8 @@ class PendingParagraph:
 
 
 class HtmlParagraphModel(Model[Element]):
-    def __init__(self,
+    def __init__(
+        self,
         hypertext_model: Model[Element],
         non_p_child_model: Model[Element] | None,
         wrap_model: Model[Element] | None = None,
@@ -139,7 +155,8 @@ class WrapperParagraphModel(DataElementModel):
 
 
 class ListModel(kit.TagModelBase[Element]):
-    def __init__(self,
+    def __init__(
+        self,
         hypertext_model: Model[Element],
         block_model: Model[Element],
     ):
@@ -148,7 +165,7 @@ class ListModel(kit.TagModelBase[Element]):
         # %list-item-model
         listidae = self | def_list_model(hypertext_model, block_model)
         wrapper_p = WrapperParagraphModel(block_model)
-        html_p = HtmlParagraphModel(hypertext_model, listidae , block_model)
+        html_p = HtmlParagraphModel(hypertext_model, listidae, block_model)
         list_item_content = listidae | wrapper_p | html_p
         self._list_content_model = DataElementModel('list-item', list_item_content)
 
@@ -188,7 +205,7 @@ def def_item_model(term_text: EModel, def_child: EModel) -> EModel:
 
 
 def def_list_model(
-    hypertext_model: Model[Element], block_model: Model[Element],
+    hypertext_model: Model[Element], block_model: Model[Element]
 ) -> EModel:
     """<def-list> Definition List
 
