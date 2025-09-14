@@ -46,16 +46,17 @@ def parse_element(src: str | Path, model: kit.Model[kit.Element]):
 
 @pytest.mark.parametrize("case", os.listdir(P_CHILD_CASE))
 def test_p_child_html(case):
-    with open(P_CHILD_CASE/ case / "jats.xml", "r") as f:
-        xml_str = f.read().strip()
-    p_child = parse_element(xml_str, jats.p_child_model())
+    jats_xml = P_CHILD_CASE/ case / "jats.xml"
+    if jats_xml.exists():
+        p_child = parse_element(jats_xml.read_text(), jats.p_child_model())
+        with open(P_CHILD_CASE / case / "expect.xml", "r") as f:
+            expected_xml_str = f.read().strip()
+    else:
+        with open(P_CHILD_CASE / case / "xhtml.xml", "r") as f:
+            expected_xml_str = f.read().strip()
+        p_child = parse_element(expected_xml_str, jats.p_child_model())
 
-    expect_xml = P_CHILD_CASE/ case / "expect.xml"
-    if expect_xml.exists():
-        with open(expect_xml, "r") as f:
-            xml_str = f.read().strip()
-
-    assert XML.to_str(p_child) == xml_str
+    assert XML.to_str(p_child) == expected_xml_str
 
     expect_html = P_CHILD_CASE/ case / "expect.html"
     with open(expect_html, "r") as f:

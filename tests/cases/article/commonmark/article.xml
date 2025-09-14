@@ -7,16 +7,16 @@
     </article-meta>
   </front>
   <body>
-    <p><italic>Italic</italic></p>
-    <p><bold>Bold</bold></p>
+    <p><i>Italic</i></p>
+    <p><b>Bold</b></p>
     <sec id="heading-1">
       <title>Heading 1</title>
       <sec id="heading-2">
         <title>Heading 2</title>
         <p><ext-link ext-link-type="uri" xlink:href="http://a.com">Link</ext-link></p>
-        <disp-quote>
+        <blockquote>
           <p>Blockquote</p>
-        </disp-quote>
+        </blockquote>
         <ul>
           <li>
             <p>List</p>
@@ -39,10 +39,10 @@
             <p>Three</p>
           </li>
         </ol>
-        <p><monospace>Inline code</monospace> with backticks</p>
-        <preformat># code block
+        <p><tt>Inline code</tt> with backticks</p>
+        <pre># code block
 print '3 backticks or'
-print 'indent 4 spaces'</preformat>
+print 'indent 4 spaces'</pre>
       </sec>
     </sec>
   </body>

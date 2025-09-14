@@ -36,7 +36,7 @@ def disp_quote_model(p_elements: EModel) -> EModel:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-quote.html
     """
     p = TextElementModel('p', p_elements)
-    return DataElementModel('disp-quote', p)
+    return DataElementModel('blockquote', p, jats_tag='disp-quote')
 
 
 class BreakModel(kit.LoadModel[Element]):
@@ -58,9 +58,9 @@ def break_model() -> EModel:
 
 def formatted_text_model(content: EModel) -> EModel:
     ret = kit.UnionModel[Element]()
-    ret |= TextElementModel('bold', content)
-    ret |= TextElementModel('italic', content)
-    ret |= TextElementModel('monospace', content)
+    ret |= TextElementModel('b', content, jats_tag='bold')
+    ret |= TextElementModel('i', content, jats_tag='italic')
+    ret |= TextElementModel('tt', content, jats_tag='monospace')
     ret |= TextElementModel('sub', content)
     ret |= TextElementModel('sup', content)
     return ret

@@ -18,7 +18,7 @@
         <p>Baseprint document successions offer benefits beyond preprints.
 This allows the research community to cite specific fixed versions
 while also having the option to discover newer versions.</p>
-        <p><bold>STAGE</bold>: Updated future edition planned. Feedback welcome.</p>
+        <p><b>STAGE</b>: Updated future edition planned. Feedback welcome.</p>
       </abstract>
     </article-meta>
   </front>
@@ -59,8 +59,8 @@ while also having the option to discover newer versions.</p>
         </sup>
   or a web address URL.
   This document itself is archived as a Baseprint document succession with DSI:</p>
-      <preformat>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc</preformat>
-      <p>This is a <italic>base DSI</italic>, which identifies all snapshots within a Baseprint document succession,
+      <pre>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc</pre>
+      <p>This is a <i>base DSI</i>, which identifies all snapshots within a Baseprint document succession,
   both current and future.
   Similar to textbooks and preprints,
   Baseprint document successions contain multiple editions (or versions) of a Baseprint document,
@@ -70,9 +70,9 @@ while also having the option to discover newer versions.</p>
         </sup>.
   A base DSI identifies all the editions of a document added to a Baseprint succession.
   Usually, readers are interested in the latest edition in the Baseprint succession.</p>
-      <p>An edition number can follow a <italic>base DSI</italic> to identify a specific static edition.
+      <p>An edition number can follow a <i>base DSI</i> to identify a specific static edition.
   For instance:</p>
-      <preformat>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc/1.1</preformat>
+      <pre>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc/1.1</pre>
     </sec>
     <sec id="conclusion">
       <title>Conclusion</title>

@@ -7,10 +7,10 @@
     </article-meta>
   </front>
   <body>
-    <preformat>Preformated</preformat>
-    <disp-quote>
+    <pre>Preformated</pre>
+    <blockquote>
       <p>A quote</p>
-    </disp-quote>
+    </blockquote>
     <ul>
       <li>
         <p>one</p>
@@ -37,13 +37,13 @@
       <title>Restyled sub-paragraph blocks</title>
       <p>Preformat
         </p>
-      <preformat>Preformated</preformat>
+      <pre>Preformated</pre>
       <p>
    quote
         </p>
-      <disp-quote>
+      <blockquote>
         <p>A quote</p>
-      </disp-quote>
+      </blockquote>
       <p>
      list
         </p>
@@ -55,7 +55,7 @@
           <p>two</p>
         </li>
       </ul>
-      <p><bold>definition</bold> list
+      <p><b>definition</b> list
         </p>
       <dl>
         <div>

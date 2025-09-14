@@ -1,19 +1,19 @@
 <ul>
   <li>
-    <p>Def <italic>time</italic>.</p>
+    <p>Def <i>time</i>.</p>
   </li>
   <li>
     <p>Foo
 bar.</p>
   </li>
   <li>
-    <p>Just <bold>inline</bold> text
+    <p>Just <b>inline</b> text
         </p>
-    <preformat>and</preformat>
+    <pre>and</pre>
     <code>block</code>
-    <disp-quote>
+    <blockquote>
       <p>content</p>
-    </disp-quote>
+    </blockquote>
     <ul>
       <li>
         <p>and lists that</p>

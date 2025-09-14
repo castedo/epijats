@@ -22,11 +22,11 @@
         </license>
       </permissions>
       <abstract>
-        <p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
-        <p><bold>OBJECTIVES:</bold></p>
+        <p><b>STAGE:</b> DISCUSSION DOCUMENT</p>
+        <p><b>OBJECTIVES:</b></p>
         <ul>
           <li>
-            <p>Define <italic>lineal admixture time</italic>.</p>
+            <p>Define <i>lineal admixture time</i>.</p>
           </li>
           <li>
             <p>Invite discussion and feedback, especially regarding questions at the end of
@@ -37,10 +37,10 @@
               are useful to downstream empirical research.</p>
           </li>
         </ul>
-        <p><bold>SIGNIFICANCE:</bold>
+        <p><b>SIGNIFICANCE:</b>
 This definition is interpretable within empirical research without assuming
 particular mathematical models of demographic or genetic processes.</p>
-        <p><bold>DOWNSTREAM RESEARCH:</bold>
+        <p><b>DOWNSTREAM RESEARCH:</b>
 The estimation of the timing and extent of interbreeding between previously
 separated populations.</p>
       </abstract>
@@ -54,7 +54,7 @@ separated populations.</p>
     </sec>
     <sec id="definition-of-lineal-admixture-time">
       <title>Definition of lineal admixture time</title>
-      <p>We define <italic>lineal admixture time</italic> per lineage. This measure in time duration
+      <p>We define <i>lineal admixture time</i> per lineage. This measure in time duration
    depends on two reference time points:</p>
       <ol>
         <li>
@@ -65,9 +65,9 @@ separated populations.</p>
           <p>an observation time, such as the present.</p>
         </li>
       </ol>
-      <p>Given a lineage, the <bold>lineal admixture time</bold> is defined as:</p>
-      <p><italic>the amount of time since fertilization of the first admixed individual in the
-     lineage</italic>.</p>
+      <p>Given a lineage, the <b>lineal admixture time</b> is defined as:</p>
+      <p><i>the amount of time since fertilization of the first admixed individual in the
+     lineage</i>.</p>
     </sec>
   </body>
 </article>

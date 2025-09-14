@@ -10,11 +10,11 @@
     <p>List items with block elements</p>
     <ul>
       <li>
-        <preformat>{ orange code block }</preformat>
+        <pre>{ orange code block }</pre>
         <code>{ orange code block }</code>
-        <disp-quote>
+        <blockquote>
           <p>orange block quote</p>
-        </disp-quote>
+        </blockquote>
       </li>
     </ul>
     <p>Definitions with block elements</p>
@@ -23,11 +23,11 @@
         <dt>orange</dt>
         <dd>
           <p>orange fruit</p>
-          <preformat>{ orange code block }</preformat>
+          <pre>{ orange code block }</pre>
           <code>{ orange code block }</code>
-          <disp-quote>
+          <blockquote>
             <p>orange block quote</p>
-          </disp-quote>
+          </blockquote>
         </dd>
       </div>
       <div>
