@@ -1,10 +1,10 @@
-<list list-type="order">
-  <list-item>
-    <list list-type="bullet">
-      <list-item>
+<ol>
+  <li>
+    <ul>
+      <li>
         <p>Foo</p>
-      </list-item>
-    </list>
+      </li>
+    </ul>
     <dl>
       <div>
         <dt>One</dt>
@@ -19,5 +19,5 @@
         </dd>
       </div>
     </dl>
-  </list-item>
-</list>
+  </li>
+</ol>

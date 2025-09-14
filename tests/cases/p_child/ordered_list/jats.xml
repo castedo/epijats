@@ -1,9 +1,9 @@
-<list list-type="order">
-  <list-item>
+<ol>
+  <li>
     <p>Def <italic>time</italic>.</p>
-  </list-item>
-  <list-item>
+  </li>
+  <li>
     <p>Foo
 bar.</p>
-  </list-item>
-</list>
+  </li>
+</ol>

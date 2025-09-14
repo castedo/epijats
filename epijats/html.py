@@ -54,20 +54,22 @@ HTML_FROM_XML = {
     'br': 'br',
     'code': 'pre',
     'dd': 'dd',
-    'dl': 'dl',
     'disp-quote': 'blockquote',
     'div': 'div',
+    'dl': 'dl',
+    'dt': 'dt',
     'italic': 'em',
-    'list-item': 'li',
+    'li': 'li',
     'monospace': 'samp',
+    'ol': 'ol',
     'p': 'p',
     'preformat': 'pre',
     'sub': 'sub',
     'sup': 'sup',
     'tbody': 'tbody',
-    'dt': 'dt',
     'thead': 'thead',
     'tr': 'tr',
+    'ul': 'ul',
 }
 
 
@@ -91,8 +93,6 @@ class DefaultHtmlizer(BaseHtmlizer):
             ret = E('a', {'href': '#' + src.rid})
         elif isinstance(src, bp.Hyperlink):
             ret = E('a', {'href': src.href})
-        elif isinstance(src, bp.List):
-            ret = E('ol' if src.list_type == bp.ListTypeCode.ORDER else 'ul')
         else:
             return False
         self.common.format_content(src, level, ret)

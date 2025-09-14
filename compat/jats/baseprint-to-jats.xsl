@@ -31,6 +31,27 @@
   </xsl:template>
 
 
+  <!-- Rename HTML list elements to JATS counterparts -->
+
+  <xsl:template match="li">
+    <list-item>
+      <xsl:apply-templates/>
+    </list-item>
+  </xsl:template>
+
+  <xsl:template match="ol">
+    <list list-type="order">
+      <xsl:apply-templates/>
+    </list>
+  </xsl:template>
+
+  <xsl:template match="ul">
+    <list list-type="bullet">
+      <xsl:apply-templates/>
+    </list>
+  </xsl:template>
+
+
   <!-- Rename HTML description list elements to JATS counterparts -->
 
   <xsl:template match="dd">
@@ -70,9 +91,9 @@
 
   <xsl:template match="dd/dl">
     <p>
-      <xsl:copy>
+      <def-list>
         <xsl:apply-templates/>
-      </xsl:copy>
+      </def-list>
     </p>
   </xsl:template>
 
@@ -84,11 +105,19 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="dd/list">
+  <xsl:template match="dd/ol">
     <p>
-      <xsl:copy>
+      <list list-type="order">
         <xsl:apply-templates/>
-      </xsl:copy>
+      </list>
+    </p>
+  </xsl:template>
+
+  <xsl:template match="dd/ul">
+    <p>
+      <list>
+        <xsl:apply-templates/>
+      </list>
     </p>
   </xsl:template>
 
@@ -103,7 +132,7 @@
 
   <!-- Move required <list-item> children under non-HTML JATS <p> child element -->
 
-  <xsl:template match="list-item/code">
+  <xsl:template match="li/code">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>
@@ -111,7 +140,7 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="list-item/disp-quote">
+  <xsl:template match="li/disp-quote">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>
@@ -119,7 +148,7 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="list-item/preformat">
+  <xsl:template match="li/preformat">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>

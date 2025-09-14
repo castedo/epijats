@@ -8,15 +8,15 @@
   </front>
   <body>
     <p>List items with block elements</p>
-    <list>
-      <list-item>
+    <ul>
+      <li>
         <preformat>{ orange code block }</preformat>
         <code>{ orange code block }</code>
         <disp-quote>
           <p>orange block quote</p>
         </disp-quote>
-      </list-item>
-    </list>
+      </li>
+    </ul>
     <p>Definitions with block elements</p>
     <dl>
       <div>
@@ -34,11 +34,11 @@
         <dt>orange</dt>
         <dd>
           <p>orange fruit</p>
-          <list>
-            <list-item>
+          <ul>
+            <li>
               <p>sublist</p>
-            </list-item>
-          </list>
+            </li>
+          </ul>
         </dd>
       </div>
     </dl>

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, TypeAlias
 from .. import baseprint as bp
 from .. import condition as fc
 from ..tree import (
+    DataElement,
     Element,
     EmptyElement,
     MarkupElement,
@@ -144,23 +145,30 @@ class HtmlParagraphModel(Model[Element]):
         return True
 
 
-class ListModel(kit.TagModelBase[Element]):
+class ListModel(kit.LoadModel[Element]):
     def __init__(
         self,
         hypertext_model: Model[Element],
         block_model: Model[Element],
     ):
-        super().__init__('list')
         html_p = HtmlParagraphModel(hypertext_model, block_model)
-        list_item_content = block_model | html_p
-        self._list_content_model = DataElementModel('list-item', list_item_content)
+        li_content = block_model | html_p
+        self._list_content = DataElementModel('li', li_content, jats_tag='list-item')
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in ['ul', 'ol', 'list']
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:
-        kit.check_no_attrib(log, xe, ['list-type'])
-        list_type = kit.get_enum_value(log, xe, 'list-type', bp.ListTypeCode)
-        ret = bp.List(list_type)
+        if xe.tag == 'list':
+            kit.check_no_attrib(log, xe, ['list-type'])
+            list_type = xe.attrib.get('list-type')
+            tag = 'ol' if list_type == 'order' else 'ul'
+        else:
+            kit.check_no_attrib(log, xe)
+            tag = str(xe.tag)
+        ret = DataElement(tag)
         sess = ArrayContentSession(log)
-        sess.bind(self._list_content_model, ret.append)
+        sess.bind(self._list_content, ret.append)
         sess.parse_content(xe)
         return ret
 

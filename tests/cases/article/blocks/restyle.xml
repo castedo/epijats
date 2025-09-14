@@ -11,14 +11,14 @@
     <disp-quote>
       <p>A quote</p>
     </disp-quote>
-    <list list-type="bullet">
-      <list-item>
+    <ul>
+      <li>
         <p>one</p>
-      </list-item>
-      <list-item>
+      </li>
+      <li>
         <p>two</p>
-      </list-item>
-    </list>
+      </li>
+    </ul>
     <dl>
       <div>
         <dt>Term</dt>
@@ -47,14 +47,14 @@
       <p>
      list
         </p>
-      <list list-type="bullet">
-        <list-item>
+      <ul>
+        <li>
           <p>one</p>
-        </list-item>
-        <list-item>
+        </li>
+        <li>
           <p>two</p>
-        </list-item>
-      </list>
+        </li>
+      </ul>
       <p><bold>definition</bold> list
         </p>
       <dl>

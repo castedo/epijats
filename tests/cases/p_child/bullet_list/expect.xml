@@ -1,12 +1,12 @@
-<list list-type="bullet">
-  <list-item>
+<ul>
+  <li>
     <p>Def <italic>time</italic>.</p>
-  </list-item>
-  <list-item>
+  </li>
+  <li>
     <p>Foo
 bar.</p>
-  </list-item>
-  <list-item>
+  </li>
+  <li>
     <p>Just <bold>inline</bold> text
         </p>
     <preformat>and</preformat>
@@ -14,11 +14,11 @@ bar.</p>
     <disp-quote>
       <p>content</p>
     </disp-quote>
-    <list>
-      <list-item>
+    <ul>
+      <li>
         <p>and lists that</p>
-      </list-item>
-    </list>
+      </li>
+    </ul>
     <dl>
       <div>
         <dt>do not</dt>
@@ -27,5 +27,5 @@ bar.</p>
         </dd>
       </div>
     </dl>
-  </list-item>
-</list>
+  </li>
+</ul>

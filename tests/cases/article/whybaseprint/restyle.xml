@@ -96,12 +96,12 @@ while also having the option to discover newer versions.</p>
       <title>Changes</title>
       <sec id="from-edition-1.1-to-2.1">
         <title>From Edition 1.1 to 2.1</title>
-        <list list-type="bullet">
-          <list-item>
+        <ul>
+          <li>
             <p>The &#8220;digital succession&#8221; terminology has been update to &#8220;Baseprint document succession&#8221;
         terminology.</p>
-          </list-item>
-        </list>
+          </li>
+        </ul>
       </sec>
     </sec>
   </body>

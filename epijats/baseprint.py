@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar
 
-from .tree import DataElement, Element, MixedContent, MarkupElement
+from .tree import Element, MixedContent, MarkupElement
 
 
 @dataclass
@@ -26,21 +26,6 @@ class CrossReference(MarkupElement):
         self.xml.attrib = {"rid": rid}
         if ref_type:
             self.xml.attrib['ref-type'] = ref_type
-
-
-class ListTypeCode(StrEnum):
-    BULLET = 'bullet'
-    ORDER = 'order'
-
-
-class List(DataElement):
-    list_type: ListTypeCode | None
-
-    def __init__(self, list_type: ListTypeCode | None) -> None:
-        super().__init__('list')
-        self.list_type = list_type
-        if list_type:
-            self.xml.attrib['list-type'] = list_type
 
 
 @dataclass(frozen=True)

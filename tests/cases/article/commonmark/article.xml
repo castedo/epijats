@@ -17,28 +17,28 @@
         <disp-quote>
           <p>Blockquote</p>
         </disp-quote>
-        <list list-type="bullet">
-          <list-item>
+        <ul>
+          <li>
             <p>List</p>
-          </list-item>
-          <list-item>
+          </li>
+          <li>
             <p>List</p>
-          </list-item>
-          <list-item>
+          </li>
+          <li>
             <p>List</p>
-          </list-item>
-        </list>
-        <list list-type="order">
-          <list-item>
+          </li>
+        </ul>
+        <ol>
+          <li>
             <p>One</p>
-          </list-item>
-          <list-item>
+          </li>
+          <li>
             <p>Two</p>
-          </list-item>
-          <list-item>
+          </li>
+          <li>
             <p>Three</p>
-          </list-item>
-        </list>
+          </li>
+        </ol>
         <p><monospace>Inline code</monospace> with backticks</p>
         <preformat># code block
 print '3 backticks or'

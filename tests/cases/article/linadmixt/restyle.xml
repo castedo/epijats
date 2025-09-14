@@ -24,19 +24,19 @@
       <abstract>
         <p><bold>STAGE:</bold> DISCUSSION DOCUMENT</p>
         <p><bold>OBJECTIVES:</bold></p>
-        <list list-type="bullet">
-          <list-item>
+        <ul>
+          <li>
             <p>Define <italic>lineal admixture time</italic>.</p>
-          </list-item>
-          <list-item>
+          </li>
+          <li>
             <p>Invite discussion and feedback, especially regarding questions at the end of
               this document.</p>
-          </list-item>
-          <list-item>
+          </li>
+          <li>
             <p>Facilitate the discovery of mathematical tools, using this definition, that
               are useful to downstream empirical research.</p>
-          </list-item>
-        </list>
+          </li>
+        </ul>
         <p><bold>SIGNIFICANCE:</bold>
 This definition is interpretable within empirical research without assuming
 particular mathematical models of demographic or genetic processes.</p>
@@ -56,15 +56,15 @@ separated populations.</p>
       <title>Definition of lineal admixture time</title>
       <p>We define <italic>lineal admixture time</italic> per lineage. This measure in time duration
    depends on two reference time points:</p>
-      <list list-type="order">
-        <list-item>
+      <ol>
+        <li>
           <p>a past time horizon when all ancestors are members of separate non-admixed
           subpopulations, and</p>
-        </list-item>
-        <list-item>
+        </li>
+        <li>
           <p>an observation time, such as the present.</p>
-        </list-item>
-      </list>
+        </li>
+      </ol>
       <p>Given a lineage, the <bold>lineal admixture time</bold> is defined as:</p>
       <p><italic>the amount of time since fertilization of the first admixed individual in the
      lineage</italic>.</p>

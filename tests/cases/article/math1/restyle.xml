@@ -19,8 +19,8 @@
   <body>
     <sec id="notation">
       <title>Notation</title>
-      <list list-type="bullet">
-        <list-item>
+      <ul>
+        <li>
           <p>"<inline-formula>
               <alternatives>
                 <tex-math>\operatorname{dom}f</tex-math>
@@ -30,8 +30,8 @@
                 <tex-math>f</tex-math>
               </alternatives>
             </inline-formula></p>
-        </list-item>
-        <list-item>
+        </li>
+        <li>
           <p>"<inline-formula>
               <alternatives>
                 <tex-math>&#10214; x \in S &#10215;</tex-math>
@@ -52,8 +52,8 @@
                   \end{cases}</tex-math>
             </alternatives>
           </disp-formula>
-        </list-item>
-      </list>
+        </li>
+      </ul>
     </sec>
   </body>
 </article>

@@ -10,7 +10,7 @@ import lxml.etree
 import epijats.parse.jats as _
 from epijats import html
 from epijats import baseprint as bp
-from epijats.baseprint import Baseprint, List
+from epijats.baseprint import Baseprint
 from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
@@ -250,11 +250,11 @@ def test_abstract_restyle() -> None:
     bad_style = """\
 <abstract>
     <p>OK</p>
-      <p>  CHOP  <list list-type="bullet">
-        <list-item>
+      <p>  CHOP  <ul>
+        <li>
             <p>Restyle!</p>
-        </list-item>
-    </list></p>
+        </li>
+    </ul></p>
                 <p>OK</p>
 </abstract>"""
     bdom = bp.ProtoSection()
@@ -263,11 +263,11 @@ def test_abstract_restyle() -> None:
 <abstract>
   <p>OK</p>
   <p>  CHOP  </p>
-  <list list-type="bullet">
-    <list-item>
+  <ul>
+    <li>
       <p>Restyle!</p>
-    </list-item>
-  </list>
+    </li>
+  </ul>
   <p>OK</p>
 </abstract>"""
     xe = XML.root(restyle.abstract(bdom))

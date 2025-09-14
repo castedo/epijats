@@ -15,11 +15,11 @@
       <disp-quote>
         <p>content</p>
       </disp-quote>
-      <list>
-        <list-item>
+      <ul>
+        <li>
           <p>and even lists that</p>
-        </list-item>
-      </list>
+        </li>
+      </ul>
       <dl>
         <div>
           <dt>oddly</dt>
