@@ -31,9 +31,36 @@
   </xsl:template>
 
 
+  <!-- Rename HTML description list elements to JATS counterparts -->
+
+  <xsl:template match="dd">
+    <def>
+      <xsl:apply-templates/>
+    </def>
+  </xsl:template>
+
+  <xsl:template match="dl">
+    <def-list>
+      <xsl:apply-templates/>
+    </def-list>
+  </xsl:template>
+
+  <xsl:template match="dl/div">
+    <def-item>
+      <xsl:apply-templates/>
+    </def-item>
+  </xsl:template>
+
+  <xsl:template match="dt">
+    <term>
+      <xsl:apply-templates/>
+    </term>
+  </xsl:template>
+
+
   <!-- Move required <def> children under non-HTML JATS <p> child element -->
 
-  <xsl:template match="def/code">
+  <xsl:template match="dd/code">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>
@@ -41,7 +68,7 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="def/def-list">
+  <xsl:template match="dd/dl">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>
@@ -49,7 +76,7 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="def/disp-quote">
+  <xsl:template match="dd/disp-quote">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>
@@ -57,7 +84,7 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="def/list">
+  <xsl:template match="dd/list">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>
@@ -65,7 +92,7 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="def/preformat">
+  <xsl:template match="dd/preformat">
     <p>
       <xsl:copy>
         <xsl:apply-templates/>

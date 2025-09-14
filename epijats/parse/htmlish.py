@@ -170,7 +170,7 @@ def def_term_model(term_text: EModel) -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
-    return TextElementModel('term', term_text)
+    return TextElementModel('dt', term_text, jats_tag='term')
 
 
 def def_def_model(def_child: EModel) -> EModel:
@@ -178,7 +178,7 @@ def def_def_model(def_child: EModel) -> EModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
-    return DataElementModel('def', def_child)
+    return DataElementModel('dd', def_child, jats_tag='def')
 
 
 def def_item_model(term_text: EModel, def_child: EModel) -> EModel:
@@ -187,7 +187,7 @@ def def_item_model(term_text: EModel, def_child: EModel) -> EModel:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
     """
     content_model = def_term_model(term_text) | def_def_model(def_child)
-    return DataElementModel('def-item', content_model)
+    return DataElementModel('div', content_model, jats_tag='def-item')
 
 
 def def_list_model(
@@ -195,7 +195,7 @@ def def_list_model(
 ) -> EModel:
     html_p = HtmlParagraphModel(hypertext_model, block_model)
     content_model = def_item_model(hypertext_model, block_model | html_p)
-    return DataElementModel('def-list', content_model)
+    return DataElementModel('dl', content_model, jats_tag='def-list')
 
 
 class TableCellModel(kit.TagModelBase[Element]):

@@ -1,13 +1,13 @@
-<def-list>
-  <def-item>
-    <term>One</term>
-    <def>
+<dl>
+  <div>
+    <dt>One</dt>
+    <dd>
       <p>1, <bold>one</bold> uno</p>
-    </def>
-  </def-item>
-  <def-item>
-    <term>to wrapper paragraphs</term>
-    <def>
+    </dd>
+  </div>
+  <div>
+    <dt>to wrapper paragraphs</dt>
+    <dd>
       <p>Just <bold>inline</bold> text
         </p>
       <preformat>and</preformat>
@@ -20,14 +20,14 @@
           <p>and even lists that</p>
         </list-item>
       </list>
-      <def-list>
-        <def-item>
-          <term>oddly</term>
-          <def>
+      <dl>
+        <div>
+          <dt>oddly</dt>
+          <dd>
             <p>Need to be wrapped in p</p>
-          </def>
-        </def-item>
-      </def-list>
-    </def>
-  </def-item>
-</def-list>
+          </dd>
+        </div>
+      </dl>
+    </dd>
+  </div>
+</dl>

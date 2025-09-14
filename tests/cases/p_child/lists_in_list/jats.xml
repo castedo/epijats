@@ -5,19 +5,19 @@
         <p>Foo</p>
       </list-item>
     </list>
-    <def-list>
-      <def-item>
-        <term>One</term>
-        <def>
+    <dl>
+      <div>
+        <dt>One</dt>
+        <dd>
           <p>1, uno</p>
-        </def>
-      </def-item>
-      <def-item>
-        <term>Two</term>
-        <def>
+        </dd>
+      </div>
+      <div>
+        <dt>Two</dt>
+        <dd>
           <p>2, dos</p>
-        </def>
-      </def-item>
-    </def-list>
+        </dd>
+      </div>
+    </dl>
   </list-item>
 </list>

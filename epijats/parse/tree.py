@@ -46,20 +46,27 @@ class EmptyElementModel(kit.TagModelBase[Element]):
         return ret
 
 
-class DataElementModel(kit.TagModelBase[Element]):
+class DataElementModel(kit.LoadModel[Element]):
     def __init__(
         self,
         tag: str | StartTag,
         content_model: Model[Element],
         *,
         optional_attrib: set[str] = set(),
+        jats_tag: str | None = None,
     ):
-        super().__init__(tag)
+        self.stag = StartTag(tag)
         self.content_model = content_model
         self._ok_attrib_keys = optional_attrib | set(self.stag.attrib.keys())
+        self.jats_tag = jats_tag
+
+    def match(self, xe: XmlElement) -> bool:
+        if self.jats_tag is not None and xe.tag == self.jats_tag:
+            return True
+        return kit.match_start_tag(xe, self.stag)
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:
-        ret = DataElement(self.tag)
+        ret = DataElement(self.stag.tag)
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, ret.xml.attrib)
         sess = ArrayContentSession(log)
         sess.bind(self.content_model, ret.append)

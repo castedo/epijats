@@ -19,20 +19,20 @@
         <p>two</p>
       </list-item>
     </list>
-    <def-list>
-      <def-item>
-        <term>Term</term>
-        <def>
+    <dl>
+      <div>
+        <dt>Term</dt>
+        <dd>
           <p>English</p>
-        </def>
-      </def-item>
-      <def-item>
-        <term>Termino</term>
-        <def>
+        </dd>
+      </div>
+      <div>
+        <dt>Termino</dt>
+        <dd>
           <p>Spanish</p>
-        </def>
-      </def-item>
-    </def-list>
+        </dd>
+      </div>
+    </dl>
     <sec id="restyled-sub-paragraph-blocks">
       <title>Restyled sub-paragraph blocks</title>
       <p>Preformat
@@ -57,20 +57,20 @@
       </list>
       <p><bold>definition</bold> list
         </p>
-      <def-list>
-        <def-item>
-          <term>Term</term>
-          <def>
+      <dl>
+        <div>
+          <dt>Term</dt>
+          <dd>
             <p>English</p>
-          </def>
-        </def-item>
-        <def-item>
-          <term>Termino</term>
-          <def>
+          </dd>
+        </div>
+        <div>
+          <dt>Termino</dt>
+          <dd>
             <p>Spanish</p>
-          </def>
-        </def-item>
-      </def-list>
+          </dd>
+        </div>
+      </dl>
       <p>
      and more!
       </p>
