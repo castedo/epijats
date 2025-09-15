@@ -1,4 +1,4 @@
-<article xmlns:xlink="http://www.w3.org/1999/xlink">
+<article>
   <front>
     <article-meta>
       <title-group>
@@ -26,19 +26,19 @@ while also having the option to discover newer versions.</p>
     <sec id="summary">
       <title>Summary</title>
       <p>Baseprint document successions are preserved in
-  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/wiki/Git">Git</ext-link>-compatible <sup>
+  <a rel="external" href="https://en.wikipedia.org/wiki/Git">Git</a>-compatible <sup>
           <xref rid="ref-enwikiU003Agit" ref-type="bibr">1</xref>
         </sup> repositories and archives.
-  Three such examples are the <ext-link ext-link-type="uri" xlink:href="https://softwareheritage.org/">Software Heritage Archive</ext-link>,
-  <ext-link ext-link-type="uri" xlink:href="https://github.com">GitHub</ext-link>, and <ext-link ext-link-type="uri" xlink:href="https://gitlab.org">GitLab</ext-link>.
-  See the <xref rid="relationship-to-git">Relationship to Git</xref> section for more details.
+  Three such examples are the <a rel="external" href="https://softwareheritage.org/">Software Heritage Archive</a>,
+  <a rel="external" href="https://github.com">GitHub</a>, and <a rel="external" href="https://gitlab.org">GitLab</a>.
+  See the <a href="#relationship-to-git">Relationship to Git</a> section for more details.
   The data archived is the machine-readable content of a document, separated from
   how it is visually presented.
-  The benefits of this separation are discussed in the <xref rid="diversity-of-reading-venues">Diversity of Reading Venues</xref> section.
+  The benefits of this separation are discussed in the <a href="#diversity-of-reading-venues">Diversity of Reading Venues</a> section.
   A key component to making this separation possible is discussed in the
-  <xref rid="document-succession-identifiers">Document Succession Identifiers</xref> section.
+  <a href="#document-succession-identifiers">Document Succession Identifiers</a> section.
   These identifiers can be used for bibliographic references similar to a
-  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <sup>
+  <a rel="external" href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</a> <sup>
           <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>
         </sup>.
   This extends one of the great features of traditional academic publishing,
@@ -50,11 +50,11 @@ while also having the option to discover newer versions.</p>
       <p>A Document Succession Identifier (DSI) <sup>
           <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
         </sup>
-  is an <ext-link ext-link-type="uri" xlink:href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</ext-link> <sup>
+  is an <a rel="external" href="https://www.softwareheritage.org/2020/07/09/intrinsic-vs-extrinsic-identifiers/">intrinsic persistent identifier</a> <sup>
           <xref rid="ref-intrinsic_extrinsic_identifiers" ref-type="bibr">4</xref>
         </sup> of a Baseprint document succession.
   It is a textual identifier similar to a
-  <ext-link ext-link-type="uri" xlink:href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</ext-link> <sup>
+  <a rel="external" href="https://en.wikipedia.org/w/index.php?title=Digital_object_identifier">DOI</a> <sup>
           <xref rid="ref-enwikiU003Adoi" ref-type="bibr">2</xref>
         </sup>
   or a web address URL.
@@ -65,7 +65,7 @@ while also having the option to discover newer versions.</p>
   Similar to textbooks and preprints,
   Baseprint document successions contain multiple editions (or versions) of a Baseprint document,
   each encoded as a
-  <ext-link ext-link-type="uri" xlink:href="https://baseprints.singlesource.pub">Baseprint document snapshot</ext-link> <sup>
+  <a rel="external" href="https://baseprints.singlesource.pub">Baseprint document snapshot</a> <sup>
           <xref rid="ref-what_is_baseprint" ref-type="bibr">5</xref>
         </sup>.
   A base DSI identifies all the editions of a document added to a Baseprint succession.
@@ -79,18 +79,18 @@ while also having the option to discover newer versions.</p>
       <p>As of late 2023, Baseprint successions have been
   implemented and used by the author for over a year.
   Authors interested in publishing Baseprint successions can visit
-  <ext-link ext-link-type="uri" xlink:href="https://try.perm.pub/">try.perm.pub</ext-link> to get started.</p>
-      <p>For technical details on how DSIs are implemented, see the <ext-link ext-link-type="uri" xlink:href="https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo">Document Succession
-  Identifier Specification</ext-link> <sup>
+  <a rel="external" href="https://try.perm.pub/">try.perm.pub</a> to get started.</p>
+      <p>For technical details on how DSIs are implemented, see the <a rel="external" href="https://perm.pub/1wFGhvmv8XZfPx0O5Hya2e9AyXo">Document Succession
+  Identifier Specification</a> <sup>
           <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
         </sup>
   or the software library at
-  <ext-link ext-link-type="uri" xlink:href="https://gitlab.com/perm.pub/hidos">gitlab.com/perm.pub/hidos</ext-link>.</p>
+  <a rel="external" href="https://gitlab.com/perm.pub/hidos">gitlab.com/perm.pub/hidos</a>.</p>
     </sec>
     <sec id="acknowledgments">
       <title>Acknowledgments</title>
       <p>This document was copyedited using
-  <ext-link ext-link-type="uri" xlink:href="https://copyaid.it">CopyAid.it</ext-link>, which uses OpenAI GPT-4.</p>
+  <a rel="external" href="https://copyaid.it">CopyAid.it</a>, which uses OpenAI GPT-4.</p>
     </sec>
     <sec id="changes">
       <title>Changes</title>

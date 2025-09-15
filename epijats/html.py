@@ -91,8 +91,8 @@ class DefaultHtmlizer(BaseHtmlizer):
             ret = E('a', {'href': '#' + src.rid})
         elif isinstance(src, bp.CrossReference):
             ret = E('a', {'href': '#' + src.rid})
-        elif isinstance(src, bp.Hyperlink):
-            ret = E('a', {'href': src.href})
+        elif isinstance(src, bp.ExternalHyperlink):
+            ret = E('a', {'href': src.href, 'rel': 'external'})
         else:
             return False
         self.common.format_content(src, level, ret)

@@ -123,7 +123,7 @@ def test_minimal_html_title():
 
 def test_article_title():
     bp = parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
-    expect = """Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov">ClinicalTrials.gov</a>"""
+    expect = """Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov" rel="external">ClinicalTrials.gov</a>"""
     assert HTML.content_to_str(bp.title) == expect
     assert_bdom_roundtrip(bp)
 
@@ -147,20 +147,20 @@ def test_simple_xml_parse():
 def test_ext_link_xml_parse():
     xml = ("""<r xmlns:xlink="http://www.w3.org/1999/xlink">"""
          + """Foo<ext-link xlink:href="http://x.es">bar</ext-link>baz</r>""")
-    expect = 'Foo<a href="http://x.es">bar</a>baz'
+    expect = 'Foo<a href="http://x.es" rel="external">bar</a>baz'
     assert xml2html(xml) == (expect, 0) 
 
 
 def test_nested_ext_link_xml_parse():
     xml = root_wrap('Foo<ext-link xlink:href="https://x.es">bar<sup>baz</sup>boo</ext-link>foo')
-    assert xml2html(xml) == ('Foo<a href="https://x.es">bar<sup>baz</sup>boo</a>foo', 0)
+    assert xml2html(xml) == ('Foo<a href="https://x.es" rel="external">bar<sup>baz</sup>boo</a>foo', 0)
     xml = root_wrap('Foo<sup><ext-link xlink:href="https://x.es">bar</ext-link>baz</sup>boo')
-    assert xml2html(xml) == ('Foo<sup><a href="https://x.es">bar</a>baz</sup>boo', 0)
+    assert xml2html(xml) == ('Foo<sup><a href="https://x.es" rel="external">bar</a>baz</sup>boo', 0)
     xml = root_wrap('Foo<ext-link xlink:href="https://x.es">'
         + '<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
-    assert xml2html(xml) == ('Foo<a href="https://x.es">barbaz</a>boo', 1)
+    assert xml2html(xml) == ('Foo<a href="https://x.es" rel="external">barbaz</a>boo', 1)
     xml = root_wrap('<ext-link>Foo<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
-    assert xml2html(xml) == ('Foo<a href="https://y.es">bar</a>bazboo', 2)
+    assert xml2html(xml) == ('Foo<a href="https://y.es" rel="external">bar</a>bazboo', 2)
 
 
 def mock_biblio_pool() -> _.BiblioRefPool:

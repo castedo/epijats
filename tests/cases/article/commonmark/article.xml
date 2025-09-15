@@ -1,4 +1,4 @@
-<article xmlns:xlink="http://www.w3.org/1999/xlink">
+<article>
   <front>
     <article-meta>
       <title-group>
@@ -13,7 +13,7 @@
       <title>Heading 1</title>
       <sec id="heading-2">
         <title>Heading 2</title>
-        <p><ext-link ext-link-type="uri" xlink:href="http://a.com">Link</ext-link></p>
+        <p><a rel="external" href="http://a.com">Link</a></p>
         <blockquote>
           <p>Blockquote</p>
         </blockquote>

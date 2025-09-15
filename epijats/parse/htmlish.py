@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 
 from .. import baseprint as bp
 from .. import condition as fc
@@ -10,6 +10,7 @@ from ..tree import (
     EmptyElement,
     MarkupElement,
     MixedContent,
+    StartTag,
 )
 
 from . import kit
@@ -26,10 +27,7 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
-EModel: TypeAlias = Model[Element]
-
-
-def disp_quote_model(p_elements: EModel) -> EModel:
+def disp_quote_model(p_elements: Model[Element]) -> Model[Element]:
     """<disp-quote> Quote, Displayed
     Like HTML <blockquote>.
 
@@ -47,7 +45,7 @@ class BreakModel(kit.LoadModel[Element]):
         return EmptyElement('br')
 
 
-def break_model() -> EModel:
+def break_model() -> Model[Element]:
     """<break> Line Break
     Like HTML <br>.
 
@@ -56,7 +54,7 @@ def break_model() -> EModel:
     return BreakModel()
 
 
-def formatted_text_model(content: EModel) -> EModel:
+def formatted_text_model(content: Model[Element]) -> Model[Element]:
     ret = kit.UnionModel[Element]()
     ret |= TextElementModel('b', content, jats_tag='bold')
     ret |= TextElementModel('i', content, jats_tag='italic')
@@ -66,8 +64,8 @@ def formatted_text_model(content: EModel) -> EModel:
     return ret
 
 
-class ExtLinkModel(kit.TagModelBase[Element]):
-    def __init__(self, content_model: EModel):
+class JatsExtLinkModel(kit.TagModelBase[Element]):
+    def __init__(self, content_model: Model[Element]):
         super().__init__('ext-link')
         self.content_model = content_model
 
@@ -83,9 +81,33 @@ class ExtLinkModel(kit.TagModelBase[Element]):
             log(fc.MissingAttribute.issue(e, k_href))
             return None
         else:
-            ret = bp.Hyperlink(href)
+            ret = bp.ExternalHyperlink(href)
             parse_mixed_content(log, e, self.content_model, ret.content)
             return ret
+
+
+class HtmlExtLinkModel(kit.TagModelBase[Element]):
+    def __init__(self, content_model: Model[Element]):
+        super().__init__(StartTag('a', {'rel': 'external'}))
+        self.content_model = content_model
+
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
+        kit.check_no_attrib(log, xe, ['rel', 'href'])
+        href = xe.attrib.get('href')
+        if href is None:
+            log(fc.MissingAttribute.issue(xe, 'href'))
+            return None
+        elif not href.startswith('https:') and not href.startswith('http:'):
+            log(fc.InvalidAttributeValue.issue(xe, 'href', href))
+            return None
+        else:
+            ret = bp.ExternalHyperlink(href)
+            parse_mixed_content(log, xe, self.content_model, ret.content)
+            return ret
+
+
+def ext_link_model(content_model: Model[Element]) -> Model[Element]:
+    return JatsExtLinkModel(content_model) | HtmlExtLinkModel(content_model)
 
 
 class PendingParagraph:
@@ -173,7 +195,7 @@ class ListModel(kit.LoadModel[Element]):
         return ret
 
 
-def def_term_model(term_text: EModel) -> EModel:
+def def_term_model(term_text: Model[Element]) -> Model[Element]:
     """<term> Definition List: Term
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
@@ -181,7 +203,7 @@ def def_term_model(term_text: EModel) -> EModel:
     return TextElementModel('dt', term_text, jats_tag='term')
 
 
-def def_def_model(def_child: EModel) -> EModel:
+def def_def_model(def_child: Model[Element]) -> Model[Element]:
     """<def> Definition List: Definition
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
@@ -189,7 +211,7 @@ def def_def_model(def_child: EModel) -> EModel:
     return DataElementModel('dd', def_child, jats_tag='def')
 
 
-def def_item_model(term_text: EModel, def_child: EModel) -> EModel:
+def def_item_model(term_text: Model[Element], def_child: Model[Element]) -> Model[Element]:
     """<def-item> Definition List: Definition Item
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
@@ -200,14 +222,14 @@ def def_item_model(term_text: EModel, def_child: EModel) -> EModel:
 
 def def_list_model(
     hypertext_model: Model[Element], block_model: Model[Element]
-) -> EModel:
+) -> Model[Element]:
     html_p = HtmlParagraphModel(hypertext_model, block_model)
     content_model = def_item_model(hypertext_model, block_model | html_p)
     return DataElementModel('dl', content_model, jats_tag='def-list')
 
 
 class TableCellModel(kit.TagModelBase[Element]):
-    def __init__(self, content_model: EModel, *, header: bool):
+    def __init__(self, content_model: Model[Element], *, header: bool):
         super().__init__('th' if header else 'td')
         self.content_model = content_model
         self._ok_attrib_keys = {'align', 'colspan', 'rowspan'}
@@ -223,7 +245,7 @@ class TableCellModel(kit.TagModelBase[Element]):
         return ret
 
 
-def table_wrap_model(p_elements: EModel) -> EModel:
+def table_wrap_model(p_elements: Model[Element]) -> Model[Element]:
     col = EmptyElementModel('col', attrib={'span', 'width'})
     colgroup = DataElementModel('colgroup', col, optional_attrib={'span', 'width'})
     br = break_model()

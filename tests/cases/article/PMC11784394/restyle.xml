@@ -1,4 +1,4 @@
-<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/" xmlns:xlink="http://www.w3.org/1999/xlink">
+<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/">
   <front>
     <article-meta>
       <title-group>
@@ -16,7 +16,7 @@
         <copyright-statement>Copyright: &#169; 2025 Innovations in Cardiac Rhythm Management</copyright-statement>
         <license>
           <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
-          <license-p>This article is available under a Creative Commons License (Attribution 4.0 International, as described at <ext-link ext-link-type="uri" xlink:href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</ext-link>).</license-p>
+          <license-p>This article is available under a Creative Commons License (Attribution 4.0 International, as described at <a rel="external" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a>).</license-p>
         </license>
       </permissions>
     </article-meta>

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING
-from warnings import warn
 
 from .. import baseprint as bp
 from .. import condition as fc
@@ -29,12 +28,12 @@ from .kit import (
     tag_model,
 )
 from .htmlish import (
-    ExtLinkModel,
-    ListModel,
     HtmlParagraphModel,
+    ListModel,
     break_model,
     def_list_model,
     disp_quote_model,
+    ext_link_model,
     formatted_text_model,
     table_wrap_model,
 )
@@ -192,10 +191,12 @@ class CitationTupleModel(kit.LoadModel[Element]):
         return ret if len(ret) else None
 
 
-class CrossReferenceModel(kit.TagModelBase[Element]):
+class JatsCrossReferenceModel(kit.LoadModel[Element]):
     def __init__(self, content_model: Model[Element]):
-        super().__init__('xref')
         self.content_model = content_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'xref' and xe.attrib.get('ref-type') != 'bibr'
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
         alt = e.attrib.get("alt")
@@ -206,13 +207,35 @@ class CrossReferenceModel(kit.TagModelBase[Element]):
         if rid is None:
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
-        ref_type = e.attrib.get("ref-type")
-        if ref_type == "bibr":
-            log(fc.InvalidAttributeValue.issue(e, 'ref-type', 'bibr'))
-            warn("CitationModel not handling xref ref-type bibr")
-        ret = bp.CrossReference(rid, ref_type)
+        ret = bp.CrossReference(rid)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
+
+
+class HtmlCrossReferenceModel(kit.LoadModel[Element]):
+    def __init__(self, content_model: Model[Element]):
+        self.content_model = content_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'a' and 'rel' not in xe.attrib
+
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
+        kit.check_no_attrib(log, xe, ['href'])
+        href = xe.attrib.get("href")
+        if href is None:
+            log(fc.MissingAttribute.issue(xe, "href"))
+            return None
+        href = href.strip()
+        if not href.startswith("#"):
+            log(fc.InvalidAttributeValue.issue(xe, 'href', href))
+            return None
+        ret = bp.CrossReference(href[1:])
+        parse_mixed_content(log, xe, self.content_model, ret.content)
+        return ret
+
+
+def cross_reference_model(content_model: Model[Element]) -> Model[Element]:
+    return JatsCrossReferenceModel(content_model) | HtmlCrossReferenceModel(content_model) 
 
 
 def article_title_model() -> kit.MonoModel[MixedContent]:
@@ -379,8 +402,8 @@ def base_hypertext_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
     if biblio:
         hypertext |= AutoCorrectCitationModel(biblio)
         hypertext |= CitationTupleModel(biblio)
-    hypertext |= ExtLinkModel(only_formatted_text)
-    hypertext |= CrossReferenceModel(only_formatted_text)
+    hypertext |= ext_link_model(only_formatted_text)
+    hypertext |= cross_reference_model(only_formatted_text)
     hypertext |= inline_formula_model()
     hypertext |= formatted_text_model(hypertext)
     return hypertext
