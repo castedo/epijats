@@ -76,24 +76,27 @@ def permissions(src: baseprint.Permissions) -> DataElement:
 def proto_section(
     tag: str,
     src: baseprint.ProtoSection,
+    level: int,
     xid: str | None = None,
     title: MixedContent | None = None,
 ) -> DataElement:
+    if level < 6:
+        level += 1
     ret = DataElement(tag)
     if xid is not None:
         ret.xml.attrib['id'] = xid
     if title is not None:
-        t = MarkupElement('title', title)
+        t = MarkupElement(f"h{level}", title)
         ret.append(t)
     for e in src.presection:
         ret.append(e)
     for ss in src.subsections:
-        ret.append(proto_section('sec', ss, ss.id, ss.title))
+        ret.append(proto_section('section', ss, level, ss.id, ss.title))
     return ret
 
 
 def abstract(src: baseprint.ProtoSection) -> DataElement:
-    return proto_section('abstract', src)
+    return proto_section('abstract', src, 1)
 
 
 def append_date_parts(src: baseprint.Date | None, dest: DataElement) -> None:
@@ -170,7 +173,7 @@ def article(src: baseprint.Baseprint) -> DataElement:
         'article',
         [
             DataElement('front', [article_meta]),
-            proto_section('body', src.body),
+            proto_section('body', src.body, 0),
         ],
     )
     if src.ref_list is not None:

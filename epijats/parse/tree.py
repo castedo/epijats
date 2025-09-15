@@ -101,9 +101,8 @@ class TextElementModel(kit.LoadModel[Element]):
         return ret
 
 
-class MixedContentModel(kit.TagMonoModelBase[MixedContent]):
-    def __init__(self, tag: str, child_model: Model[Element]):
-        super().__init__(tag)
+class MixedContentModelBase(kit.MonoModel[MixedContent]):
+    def __init__(self, child_model: Model[Element]):
         self.child_model = child_model
 
     @property
@@ -116,3 +115,12 @@ class MixedContentModel(kit.TagMonoModelBase[MixedContent]):
             parse_mixed_content(log, xe, self.child_model, target)
         else:
             log(fc.ExcessElement.issue(xe))
+
+
+class MixedContentModel(MixedContentModelBase):
+    def __init__(self, tag: str, child_model: Model[Element]):
+        super().__init__(child_model)
+        self.tag = tag
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == self.tag

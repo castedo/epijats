@@ -17,8 +17,8 @@
     </article-meta>
   </front>
   <body>
-    <sec id="notation">
-      <title>Notation</title>
+    <section id="notation">
+      <h2>Notation</h2>
       <ul>
         <li>
           <p>"<inline-formula>
@@ -54,6 +54,6 @@
           </disp-formula>
         </li>
       </ul>
-    </sec>
+    </section>
   </body>
 </article>

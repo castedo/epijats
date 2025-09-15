@@ -40,6 +40,7 @@ from .htmlish import (
 from .tree import (
     EmptyElementModel,
     MixedContentModel,
+    MixedContentModelBase,
     TextElementModel,
     parse_mixed_content,
 )
@@ -245,6 +246,14 @@ def article_title_model() -> kit.MonoModel[MixedContent]:
     return MixedContentModel('article-title', base_hypertext_model())
 
 
+class SectionTitleMonoModel(MixedContentModelBase):
+    def __init__(self, child_model: Model[Element]):
+        super().__init__(child_model | break_model())
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']
+
+
 def title_model(hypertext: Model[Element] | None = None) -> kit.MonoModel[MixedContent]:
     """
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/title.html
@@ -346,15 +355,17 @@ def abstract_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSectio
     return ContentInElementModel('abstract', content)
 
 
-class SectionModel(TagModelBase[bp.Section]):
+class SectionModel(kit.LoadModel[bp.Section]):
     """<sec> Section
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
 
     def __init__(self, hypertext_model: Model[Element]):
-        super().__init__('sec')
-        self._title_model = title_model(hypertext_model)
+        self._title_model = SectionTitleMonoModel(hypertext_model)
         self._proto = ProtoSectionBinder(hypertext_model)
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in ['section', 'sec']
 
     def load(self, log: Log, e: XmlElement) -> bp.Section | None:
         kit.check_no_attrib(log, e, ['id'])
@@ -363,11 +374,8 @@ class SectionModel(TagModelBase[bp.Section]):
         self._proto.binds(sess, ret)
         sess.bind_mono(self._title_model, ret.title)
         sess.parse_content(e)
-        title_element = e.find('title')
-        if title_element is None:
-            log(fc.MissingChild.issue(e, 'title'))
-        elif ret.title.blank():
-            log(fc.MissingContent.issue(title_element))
+        if ret.title.blank():
+            log(fc.MissingSectionHeading.issue(e))
         return ret
 
 

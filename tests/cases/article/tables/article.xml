@@ -31,8 +31,8 @@
         </tbody>
       </table>
     </table-wrap>
-    <sec>
-      <title>Table</title>
+    <section>
+      <h2>Table</h2>
       <table-wrap>
         <table>
           <thead>
@@ -47,6 +47,6 @@
           </tbody>
         </table>
       </table-wrap>
-    </sec>
+    </section>
   </body>
 </article>

@@ -7,8 +7,8 @@
     </article-meta>
   </front>
   <body>
-    <sec>
-      <title>First<br/>Section</title>
-    </sec>
+    <section>
+      <h2>First<br/>Section</h2>
+    </section>
   </body>
 </article>

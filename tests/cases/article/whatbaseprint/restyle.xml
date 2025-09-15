@@ -32,8 +32,8 @@
     </article-meta>
   </front>
   <body>
-    <sec id="summary">
-      <title>Summary</title>
+    <section id="summary">
+      <h2>Summary</h2>
       <p>Multiple independent websites
       can automatically generate
       both a PDF file and an HTML page
@@ -89,6 +89,6 @@
           </tbody>
         </table>
       </table-wrap>
-    </sec>
+    </section>
   </body>
 </article>

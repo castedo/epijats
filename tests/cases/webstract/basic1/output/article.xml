@@ -28,9 +28,9 @@ Attribution 4.0 International license.</license-p>
     </article-meta>
   </front>
   <body>
-    <sec id="summary">
-      <title>Summary</title>
+    <section id="summary">
+      <h2>Summary</h2>
       <p>Bego&#241;a Jos&#233; Sag&#252;es is test.</p>
-    </sec>
+    </section>
   </body>
 </article>

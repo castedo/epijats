@@ -8,12 +8,12 @@
         <p>JATS<sup>
             <xref rid="ref-1" ref-type="bibr">1</xref>
           </sup></p>
-        <sec>
-          <title>Sections too</title>
+        <section>
+          <h3>Sections too</h3>
           <p>JATS<sup>
               <xref rid="ref-1" ref-type="bibr">1</xref>
             </sup></p>
-        </sec>
+        </section>
       </abstract>
     </article-meta>
   </front>

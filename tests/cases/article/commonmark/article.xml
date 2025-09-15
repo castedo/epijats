@@ -9,10 +9,10 @@
   <body>
     <p><i>Italic</i></p>
     <p><b>Bold</b></p>
-    <sec id="heading-1">
-      <title>Heading 1</title>
-      <sec id="heading-2">
-        <title>Heading 2</title>
+    <section id="heading-1">
+      <h2>Heading 1</h2>
+      <section id="heading-2">
+        <h3>Heading 2</h3>
         <p><a rel="external" href="http://a.com">Link</a></p>
         <blockquote>
           <p>Blockquote</p>
@@ -43,7 +43,7 @@
         <pre># code block
 print '3 backticks or'
 print 'indent 4 spaces'</pre>
-      </sec>
-    </sec>
+      </section>
+    </section>
   </body>
 </article>

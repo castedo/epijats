@@ -1,4 +1,7 @@
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+<xsl:stylesheet
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    version="1.0">
 
   <xsl:output
     method="xml"
@@ -12,22 +15,79 @@
     </xsl:copy>
   </xsl:template>
 
-  <!-- add required <atricle article-type> attribute -->
+  <!-- add required <atricle> attributes -->
   <xsl:template match="/article">
-    <xsl:copy>
-      <xsl:apply-templates select="@*" />
-      <xsl:if test="not(@article-type)">
-        <xsl:attribute name="article-type">other</xsl:attribute>
-      </xsl:if>
+    <article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="other">
       <xsl:apply-templates/>
-    </xsl:copy>
+    </article>
   </xsl:template>
 
 
   <!-- Rename HTML elements to JATS counterparts -->
 
+  <xsl:template match="a[@rel='external']">
+    <ext-link ext-link-type="uri" xlink:href="{@href}">
+      <xsl:apply-templates/>
+    </ext-link>
+  </xsl:template>
+
+  <xsl:template match="a">
+    <xref>
+      <xsl:attribute name="rid">
+        <xsl:value-of select="substring(@href, 2)"/>
+      </xsl:attribute>
+      <xsl:apply-templates/>
+    </xref>
+  </xsl:template>
+
+  <xsl:template match="b">
+    <bold>
+      <xsl:apply-templates/>
+    </bold>
+  </xsl:template>
+
+  <xsl:template match="blockquote">
+    <disp-quote>
+      <xsl:apply-templates/>
+    </disp-quote>
+  </xsl:template>
+
   <xsl:template match="br">
     <break/>
+  </xsl:template>
+
+  <xsl:template match="i">
+    <italic>
+      <xsl:apply-templates/>
+    </italic>
+  </xsl:template>
+
+  <xsl:template match="pre">
+    <preformat>
+      <xsl:apply-templates/>
+    </preformat>
+  </xsl:template>
+
+  <xsl:template match="tt">
+    <monospace>
+      <xsl:apply-templates/>
+    </monospace>
+  </xsl:template>
+
+
+  <!-- Rename HTML section and heading elements to JATS -->
+
+  <xsl:template match="section">
+    <sec>
+      <xsl:apply-templates select="@*" />
+      <xsl:apply-templates/>
+    </sec>
+  </xsl:template>
+
+  <xsl:template match="h1|h2|h3|h4|h5|h6">
+    <title>
+      <xsl:apply-templates/>
+    </title>
   </xsl:template>
 
 

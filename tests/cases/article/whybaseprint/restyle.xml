@@ -23,8 +23,8 @@ while also having the option to discover newer versions.</p>
     </article-meta>
   </front>
   <body>
-    <sec id="summary">
-      <title>Summary</title>
+    <section id="summary">
+      <h2>Summary</h2>
       <p>Baseprint document successions are preserved in
   <a rel="external" href="https://en.wikipedia.org/wiki/Git">Git</a>-compatible <sup>
           <xref rid="ref-enwikiU003Agit" ref-type="bibr">1</xref>
@@ -44,9 +44,9 @@ while also having the option to discover newer versions.</p>
   This extends one of the great features of traditional academic publishing,
   namely, the ability of researchers to reference
   a static archived document long into the future.</p>
-    </sec>
-    <sec id="document-succession-identifiers">
-      <title>Document Succession Identifiers</title>
+    </section>
+    <section id="document-succession-identifiers">
+      <h2>Document Succession Identifiers</h2>
       <p>A Document Succession Identifier (DSI) <sup>
           <xref rid="ref-DSI_spec" ref-type="bibr">3</xref>
         </sup>
@@ -73,9 +73,9 @@ while also having the option to discover newer versions.</p>
       <p>An edition number can follow a <i>base DSI</i> to identify a specific static edition.
   For instance:</p>
       <pre>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc/1.1</pre>
-    </sec>
-    <sec id="conclusion">
-      <title>Conclusion</title>
+    </section>
+    <section id="conclusion">
+      <h2>Conclusion</h2>
       <p>As of late 2023, Baseprint successions have been
   implemented and used by the author for over a year.
   Authors interested in publishing Baseprint successions can visit
@@ -86,24 +86,24 @@ while also having the option to discover newer versions.</p>
         </sup>
   or the software library at
   <a rel="external" href="https://gitlab.com/perm.pub/hidos">gitlab.com/perm.pub/hidos</a>.</p>
-    </sec>
-    <sec id="acknowledgments">
-      <title>Acknowledgments</title>
+    </section>
+    <section id="acknowledgments">
+      <h2>Acknowledgments</h2>
       <p>This document was copyedited using
   <a rel="external" href="https://copyaid.it">CopyAid.it</a>, which uses OpenAI GPT-4.</p>
-    </sec>
-    <sec id="changes">
-      <title>Changes</title>
-      <sec id="from-edition-1.1-to-2.1">
-        <title>From Edition 1.1 to 2.1</title>
+    </section>
+    <section id="changes">
+      <h2>Changes</h2>
+      <section id="from-edition-1.1-to-2.1">
+        <h3>From Edition 1.1 to 2.1</h3>
         <ul>
           <li>
             <p>The &#8220;digital succession&#8221; terminology has been update to &#8220;Baseprint document succession&#8221;
         terminology.</p>
           </li>
         </ul>
-      </sec>
-    </sec>
+      </section>
+    </section>
   </body>
   <back>
     <ref-list>

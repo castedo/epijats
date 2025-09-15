@@ -47,13 +47,13 @@ separated populations.</p>
     </article-meta>
   </front>
   <body>
-    <sec id="background">
-      <title>Background</title>
+    <section id="background">
+      <h2>Background</h2>
       <p>The genealogies of a population reflect population events of the
  past.</p>
-    </sec>
-    <sec id="definition-of-lineal-admixture-time">
-      <title>Definition of lineal admixture time</title>
+    </section>
+    <section id="definition-of-lineal-admixture-time">
+      <h2>Definition of lineal admixture time</h2>
       <p>We define <i>lineal admixture time</i> per lineage. This measure in time duration
    depends on two reference time points:</p>
       <ol>
@@ -68,6 +68,6 @@ separated populations.</p>
       <p>Given a lineage, the <b>lineal admixture time</b> is defined as:</p>
       <p><i>the amount of time since fertilization of the first admixed individual in the
      lineage</i>.</p>
-    </sec>
+    </section>
   </body>
 </article>

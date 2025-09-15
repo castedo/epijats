@@ -139,6 +139,10 @@ class InvalidCitation(ElementFormatCondition):
     """Invalid citation"""
 
 
+class MissingSectionHeading(ElementFormatCondition):
+    """Missing section heading"""
+
+
 @dataclass(frozen=True)
 class MissingChild(FormatCondition):
     """Missing child element"""
