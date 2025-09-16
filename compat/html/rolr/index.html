@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Baseprint Render of Last Resort</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="module">
+import { fetchBaseprintHTML } from "./baseprint.mjs";
+
+const baseprintXMLURL = "../baseprint/article.xml";
+
+window.onload = async function() {
+  const error = document.querySelector(".error");
+  error.classList.remove("show");
+  const result = await fetchBaseprintHTML(baseprintXMLURL);
+  if (result.error) {
+    error.textContent = result.error;
+    error.classList.add("show");
+  } else {
+    document.querySelector("main").appendChild(result.dom);
+  }
+}
+</script>
+<link href="baseprint.css" rel="stylesheet">
+<style>
+.error {
+  display: none;
+  padding: 0.5em;
+  background-color: pink;
+}
+.error.show {
+  display: block;
+}
+</style>
+</head>
+<html>
+<body>
+<pre class="error"></pre>
+<main></main>
+</body>
+</html>

@@ -1,0 +1,146 @@
+title-group > article-title {
+  display: block;
+  font-size: 2.6em;
+  font-weight: bold;
+  margin-block-start: 0.67em;
+  margin-block-end: 0.67em;
+}
+h2 {
+  font-size: 2em;
+}
+h3 {
+  font-size: 1.68em;
+}
+h4 {
+  font-size: 1.41em;
+}
+h5 {
+  font-size: 1.19em;
+}
+h6 {
+  font-size: 1em;
+}
+
+contrib-group {
+  display: flex;
+  margin: 0.75em 0;
+  column-gap: 0.25em;
+}
+contrib-group > contrib:not(:last-child)::after {
+  content: ",";
+  order: 666;
+  margin-left: -0.25em;
+}
+
+contrib {
+  display: flex;
+  column-gap: 0.25em;
+}
+contrib > name {
+  order: 0;
+  display: flex;
+  column-gap: 0.25em;
+}
+contrib > name > given-names {
+  order: 1;
+}
+contrib > name > surname {
+  order: 2;
+}
+contrib > email {
+  order: 1;
+}
+contrib > contrib-id {
+  order: 2;
+}
+contrib > email::before {
+  content: "(";
+}
+contrib > email::after {
+  content: ")";
+}
+
+permissions {
+  display: block;
+  margin: 1em 0;
+}
+
+copyright-statement {
+  display: block;
+  margin: 0.5em 0;
+}
+copyright-statement::before {
+  display: block;
+  content: "Copyright:";
+  font-weight: bold;
+  margin: 0.25em 0;
+}
+
+license_ref  {
+  display: block;
+  margin: 0.25em 0;
+}
+license-p {
+  display: block;
+  margin: 0.25em 0;
+}
+
+abstract {
+  display: block;
+  margin: 1.5em 0;
+}
+abstract::before {
+  content: "Abstract";
+  font-size: 2em;
+  font-weight: bold;
+}
+
+ref-list {
+  display: block;
+  list-style-type: decimal;
+  margin: 2em 0;
+}
+ref-list::before {
+  content: "References";
+  font-size: 2em;
+  font-weight: bold;
+}
+
+ref {
+  display: list-item;
+  margin: 0.5em 0 0.5em 1.5em;
+}
+
+element-citation {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.25em;
+}
+
+element-citation > person-group {
+  order: -1;
+  display: flex;
+  column-gap: 0.25em;
+}
+
+element-citation > person-group > name {
+  display: flex;
+}
+element-citation > person-group > name > given-names {
+  order: 1;
+}
+element-citation > person-group > name > surname {
+  order: 2;
+}
+element-citation > person-group > name > * {
+  margin-right: 0.25em;
+}
+element-citation > person-group > name:not(:last-child)::after {
+  content: ",";
+  order: 666;
+  margin-left: -0.25em;
+}
+
+element-citation > article-title {
+  font-style: italic;
+}

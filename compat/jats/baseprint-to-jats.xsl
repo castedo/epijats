@@ -79,7 +79,6 @@
 
   <xsl:template match="section">
     <sec>
-      <xsl:apply-templates select="@*" />
       <xsl:apply-templates/>
     </sec>
   </xsl:template>
