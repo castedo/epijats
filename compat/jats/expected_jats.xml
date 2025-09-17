@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD with MathML3 v1.3 20210610//EN" "JATS-archivearticle1-3-mathml3.dtd">
+<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ali="http://www.niso.org/schemas/ali/1.0/" article-type="other">
+  <front>
+    <journal-meta>
+      <journal-id journal-id-type="archive">JJXT</journal-id>
+      <journal-title-group>
+        <journal-title>Journal of JATS XML Testing</journal-title>
+      </journal-title-group>
+      <issn pub-type="epub">0000-0000</issn>
+      <publisher>
+        <publisher-name>Random Madhouse</publisher-name>
+      </publisher>
+    </journal-meta>
+    <article-meta>
+      <article-categories>
+        <subj-group subj-group-type="heading">
+          <subject>JATS</subject>
+        </subj-group>
+      </article-categories>
+      <title-group>
+        <article-title>Kitchen Sink Baseprint Example</article-title>
+      </title-group>
+      <pub-date pub-type="pub">
+        <year>1700</year>
+      </pub-date>
+      <elocation-id>0</elocation-id>
+      <permissions>
+        <copyright-statement>&#xA9; 2025, Ellerman et al</copyright-statement>
+        <license>
+          <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-p>This document is distributed under a Creative Commons Attribution 4.0 International license.</license-p>
+        </license>
+      </permissions>
+    </article-meta>
+  </front>
+  <body>
+    <p>This is Baseprint XML that is XML-transformable to
+      <ext-link ext-link-type="uri" xlink:href="https://jats.nlm.nih.gov/">NISO JATS XML</ext-link><sup><xref rid="ref-jats" ref-type="bibr">1</xref></sup>.
+      The <xref rid="last-section">last section</xref> tests a description/definition list.
+    </p>
+    <p>
+      <italic>Italic</italic>
+      <bold>Bold</bold>
+      <monospace>Monospace</monospace>
+    </p>
+    <disp-quote>
+      <p>Blockquote</p>
+    </disp-quote>
+    <preformat>Tick |
+     | tack |
+            | toe</preformat>
+    <sec>
+      <title>Lists</title>
+      <list list-type="bullet">
+        <list-item>
+          <p>Bullet</p>
+        </list-item>
+      </list>
+      <list list-type="order">
+        <list-item>
+          <p>One</p>
+        </list-item>
+        <list-item>
+          <p>Two</p>
+        </list-item>
+        <list-item>
+          <p>Three</p>
+        </list-item>
+      </list>
+    </sec>
+    <sec id="last-section">
+      <title>Description<break/>List</title>
+      <def-list>
+        <def-item>
+          <term>One</term>
+          <def>
+            <p>1, <bold>one</bold> uno</p>
+          </def>
+        </def-item>
+        <def-item>
+          <term>to wrapper paragraphs</term>
+          <def>
+            <p>Just <bold>inline</bold> text
+              </p>
+            <p>
+              <preformat>and</preformat>
+            </p>
+            <p>
+              <disp-quote>
+                <p>content</p>
+              </disp-quote>
+            </p>
+            <p>
+              <list>
+                <list-item>
+                  <p>and even lists that</p>
+                </list-item>
+              </list>
+            </p>
+            <p>
+              <def-list>
+                <def-item>
+                  <term>oddly</term>
+                  <def>
+                    <p>Need to be wrapped in p</p>
+                  </def>
+                </def-item>
+              </def-list>
+            </p>
+          </def>
+        </def-item>
+      </def-list>
+    </sec>
+  </body>
+  <back>
+    <ref-list>
+      <title>References</title>
+      <ref id="ref-jats">
+        <element-citation>
+          <person-group person-group-type="author">
+            <string-name>U.S. National Library of Medicine (NLM)</string-name>
+          </person-group>
+          <article-title>Journal Article Tag Suite</article-title>
+          <year>2024</year>
+          <uri>https://jats.nlm.nih.gov/</uri>
+        </element-citation>
+      </ref>
+    </ref-list>
+  </back>
+</article>

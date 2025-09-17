@@ -1,0 +1,102 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Kitchen Sink Baseprint Example</article-title>
+      </title-group>
+      <permissions>
+        <copyright-statement>&#169; 2025, Ellerman et al</copyright-statement>
+        <license>
+          <license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</license_ref>
+          <license-p>This document is distributed under a Creative Commons Attribution 4.0 International license.</license-p>
+        </license>
+      </permissions>
+    </article-meta>
+  </front>
+  <body>
+    <p>This is Baseprint XML that is XML-transformable to
+      <a rel="external" href="https://jats.nlm.nih.gov/">NISO JATS XML</a><sup>
+        <xref rid="ref-jats" ref-type="bibr">1</xref>
+      </sup>.
+      The <a href="#last-section">last section</a> tests a description/definition list.
+    </p>
+    <p>
+      <i>Italic</i> <b>Bold</b> <tt>Monospace</tt> 
+    </p>
+    <blockquote>
+      <p>Blockquote</p>
+    </blockquote>
+    <pre>Tick |
+     | tack |
+            | toe</pre>
+    <section>
+      <h2>Lists</h2>
+      <ul>
+        <li>
+          <p>Bullet</p>
+        </li>
+      </ul>
+      <ol>
+        <li>
+          <p>One</p>
+        </li>
+        <li>
+          <p>Two</p>
+        </li>
+        <li>
+          <p>Three</p>
+        </li>
+      </ol>
+    </section>
+    <section id="last-section">
+      <h2>Description<br/>List</h2>
+      <dl>
+        <div>
+          <dt>One</dt>
+          <dd>
+            <p>1, <b>one</b> uno</p>
+          </dd>
+        </div>
+        <div>
+          <dt>to wrapper paragraphs</dt>
+          <dd>
+            <p>Just <b>inline</b> text
+              </p>
+            <pre>and</pre>
+            <blockquote>
+              <p>content</p>
+            </blockquote>
+            <ul>
+              <li>
+                <p>and even lists that</p>
+              </li>
+            </ul>
+            <dl>
+              <div>
+                <dt>oddly</dt>
+                <dd>
+                  <p>Need to be wrapped in p</p>
+                </dd>
+              </div>
+            </dl>
+          </dd>
+        </div>
+      </dl>
+    </section>
+  </body>
+  <back>
+    <ref-list>
+      <title>References</title>
+      <ref id="ref-jats">
+        <element-citation>
+          <person-group person-group-type="author">
+            <string-name>U.S. National Library of Medicine (NLM)</string-name>
+          </person-group>
+          <article-title>Journal Article Tag Suite</article-title>
+          <year>2024</year>
+          <uri>https://jats.nlm.nih.gov/</uri>
+        </element-citation>
+      </ref>
+    </ref-list>
+  </back>
+</article>

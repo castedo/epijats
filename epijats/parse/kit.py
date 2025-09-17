@@ -176,21 +176,12 @@ class StatelessParser(Parser, Generic[DestT]):
         return None
 
 
-class TagBinderBase(ABC, Binder[DestT]):
-    def __init__(self, tag: str | StartTag | None = None):
-        if tag is None:
-            tag = getattr(type(self), 'TAG')
-        self.stag = StartTag(tag)
+class BinderBase(ABC, Binder[DestT]):
+    @abstractmethod
+    def match(self, xe: XmlElement) -> bool: ...
 
     @abstractmethod
     def read(self, log: Log, xe: XmlElement, dest: DestT) -> None: ...
-
-    @property
-    def tag(self) -> str:
-        return self.stag.tag
-
-    def match(self, xe: XmlElement) -> bool:
-        return match_start_tag(xe, self.stag)
 
     def bound_parser(self, log: Log, dest: DestT) -> Parser:
         def parse_fun(xe: XmlElement) -> bool:
@@ -198,6 +189,20 @@ class TagBinderBase(ABC, Binder[DestT]):
             return True
 
         return StatelessParser(self.match, parse_fun)
+
+
+class TagBinderBase(BinderBase[DestT]):
+    def __init__(self, tag: str | StartTag | None = None):
+        if tag is None:
+            tag = getattr(type(self), 'TAG')
+        self.stag = StartTag(tag)
+
+    @property
+    def tag(self) -> str:
+        return self.stag.tag
+
+    def match(self, xe: XmlElement) -> bool:
+        return match_start_tag(xe, self.stag)
 
 
 Sink: TypeAlias = Callable[[ParsedT], None]

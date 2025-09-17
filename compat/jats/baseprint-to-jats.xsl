@@ -1,6 +1,7 @@
 <xsl:stylesheet
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:ali="http://www.niso.org/schemas/ali/1.0/"
     version="1.0">
 
   <xsl:output
@@ -21,7 +22,6 @@
       <xsl:apply-templates/>
     </article>
   </xsl:template>
-
 
   <!-- Rename HTML elements to JATS counterparts -->
 
@@ -79,6 +79,7 @@
 
   <xsl:template match="section">
     <sec>
+      <xsl:copy-of select="@id"/>
       <xsl:apply-templates/>
     </sec>
   </xsl:template>
@@ -142,9 +143,9 @@
 
   <xsl:template match="dd/code">
     <p>
-      <xsl:copy>
+      <code>
         <xsl:apply-templates/>
-      </xsl:copy>
+      </code>
     </p>
   </xsl:template>
 
@@ -156,11 +157,11 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="dd/disp-quote">
+  <xsl:template match="dd/blockquote">
     <p>
-      <xsl:copy>
+      <disp-quote>
         <xsl:apply-templates/>
-      </xsl:copy>
+      </disp-quote>
     </p>
   </xsl:template>
 
@@ -180,11 +181,11 @@
     </p>
   </xsl:template>
 
-  <xsl:template match="dd/preformat">
+  <xsl:template match="dd/pre">
     <p>
-      <xsl:copy>
+      <preformat>
         <xsl:apply-templates/>
-      </xsl:copy>
+      </preformat>
     </p>
   </xsl:template>
 
@@ -193,26 +194,34 @@
 
   <xsl:template match="li/code">
     <p>
-      <xsl:copy>
+      <code>
         <xsl:apply-templates/>
-      </xsl:copy>
+      </code>
     </p>
   </xsl:template>
 
-  <xsl:template match="li/disp-quote">
+  <xsl:template match="li/blockquote">
     <p>
-      <xsl:copy>
+      <disp-quote>
         <xsl:apply-templates/>
-      </xsl:copy>
+      </disp-quote>
     </p>
   </xsl:template>
 
-  <xsl:template match="li/preformat">
+  <xsl:template match="li/pre">
     <p>
-      <xsl:copy>
+      <preformat>
         <xsl:apply-templates/>
-      </xsl:copy>
+      </preformat>
     </p>
+  </xsl:template>
+
+
+  <!-- add ali XML namespace if absent -->
+  <xsl:template match="license_ref">
+    <ali:license_ref>
+      <xsl:apply-templates select="node()|@*"/>
+    </ali:license_ref>
   </xsl:template>
 
 

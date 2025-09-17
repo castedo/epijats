@@ -93,6 +93,12 @@
   body {
     margin: 0;
   }
+  h1 { bookmark-level: none; }
+  h2 { bookmark-level: 1; }
+  h3 { bookmark-level: 2; }
+  h4 { bookmark-level: 3; }
+  h5 { bookmark-level: 4; }
+  h6 { bookmark-level: 5; }
   header .page-left {
     position: running(top-left);
   }

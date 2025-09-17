@@ -462,8 +462,12 @@ CC_URLS = {
 }
 
 
-class LicenseRefBinder(kit.TagBinderBase[bp.License]):
-    TAG = "{http://www.niso.org/schemas/ali/1.0/}license_ref"
+class LicenseRefBinder(kit.BinderBase[bp.License]):
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in [
+            "license_ref",
+            "{http://www.niso.org/schemas/ali/1.0/}license_ref",
+        ]
 
     def read(self, log: Log, xe: XmlElement, dest: bp.License) -> None:
         kit.check_no_attrib(log, xe, ['content-type'])
