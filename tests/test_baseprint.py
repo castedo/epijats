@@ -121,13 +121,6 @@ def test_minimal_html_title():
     assert HTML.content_to_str(bp.title) == 'A test'
 
 
-def test_article_title():
-    bp = parse_baseprint(SNAPSHOT_CASE / "PMC11003838.xml")
-    expect = """Shedding Light on Data Monitoring Committee Charters on <a href="http://clinicaltrials.gov" rel="external">ClinicalTrials.gov</a>"""
-    assert HTML.content_to_str(bp.title) == expect
-    assert_bdom_roundtrip(bp)
-
-
 def xml2html(xml):
     et = XML.ET.fromstring(xml)
     issues = []

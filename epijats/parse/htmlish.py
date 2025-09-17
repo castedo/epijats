@@ -27,6 +27,15 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
+def minimally_formatted_text_model(content: Model[Element]) -> Model[Element]:
+    ret = kit.UnionModel[Element]()
+    ret |= TextElementModel('b', content, jats_tag='bold')
+    ret |= TextElementModel('i', content, jats_tag='italic')
+    ret |= TextElementModel('sub', content)
+    ret |= TextElementModel('sup', content)
+    return ret
+
+
 def disp_quote_model(p_elements: Model[Element]) -> Model[Element]:
     """<disp-quote> Quote, Displayed
     Like HTML <blockquote>.
@@ -56,11 +65,8 @@ def break_model() -> Model[Element]:
 
 def formatted_text_model(content: Model[Element]) -> Model[Element]:
     ret = kit.UnionModel[Element]()
-    ret |= TextElementModel('b', content, jats_tag='bold')
-    ret |= TextElementModel('i', content, jats_tag='italic')
+    ret |= minimally_formatted_text_model(content)
     ret |= TextElementModel('tt', content, jats_tag='monospace')
-    ret |= TextElementModel('sub', content)
-    ret |= TextElementModel('sup', content)
     return ret
 
 

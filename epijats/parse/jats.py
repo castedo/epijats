@@ -24,7 +24,6 @@ from .kit import (
     Log,
     Model,
     TagModelBase,
-    UnionModel,
     tag_model,
 )
 from .htmlish import (
@@ -35,6 +34,7 @@ from .htmlish import (
     disp_quote_model,
     ext_link_model,
     formatted_text_model,
+    minimally_formatted_text_model,
     table_wrap_model,
 )
 from .tree import (
@@ -240,10 +240,9 @@ def cross_reference_model(content_model: Model[Element]) -> Model[Element]:
 
 
 def article_title_model() -> kit.MonoModel[MixedContent]:
-    """
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article-title.html
-    """
-    return MixedContentModel('article-title', base_hypertext_model())
+    minimal_model = kit.UnionModel[Element]()
+    minimal_model |= minimally_formatted_text_model(minimal_model)
+    return MixedContentModel('article-title', minimal_model)
 
 
 class SectionTitleMonoModel(MixedContentModelBase):
@@ -335,23 +334,17 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
 
 
 class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
-    def __init__(self, hypertext_model: Model[Element]):
+    def __init__(self, models: CoreModels):
         super().__init__(bp.ProtoSection)
-        self.hypertext_model = hypertext_model
+        self._models = models
 
     def binds(self, sess: ArrayContentSession, target: bp.ProtoSection) -> None:
-        p_level = p_level_model(self.hypertext_model)
-        sess.bind(p_level, target.presection.append)
-        sess.bind(SectionModel(self.hypertext_model), target.subsections.append)
+        sess.bind(self._models.p_level, target.presection.append)
+        sess.bind(SectionModel(self._models), target.subsections.append)
 
 
 def abstract_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
-    """<abstract> Abstract
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/abstract.html
-    """
-
-    content = ProtoSectionBinder(base_hypertext_model(biblio))
+    content = ProtoSectionBinder(CoreModels(biblio))
     return ContentInElementModel('abstract', content)
 
 
@@ -360,9 +353,9 @@ class SectionModel(kit.LoadModel[bp.Section]):
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
 
-    def __init__(self, hypertext_model: Model[Element]):
-        self._title_model = SectionTitleMonoModel(hypertext_model)
-        self._proto = ProtoSectionBinder(hypertext_model)
+    def __init__(self, models: CoreModels):
+        self._title_model = SectionTitleMonoModel(models.hypertext)
+        self._proto = ProtoSectionBinder(models)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['section', 'sec']
@@ -403,10 +396,10 @@ class PersonGroupModel(TagModelBase[bp.PersonGroup]):
 def base_hypertext_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
     """Base hypertext model"""
 
-    only_formatted_text = UnionModel[Element]()
+    only_formatted_text = kit.UnionModel[Element]()
     only_formatted_text |= formatted_text_model(only_formatted_text)
 
-    hypertext = UnionModel[Element]()
+    hypertext = kit.UnionModel[Element]()
     if biblio:
         hypertext |= AutoCorrectCitationModel(biblio)
         hypertext |= CitationTupleModel(biblio)
@@ -418,11 +411,11 @@ def base_hypertext_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
 
 
 class CoreModels:
-    def __init__(self, hypertext_model: Model[Element] | None) -> None:
-        if hypertext_model is None:
-            hypertext_model = base_hypertext_model()
-        self.hypertext = hypertext_model
-        self.block = UnionModel[Element]()
+    def __init__(self, biblio: BiblioRefPool | None) -> None:
+        self.hypertext = base_hypertext_model(biblio)
+        self.block = kit.UnionModel[Element]()
+        p = HtmlParagraphModel(self.hypertext, self.block)
+        self.p_level = self.block | p
         self.p_child = self.hypertext | self.block
         self.block |= disp_formula_model()
         self.block |= TextElementModel('code', self.hypertext)
@@ -431,24 +424,6 @@ class CoreModels:
         self.block |= def_list_model(self.hypertext, self.block)
         self.block |= disp_quote_model(self.p_child)
         self.block |= table_wrap_model(self.p_child)
-
-
-def p_child_model(hypertext: Model[Element] | None = None) -> Model[Element]:
-    """Paragraph (child) elements (subset of Article Authoring JATS)
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/p-elements.html
-    """
-
-    models = CoreModels(hypertext)
-    return models.p_child
-
-
-def p_level_model(hypertext: Model[Element]) -> Model[Element]:
-    """Paragraph-level elements (subset of Article Authoring JATS)
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/pe/para-level.html
-    """
-
-    models = CoreModels(hypertext)
-    return models.block | HtmlParagraphModel(hypertext, models.block)
 
 
 CC_URLS = {
@@ -553,13 +528,7 @@ class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
 
 
 def body_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
-    """<body> Body of the Document
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/body.html
-    """
-
-    hypertext = base_hypertext_model(biblio)
-    content = ProtoSectionBinder(hypertext)
+    content = ProtoSectionBinder(CoreModels(biblio))
     return ContentInElementModel('body', content)
 
 
