@@ -14,10 +14,10 @@ Stage 3:   ▼
           PDF
 ```
 
-Choose `--to=jats` to restyle from any JATS XML to Baseprint JATS XML.
+Choose `--to=xml` to reformat XML input to Baseprint XML output.
 
 ```
-usage: epijats [-h] [--version] [--to {jats,html,html+pdf,pdf}] [--no-web-fonts]
+usage: epijats [-h] [--version] [--to {xml,html,html+pdf,pdf}] [--no-web-fonts]
                inpath outpath
 
 Eprint JATS
@@ -29,7 +29,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
-  --to {jats,html,html+pdf,pdf}
+  --to {xml,html,html+pdf,pdf}
                         format of target
   --no-web-fonts        Do not use online web fonts
 ```

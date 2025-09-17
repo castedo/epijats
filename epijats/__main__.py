@@ -2,7 +2,6 @@ import argparse, logging
 from pathlib import Path
 from sys import stderr
 from typing import Any
-from warnings import warn
 
 from . import Eprint, EprinterConfig
 from . import restyle
@@ -35,7 +34,6 @@ def version() -> str:
 class Main:
     inpath: Path
     outpath: Path
-    inform: str | None
     outform: str
     no_web_fonts: bool
 
@@ -45,12 +43,9 @@ class Main:
         parser.add_argument("inpath", type=Path, help="input directory/path")
         parser.add_argument("outpath", type=Path, help="output directory/path")
         parser.add_argument(
-            "--from", dest="inform", choices=["jats"], help=argparse.SUPPRESS
-        )
-        parser.add_argument(
             "--to",
             dest="outform",
-            choices=["jats", "html", "html+pdf", "pdf"],
+            choices=["xml", "html", "html+pdf", "pdf"],
             default="pdf",
             help="format of target",
         )
@@ -62,11 +57,9 @@ class Main:
         parser.parse_args(cmd_line_args, self)
         if self.inpath == self.outpath:
             parser.error(f"Output path must not equal input path: {self.inpath}")
-        if self.inform:
-            warn("--from option is deprecated", DeprecationWarning)
 
     def run(self) -> int:
-        return self.restyle() if self.outform == "jats" else self.convert()
+        return self.restyle() if self.outform == "xml" else self.convert()
 
     def restyle(self) -> int:
         if not restyle.restyle_xml(self.inpath, self.outpath):
