@@ -50,6 +50,42 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
+def hypotext_model() -> Model[Element]:
+    # Corresponds to {HYPOTEXT} in BpDF spec ed.2
+    # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
+    ret = kit.UnionModel[Element]()
+    ret |= formatted_text_model(ret)
+    return ret
+
+
+def copytext_model() -> Model[Element]:
+    # Corresponds to {COPYTEXT} in BpDF spec ed.2
+    ret = kit.UnionModel[Element]()
+    ret |= formatted_text_model(ret)
+    ret |= ext_link_model(hypotext_model())
+    return ret
+
+
+def copytext_element_model(tag: str) -> kit.MonoModel[MixedContent]:
+    return MixedContentModel(tag, copytext_model())
+
+
+def hypertext_model(biblio: BiblioRefPool | None) -> Model[Element]:
+    # Corresponds to {HYPERTEXT} in BpDF spec ed.2
+    # but with experimental inline math element too
+    hypotext = hypotext_model()
+    hypertext = kit.UnionModel[Element]()
+    if biblio:
+        # model for <sup>~CITE must preempt regular <sup> model
+        hypertext |= AutoCorrectCitationModel(biblio)
+        hypertext |= CitationTupleModel(biblio)
+    hypertext |= formatted_text_model(hypertext)
+    hypertext |= ext_link_model(hypotext)
+    hypertext |= cross_reference_model(hypotext, biblio)
+    hypertext |= inline_formula_model()
+    return hypertext
+
+
 class BiblioRefPool:
     def __init__(self, orig: Iterable[bp.BiblioRefItem]):
         self._orig = list(orig)
@@ -260,31 +296,19 @@ def cross_reference_model(
 
 
 def article_title_model() -> kit.MonoModel[MixedContent]:
-    minimal_model = kit.UnionModel[Element]()
-    minimal_model |= minimally_formatted_text_model(minimal_model)
-    return MixedContentModel('article-title', minimal_model)
+    # Contents corresponds to {MINITEXT} in BpDF spec ed.2
+    # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
+    minitext_model = kit.UnionModel[Element]()
+    minitext_model |= minimally_formatted_text_model(minitext_model)
+    return MixedContentModel('article-title', minitext_model)
 
 
 class SectionTitleMonoModel(MixedContentModelBase):
     def __init__(self, child_model: Model[Element]):
-        super().__init__(child_model | break_model())
+        super().__init__(child_model)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']
-
-
-def title_model(hypertext: Model[Element] | None = None) -> kit.MonoModel[MixedContent]:
-    """
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/title.html
-    """
-    if hypertext is None:
-        hypertext = base_hypertext_model()
-    child_model = hypertext | break_model()
-    return MixedContentModel('title', child_model)
-
-
-def hypertext_element_model(tag: str) -> kit.MonoModel[MixedContent]:
-    return MixedContentModel(tag, base_hypertext_model())
 
 
 def title_group_model() -> Model[MixedContent]:
@@ -374,7 +398,7 @@ class SectionModel(kit.LoadModel[bp.Section]):
     """
 
     def __init__(self, models: CoreModels):
-        self._title_model = SectionTitleMonoModel(models.hypertext)
+        self._title_model = SectionTitleMonoModel(models.heading_text)
         self._proto = ProtoSectionBinder(models)
 
     def match(self, xe: XmlElement) -> bool:
@@ -413,33 +437,10 @@ class PersonGroupModel(TagModelBase[bp.PersonGroup]):
         return ret
 
 
-def base_hypertext_model(
-    biblio: BiblioRefPool | None = None,
-    *,
-    with_xref: bool = True,
-    with_math: bool = True,
-) -> Model[Element]:
-    """Base hypertext model"""
-
-    only_formatted_text = kit.UnionModel[Element]()
-    only_formatted_text |= formatted_text_model(only_formatted_text)
-
-    hypertext = kit.UnionModel[Element]()
-    if with_math:
-        hypertext |= inline_formula_model()
-    if biblio:
-        hypertext |= AutoCorrectCitationModel(biblio)
-        hypertext |= CitationTupleModel(biblio)
-    if with_xref:
-        hypertext |= cross_reference_model(only_formatted_text, biblio)
-    hypertext |= ext_link_model(only_formatted_text)
-    hypertext |= formatted_text_model(hypertext)
-    return hypertext
-
-
 class CoreModels:
     def __init__(self, biblio: BiblioRefPool | None) -> None:
-        self.hypertext = base_hypertext_model(biblio)
+        self.hypertext = hypertext_model(biblio)
+        self.heading_text = self.hypertext | break_model()
         self.block = kit.UnionModel[Element]()
         p = HtmlParagraphModel(self.hypertext, self.block)
         self.p_level = self.block | p
@@ -492,7 +493,7 @@ class LicenseModel(kit.TagModelBase[bp.License]):
         ret = bp.License(MixedContent(), "", None)
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        sess.bind_mono(hypertext_element_model('license-p'), ret.license_p)
+        sess.bind_mono(copytext_element_model('license-p'), ret.license_p)
         sess.bind_once(LicenseRefBinder(), ret)
         sess.parse_content(e)
         return None if ret.blank() else ret
@@ -504,7 +505,7 @@ class PermissionsModel(kit.TagModelBase[bp.Permissions]):
     def load(self, log: Log, e: XmlElement) -> bp.Permissions | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        statement = sess.one(hypertext_element_model('copyright-statement'))
+        statement = sess.one(copytext_element_model('copyright-statement'))
         license = sess.one(LicenseModel())
         sess.parse_content(e)
         if license.out is None:
@@ -747,7 +748,7 @@ class RefListModel(TagModelBase[bp.BiblioRefList]):
     def load(self, log: Log, e: XmlElement) -> bp.BiblioRefList | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        title = sess.one(title_model())
+        title = sess.one(tag_model('title', kit.load_string))
         references = sess.every(BiblioRefItemModel())
         sess.parse_content(e)
         return bp.BiblioRefList(title.out, list(references))

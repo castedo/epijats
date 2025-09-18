@@ -200,7 +200,7 @@ class BiblioRefItem:
 
 @dataclass
 class BiblioRefList:
-    title: MixedContent | None
+    title: str | None
     references: list[BiblioRefItem]
 
 

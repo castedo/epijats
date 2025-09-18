@@ -249,7 +249,7 @@ class HtmlGenerator:
         frags: list[str | XmlElement] = []
         if src.title:
             h = ET.Element('h2')
-            self._markup.format(src.title, 0, h)
+            h.text = src.title
             h.tail = '\n'
             frags.append(h)
         formatter = CiteprocBiblioFormatter(abridged=abridged, use_lxml=False)
