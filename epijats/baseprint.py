@@ -107,6 +107,11 @@ class Permissions:
 
 
 @dataclass
+class Abstract:
+    blocks: list[Element]
+
+
+@dataclass
 class ProtoSection:
     presection: list[Element]
     subsections: list[Section]
@@ -203,7 +208,7 @@ class BiblioRefList:
 class Baseprint:
     title: MixedContent
     authors: list[Author]
-    abstract: ProtoSection | None
+    abstract: Abstract | None
     permissions: Permissions | None
     body: ProtoSection
     ref_list: BiblioRefList | None

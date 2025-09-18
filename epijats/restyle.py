@@ -88,15 +88,14 @@ def proto_section(
     if title is not None:
         t = MarkupElement(f"h{level}", title)
         ret.append(t)
-    for e in src.presection:
-        ret.append(e)
+    ret.extend(src.presection)
     for ss in src.subsections:
         ret.append(proto_section('section', ss, level, ss.id, ss.title))
     return ret
 
 
-def abstract(src: baseprint.ProtoSection) -> DataElement:
-    return proto_section('abstract', src, 1)
+def abstract(src: baseprint.Abstract) -> DataElement:
+    return DataElement('abstract', src.blocks)
 
 
 def append_date_parts(src: baseprint.Date | None, dest: DataElement) -> None:

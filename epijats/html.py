@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, Iterator
 from warnings import warn
 
 from . import baseprint as bp
@@ -209,8 +209,17 @@ class HtmlGenerator:
             ss.append(it.tail)
         return self._html_content_to_str(ss)
 
+    def abstract_to_str(self, src: bp.Abstract) -> str:
+        return self._html_content_to_str(self._blocks_content(src.blocks))
+
     def proto_section_to_str(self, src: bp.ProtoSection) -> str:
         return self._html_content_to_str(self._proto_section_content(src))
+
+    def _blocks_content(self, src: Iterable[PureElement]) -> Iterator[XmlElement]:
+        for p in src:
+            for sub in self._html.format(p, 0):
+                sub.tail = "\n"
+                yield sub
 
     def _proto_section_content(
         self,
@@ -218,28 +227,23 @@ class HtmlGenerator:
         title: MixedContent | None = None,
         xid: str | None = None,
         level: int = 0,
-    ) -> Iterable[XmlElement]:
+    ) -> Iterator[XmlElement]:
         if level < 6:
             level += 1
-        ret: list[XmlElement] = []
         if title:
             h = ET.Element(f"h{level}")
             if xid is not None:
                 h.attrib['id'] = xid
             self._markup.format(title, level, h)
             h.tail = "\n"
-            ret.append(h)
-        for p in src.presection:
-            for sub in self._html.format(p, 0):
-                sub.tail = "\n"
-                ret.append(sub)
+            yield h
+        yield from self._blocks_content(src.presection)
         for ss in src.subsections:
             section = ET.Element("section")
             section.text = "\n"
             section.extend(self._proto_section_content(ss, ss.title, ss.id, level))
             section.tail = "\n"
-            ret.append(section)
-        return ret
+            yield section
 
     def html_references(self, src: bp.BiblioRefList, *, abridged: bool = False) -> str:
         frags: list[str | XmlElement] = []

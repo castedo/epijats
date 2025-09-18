@@ -98,7 +98,7 @@ class DataElement(Element):
     def __init__(
         self,
         xml_tag: str | StartTag,
-        array: list[PureElement] = [],
+        array: Iterable[PureElement] = [],
     ):
         super().__init__(xml_tag)
         self._array = list(array)
@@ -108,6 +108,9 @@ class DataElement(Element):
 
     def append(self, e: PureElement) -> None:
         self._array.append(e)
+
+    def extend(self, es: Iterable[PureElement]) -> None:
+        self._array.extend(es)
 
 
 @dataclass

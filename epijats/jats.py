@@ -52,7 +52,7 @@ def webstract_from_baseprint(bp: baseprint.Baseprint) -> Webstract:
     ret['title'] = gen.content_to_str(bp.title)
     ret['contributors'] = [author_as_pod(a) for a in bp.authors]
     if bp.abstract:
-        ret['abstract'] = gen.proto_section_to_str(bp.abstract)
+        ret['abstract'] = gen.abstract_to_str(bp.abstract)
     if bp.permissions:
         if bp.permissions.license:
             if bp.permissions.license.license_ref:

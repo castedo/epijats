@@ -343,9 +343,9 @@ class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
         sess.bind(SectionModel(self._models), target.subsections.append)
 
 
-def abstract_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
-    content = ProtoSectionBinder(CoreModels(biblio))
-    return ContentInElementModel('abstract', content)
+def abstract_model(biblio: BiblioRefPool | None) -> kit.LoadModel[bp.Abstract]:
+    models = CoreModels(biblio)
+    return AbstractModel(models.p_level)
 
 
 class SectionModel(kit.LoadModel[bp.Section]):
@@ -489,10 +489,23 @@ class PermissionsModel(kit.TagModelBase[bp.Permissions]):
         return bp.Permissions(license.out, copyright)
 
 
+class AbstractModel(kit.TagModelBase[bp.Abstract]):
+    def __init__(self, p_level: Model[Element]):
+        super().__init__('abstract')
+        self._p_level = p_level
+
+    def load(self, log: Log, e: XmlElement) -> bp.Abstract | None:
+        kit.check_no_attrib(log, e)
+        sess = ArrayContentSession(log)
+        blocks = sess.every(self._p_level)
+        sess.parse_content(e)
+        return bp.Abstract(list(blocks)) if blocks else None
+
+
 class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
-    def __init__(self, biblio: BiblioRefPool | None):
+    def __init__(self, abstract_model: AbstractModel):
         super().__init__('article-meta')
-        self._abstract_model = abstract_model(biblio)
+        self._abstract_model = abstract_model
 
     def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
         kit.check_no_attrib(log, xe)
@@ -500,24 +513,23 @@ class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
         sess = ArrayContentSession(log)
         title = sess.one(title_group_model())
         authors = sess.one(tag_model('contrib-group', load_author_group))
-        abstract = bp.ProtoSection()
-        sess.bind_mono(self._abstract_model, abstract)
+        abstract = sess.one(self._abstract_model)
         permissions = sess.one(PermissionsModel())
         sess.parse_content(xe)
         if title.out:
             dest.title = title.out
         if authors.out is not None:
             dest.authors = authors.out
-        if abstract.has_content():
-            dest.abstract = abstract
+        if abstract.out:
+            dest.abstract = abstract.out
         if permissions.out is not None:
             dest.permissions = permissions.out
 
 
 class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
-    def __init__(self, biblio: BiblioRefPool | None):
+    def __init__(self, abstract_model: AbstractModel):
         super().__init__('front')
-        self._meta_model = ArticleMetaBinder(biblio)
+        self._meta_model = ArticleMetaBinder(abstract_model)
 
     def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
         kit.check_no_attrib(log, xe)
@@ -527,8 +539,8 @@ class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
         sess.parse_content(xe)
 
 
-def body_model(biblio: BiblioRefPool | None) -> kit.MonoModel[bp.ProtoSection]:
-    content = ProtoSectionBinder(CoreModels(biblio))
+def body_model(models: CoreModels) -> kit.MonoModel[bp.ProtoSection]:
+    content = ProtoSectionBinder(models)
     return ContentInElementModel('body', content)
 
 
@@ -738,10 +750,12 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     back_log = list[fc.FormatIssue]()
     ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
+    models = CoreModels(biblio)
+    abstract_model = AbstractModel(models.p_level)
     kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession(log)
-    sess.bind_once(ArticleFrontBinder(biblio), ret)
-    sess.bind_mono(body_model(biblio), ret.body)
+    sess.bind_once(ArticleFrontBinder(abstract_model), ret)
+    sess.bind_mono(body_model(models), ret.body)
     sess.parse_content(e)
     if ret.ref_list:
         assert biblio

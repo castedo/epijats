@@ -77,8 +77,7 @@ def test_minimalish():
     got = parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
     assert got.authors == [bp.Author(bp.PersonName("Wang"))]
-    expect = bp.ProtoSection()
-    expect.presection.append(MarkupElement('p', 'A simple test.'))
+    expect = bp.Abstract([MarkupElement('p', 'A simple test.')])
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
 
@@ -108,7 +107,7 @@ def test_article(case):
 
     title = HTML.content_to_str(bp.title)
     assert_eq_if_exists(title, case_path / "title.html")
-    abstract = HTML.proto_section_to_str(bp.abstract) if bp.abstract else None
+    abstract = HTML.abstract_to_str(bp.abstract) if bp.abstract else None
     assert_eq_if_exists(abstract, case_path / "abstract.html")
     body = HTML.html_body_content(bp)
     assert_eq_if_exists(body, case_path / "body.html")
@@ -250,8 +249,8 @@ def test_abstract_restyle() -> None:
     </ul></p>
                 <p>OK</p>
 </abstract>"""
-    bdom = bp.ProtoSection()
-    model.read(assert_not, lxml_element_from_str(bad_style), bdom)
+    bdom = model.load_if_match(assert_not, lxml_element_from_str(bad_style))
+    assert bdom is not None
     restyled = """\
 <abstract>
   <p>OK</p>
@@ -266,9 +265,7 @@ def test_abstract_restyle() -> None:
     xe = XML.root(restyle.abstract(bdom))
     assert str_from_xml_element(xe) == restyled
 
-    roundtrip = bp.ProtoSection()
-    model.read(assert_not, xe, roundtrip)
-    assert roundtrip == bdom
+    assert model.load(assert_not, xe) == bdom
 
     expect_html = """<p>OK</p>
 <p>  CHOP  </p>
@@ -279,7 +276,7 @@ def test_abstract_restyle() -> None:
 </ul>
 <p>OK</p>
 """
-    assert HTML.proto_section_to_str(bdom) == expect_html
+    assert HTML.abstract_to_str(bdom) == expect_html
 
 
 def test_minimal_with_issues():
