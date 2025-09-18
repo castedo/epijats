@@ -56,6 +56,9 @@ class BiblioRefPool:
         self.used: list[bp.BiblioRefItem] = []
         self._orig_order = True
 
+    def is_bibr_rid(self, rid: str | None) -> bool:
+        return bool(rid) and any(rid == ref.id for ref in self._orig)
+
     def cite(self, rid: str, ideal_rord: int | None) -> Citation | None:
         for zidx, ref in enumerate(self.used):
             if rid == ref.id:
@@ -83,13 +86,19 @@ class BiblioRefPool:
             yield Citation(rid, rord)
 
 
-class CitationModel(kit.TagModelBase[Citation]):
+class CitationModel(kit.LoadModel[Citation]):
     def __init__(self, biblio: BiblioRefPool):
-        super().__init__(StartTag('xref', {'ref-type': 'bibr'}))
         self.biblio = biblio
 
+    def match(self, xe: XmlElement) -> bool:
+        # JatsCrossReferenceModel is the opposing <xref> model to CitationModel
+        if xe.tag != 'xref':
+            return False
+        if xe.attrib.get('ref-type') == 'bibr':
+            return True
+        return self.biblio.is_bibr_rid(xe.attrib.get("rid"))
+
     def load(self, log: Log, e: XmlElement) -> Citation | None:
-        assert e.attrib.get("ref-type") == "bibr"
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
             del e.attrib["alt"]
@@ -112,11 +121,13 @@ class CitationModel(kit.TagModelBase[Citation]):
         return ret
 
 
-class AutoCorrectCitationModel(kit.TagModelBase[Element]):
+class AutoCorrectCitationModel(kit.LoadModel[Element]):
     def __init__(self, biblio: BiblioRefPool):
         submodel = CitationModel(biblio)
-        super().__init__(submodel.stag)
         self._submodel = submodel
+
+    def match(self, xe: XmlElement) -> bool:
+        return self._submodel.match(xe)
 
     def load(self, log: Log, e: XmlElement) -> CitationTuple | None:
         citation = self._submodel.load(log, e)
@@ -169,10 +180,10 @@ class CitationTupleModel(kit.LoadModel[Element]):
         self._submodel = CitationModel(biblio)
 
     def match(self, xe: XmlElement) -> bool:
-        if xe.tag == 'sup':
-            if any(c.tag == 'xref' and c.attrib.get('ref-type') == 'bibr' for c in xe):
-                return True
-        return False
+        # Minor break of backwards compat to BpDF ed.1 where
+        # xref inside sup might be what is now <a href="#...">
+        # But no known archived baseprint did this.
+        return xe.tag == 'sup' and any(c.tag == 'xref' for c in xe)
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e)
@@ -193,11 +204,17 @@ class CitationTupleModel(kit.LoadModel[Element]):
 
 
 class JatsCrossReferenceModel(kit.LoadModel[Element]):
-    def __init__(self, content_model: Model[Element]):
+    def __init__(self, content_model: Model[Element], biblio: BiblioRefPool | None):
         self.content_model = content_model
+        self.biblio = biblio
 
     def match(self, xe: XmlElement) -> bool:
-        return xe.tag == 'xref' and xe.attrib.get('ref-type') != 'bibr'
+        # CitationModel is the opposing <xref> model to JatsCrossReferenceModel
+        if xe.tag != 'xref':
+            return False
+        if xe.attrib.get('ref-type') == 'bibr':
+            return False
+        return not (self.biblio and self.biblio.is_bibr_rid(xe.attrib.get("rid")))
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
         alt = e.attrib.get("alt")
@@ -235,8 +252,11 @@ class HtmlCrossReferenceModel(kit.LoadModel[Element]):
         return ret
 
 
-def cross_reference_model(content_model: Model[Element]) -> Model[Element]:
-    return JatsCrossReferenceModel(content_model) | HtmlCrossReferenceModel(content_model) 
+def cross_reference_model(
+    content_model: Model[Element], biblio: BiblioRefPool | None
+) -> Model[Element]:
+    jats_xref = JatsCrossReferenceModel(content_model, biblio)
+    return jats_xref | HtmlCrossReferenceModel(content_model)
 
 
 def article_title_model() -> kit.MonoModel[MixedContent]:
@@ -393,19 +413,26 @@ class PersonGroupModel(TagModelBase[bp.PersonGroup]):
         return ret
 
 
-def base_hypertext_model(biblio: BiblioRefPool | None = None) -> Model[Element]:
+def base_hypertext_model(
+    biblio: BiblioRefPool | None = None,
+    *,
+    with_xref: bool = True,
+    with_math: bool = True,
+) -> Model[Element]:
     """Base hypertext model"""
 
     only_formatted_text = kit.UnionModel[Element]()
     only_formatted_text |= formatted_text_model(only_formatted_text)
 
     hypertext = kit.UnionModel[Element]()
+    if with_math:
+        hypertext |= inline_formula_model()
     if biblio:
         hypertext |= AutoCorrectCitationModel(biblio)
         hypertext |= CitationTupleModel(biblio)
+    if with_xref:
+        hypertext |= cross_reference_model(only_formatted_text, biblio)
     hypertext |= ext_link_model(only_formatted_text)
-    hypertext |= cross_reference_model(only_formatted_text)
-    hypertext |= inline_formula_model()
     hypertext |= formatted_text_model(hypertext)
     return hypertext
 
