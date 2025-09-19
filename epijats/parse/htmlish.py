@@ -36,11 +36,11 @@ def minimally_formatted_text_model(content: Model[Element]) -> Model[Element]:
     return ret
 
 
-def disp_quote_model(p_elements: Model[Element]) -> Model[Element]:
+def blockquote_model(p_elements: Model[Element]) -> Model[Element]:
     """<disp-quote> Quote, Displayed
     Like HTML <blockquote>.
 
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-quote.html
+    https://jats.nlm.nih.gov/archiving/tag-library/1.4/element/disp-quote.html
     """
     p = TextElementModel('p', p_elements)
     return DataElementModel('blockquote', p, jats_tag='disp-quote')
@@ -174,14 +174,8 @@ class HtmlParagraphModel(Model[Element]):
 
 
 class ListModel(kit.LoadModel[Element]):
-    def __init__(
-        self,
-        hypertext_model: Model[Element],
-        block_model: Model[Element],
-    ):
-        html_p = HtmlParagraphModel(hypertext_model, block_model)
-        li_content = block_model | html_p
-        self._list_content = DataElementModel('li', li_content, jats_tag='list-item')
+    def __init__(self, block_model: Model[Element]):
+        self._list_content = DataElementModel('li', block_model, jats_tag='list-item')
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['ul', 'ol', 'list']
@@ -229,8 +223,7 @@ def def_item_model(term_text: Model[Element], def_child: Model[Element]) -> Mode
 def def_list_model(
     hypertext_model: Model[Element], block_model: Model[Element]
 ) -> Model[Element]:
-    html_p = HtmlParagraphModel(hypertext_model, block_model)
-    content_model = def_item_model(hypertext_model, block_model | html_p)
+    content_model = def_item_model(hypertext_model, block_model)
     return DataElementModel('dl', content_model, jats_tag='def-list')
 
 

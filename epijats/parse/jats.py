@@ -31,7 +31,7 @@ from .htmlish import (
     ListModel,
     break_model,
     def_list_model,
-    disp_quote_model,
+    blockquote_model,
     ext_link_model,
     formatted_text_model,
     minimally_formatted_text_model,
@@ -84,6 +84,23 @@ def hypertext_model(biblio: BiblioRefPool | None) -> Model[Element]:
     hypertext |= cross_reference_model(hypotext, biblio)
     hypertext |= inline_formula_model()
     return hypertext
+
+
+class CoreModels:
+    def __init__(self, biblio: BiblioRefPool | None) -> None:
+        self.hypertext = hypertext_model(biblio)
+        self.heading_text = self.hypertext | break_model()
+        block = kit.UnionModel[Element]()
+        p = HtmlParagraphModel(self.hypertext, block)
+        self.p_level = block | p
+        self.p_child = self.hypertext | block
+        block |= disp_formula_model()
+        block |= TextElementModel('code', self.hypertext)
+        block |= TextElementModel('pre', self.hypertext, jats_tag='preformat')
+        block |= ListModel(self.p_level)
+        block |= def_list_model(self.hypertext, self.p_level)
+        block |= blockquote_model(self.p_child)
+        block |= table_wrap_model(self.p_child)
 
 
 class BiblioRefPool:
@@ -435,23 +452,6 @@ class PersonGroupModel(TagModelBase[bp.PersonGroup]):
         sess.parse_content(e)
         ret.etal = bool(etal.out)
         return ret
-
-
-class CoreModels:
-    def __init__(self, biblio: BiblioRefPool | None) -> None:
-        self.hypertext = hypertext_model(biblio)
-        self.heading_text = self.hypertext | break_model()
-        self.block = kit.UnionModel[Element]()
-        p = HtmlParagraphModel(self.hypertext, self.block)
-        self.p_level = self.block | p
-        self.p_child = self.hypertext | self.block
-        self.block |= disp_formula_model()
-        self.block |= TextElementModel('code', self.hypertext)
-        self.block |= TextElementModel('pre', self.hypertext, jats_tag='preformat')
-        self.block |= ListModel(self.hypertext, self.block)
-        self.block |= def_list_model(self.hypertext, self.block)
-        self.block |= disp_quote_model(self.p_child)
-        self.block |= table_wrap_model(self.p_child)
 
 
 CC_URLS = {
