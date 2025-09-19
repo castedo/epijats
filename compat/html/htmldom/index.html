@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+<title>Parse Baseprint XML as HTMLDocument object</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script type="module">
+const baseprintXMLURL = "../baseprint/article.xml";
+
+window.onload = async function() {
+  const output = document.querySelector(".output");
+  output.classList.remove("show");
+  const resp = await fetch(baseprintXMLURL);
+  if (resp.ok) {
+    const parser = new DOMParser();
+    const dom = parser.parseFromString(await resp.text(), "text/html");
+    const main = document.querySelector("main")
+    main.append(dom.body.firstChild);
+    output.textContent = main.innerHTML
+  } else {
+    output.textContent = `HTTP ${resp.status} ${resp.statusText} ${resp.url}`
+    output.classList.add("show");
+  }
+}
+</script>
+
+<link href="baseprint.css" rel="stylesheet">
+<style>
+.output {
+  padding: 0.5em;
+  border: solid 2px grey;
+}
+</style>
+
+</head>
+<body>
+<main></main>
+<pre class="output"></pre>
+</body>
+</html>

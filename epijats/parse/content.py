@@ -84,6 +84,24 @@ class MergedElementsContentBinder(ContentBinder[DestT]):
         sess.bind_mono(self.child_model, dest)
 
 
+class ContentInElementModelBase(kit.MonoModel[ParsedT]):
+    def __init__(self, content: ContentBinder[ParsedT]):
+        self.content = content
+
+    @property
+    def parsed_type(self) -> type[ParsedT]:
+        return self.content.dest_type
+
+    def check(self, log: Log, e: XmlElement) -> None:
+        kit.check_no_attrib(log, e)
+
+    def read(self, log: Log, xe: XmlElement, target: ParsedT) -> None:
+        self.check(log, xe)
+        sess = ArrayContentSession(log)
+        self.content.binds(sess, target)
+        sess.parse_content(xe)
+
+
 class ContentInElementModel(kit.TagMonoModelBase[ParsedT]):
     def __init__(self, tag: str, content: ContentBinder[ParsedT]):
         super().__init__(tag)

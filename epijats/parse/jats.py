@@ -18,6 +18,7 @@ from .content import (
     ArrayContentSession,
     ContentBinder,
     ContentInElementModel,
+    ContentInElementModelBase,
     MergedElementsContentBinder,
 )
 from .kit import (
@@ -567,9 +568,14 @@ class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
         sess.parse_content(xe)
 
 
-def body_model(models: CoreModels) -> kit.MonoModel[bp.ProtoSection]:
-    content = ProtoSectionBinder(models)
-    return ContentInElementModel('body', content)
+class BodyModel(ContentInElementModelBase[bp.ProtoSection]):
+    def __init__(self, models: CoreModels):
+        self.content =  ProtoSectionBinder(models)
+
+    def match(self, xe: XmlElement) -> bool:
+        # JATS and HTML conflict in use of <body> tag
+        # DOMParser moves <body> position when parsed as HTML
+        return xe.tag in ['article-body', 'body']
 
 
 class PositiveIntModel(TagModelBase[int]):
@@ -680,6 +686,15 @@ def load_edition(log: Log, e: XmlElement) -> int | None:
         return None
 
 
+class SourceTitleModel(kit.LoadModel[str]):
+    def match(self, xe: XmlElement) -> bool:
+        # JATS/HTML conflict in use of <source> tag
+        return xe.tag in ['source-title', 'source']
+
+    def load(self, log: Log, xe: XmlElement) -> str | None:
+        return kit.load_string(log, xe)
+
+
 class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
     """<element-citation> Element Citation
 
@@ -691,7 +706,7 @@ class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
     def read(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        source = sess.one(tag_model('source', kit.load_string))
+        source = sess.one(SourceTitleModel())
         title = sess.one(tag_model('article-title', kit.load_string))
         authors = sess.one(PersonGroupModel('author'))
         editors = sess.one(PersonGroupModel('editor'))
@@ -783,7 +798,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession(log)
     sess.bind_once(ArticleFrontBinder(abstract_model), ret)
-    sess.bind_mono(body_model(models), ret.body)
+    sess.bind_mono(BodyModel(models), ret.body)
     sess.parse_content(e)
     if ret.ref_list:
         assert biblio

@@ -153,7 +153,7 @@ def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
 
 def ref_list(src: baseprint.BiblioRefList) -> DataElement:
     ret = DataElement('ref-list', [])
-    if src.title is not None:
+    if src.title and src.title != "References":
         ret.append(MarkupElement('title', src.title))
     for ref in src.references:
         ret.append(biblio_ref_item(ref))

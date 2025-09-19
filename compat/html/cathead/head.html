@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+<!-- Do `cat head.html article.xml > preview.html` with this file as head.html -->
+
+<title>Very Degraded Baseprint Preview</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+title-group > article-title {
+  display: block;
+  font-size: 2.6em;
+  font-weight: bold;
+  margin-block-start: 0.67em;
+  margin-block-end: 0.67em;
+}
+h2 {
+  font-size: 2em;
+}
+h3 {
+  font-size: 1.68em;
+}
+h4 {
+  font-size: 1.41em;
+}
+h5 {
+  font-size: 1.19em;
+}
+h6 {
+  font-size: 1em;
+}
+
+contrib-group {
+  display: flex;
+  margin: 0.75em 0;
+  column-gap: 0.25em;
+}
+contrib-group > contrib:not(:last-child)::after {
+  content: ",";
+  order: 666;
+  margin-left: -0.25em;
+}
+contrib {
+  display: flex;
+  column-gap: 0.25em;
+}
+contrib > name {
+  order: 0;
+  display: flex;
+  column-gap: 0.25em;
+}
+contrib > name > given-names {
+  order: 1;
+}
+contrib > name > surname {
+  order: 2;
+}
+contrib > email {
+  order: 1;
+}
+contrib > contrib-id {
+  order: 2;
+}
+contrib > email::before {
+  content: "(";
+}
+contrib > email::after {
+  content: ")";
+}
+
+permissions {
+  display: block;
+  margin: 1em 0;
+}
+copyright-statement {
+  display: block;
+  margin: 0.5em 0;
+}
+copyright-statement::before {
+  display: block;
+  content: "Copyright:";
+  font-weight: bold;
+  margin: 0.25em 0;
+}
+license_ref  {
+  display: block;
+  margin: 0.25em 0;
+}
+license-p {
+  display: block;
+  margin: 0.25em 0;
+}
+
+abstract {
+  display: block;
+  margin: 1.5em 0;
+}
+abstract::before {
+  content: "Abstract";
+  font-size: 2em;
+  font-weight: bold;
+}
+
+ref-list {
+  display: block;
+}
+ref-list::before {
+  content: "References";
+  font-size: 2em;
+  font-weight: bold;
+  margin-left: -40px;
+}
+
+ref-list {
+  list-style-type: decimal;
+  display: block;
+  margin-block-start: 1em;
+  margin-block-end: 1em;
+  padding-inline-start: 40px;
+}
+ref-list > ref {
+  display: list-item;
+}
+element-citation {
+  display: flex;
+  flex-direction: column;
+}
+element-citation > article-title::before {
+  content: "Title: ";
+}
+element-citation > comment::before {
+  content: "Comment: ";
+}
+element-citation > date-in-citation::before {
+  content: "Accessed: ";
+}
+element-citation > day::before {
+  content: "Day: ";
+}
+element-citation > edition::before {
+  content: "Edition: ";
+}
+element-citation > elocation-id::before {
+  content: "Elocation: ";
+}
+element-citation > fpage::before {
+  content: "First page: ";
+}
+element-citation > ISBN::before {
+  content: "ISBN: ";
+}
+element-citation > issn::before {
+  content: "ISSN: ";
+}
+element-citation > issue::before {
+  content: "Issue: ";
+}
+element-citation > lpage::before {
+  content: "Last page: ";
+}
+element-citation > month::before {
+  content: "Month: ";
+}
+element-citation > person-group[person-group-type="author"]::before {
+  content: "Authors: ";
+}
+element-citation > person-group[person-group-type="editor"]::before {
+  content: "Editors: ";
+}
+element-citation > pub-id::before {
+  content: "Pub ID: ";
+}
+element-citation > publisher-loc::before {
+  content: "Publisher location: ";
+}
+element-citation > publisher-name::before {
+  content: "Publisher: ";
+}
+element-citation > source-title::before {
+  content: "Source: ";
+}
+element-citation > uri::before {
+  content: "Uri: ";
+}
+element-citation > volume::before {
+  content: "Volume: ";
+}
+element-citation > year::before {
+  content: "Year: ";
+}
+
+element-citation > person-group {
+  display: flex;
+  column-gap: 0.25em;
+}
+element-citation > person-group > name {
+  display: flex;
+}
+element-citation > person-group > name > given-names {
+  order: 1;
+}
+element-citation > person-group > name > surname {
+  order: 2;
+}
+element-citation > person-group > name > * {
+  margin-right: 0.25em;
+}
+element-citation > person-group > name:not(:last-child)::after {
+  content: ",";
+  order: 666;
+  margin-left: -0.25em;
+}
+</style>
+
+</head>
+<body>
