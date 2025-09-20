@@ -264,6 +264,14 @@ class WebstractFacade:
         else:
             return self.edid
 
+    @property
+    def year(self) -> str | None:
+        if self.date:
+            dt = datetime.date.fromisoformat(self.date)
+            return str(dt.year)
+        else:
+            return None
+
 
 def webstract_pod_from_edition(ed: Edition) -> dict[str, Any]:
     with tempfile.TemporaryDirectory() as tempdir:

@@ -17,22 +17,24 @@
 <span class="dsi-url"><span class="base-url">{{ dsi_base_url }}/</span><wbr>{{ dsi_html_code(doc) }}</span>
 {%- endmacro %}
 
-{% macro swhid_html(doc) -%}
+{% macro swhid_html(doc) %}
 {% set swh_archive_url = "https://archive.softwareheritage.org/" %}
 <span class="uri">
   {% if doc.archive_date %}
   <a href="{{ swh_archive_url }}{{ doc.hash_scheme }}{{ doc.hexhash }}">
   {% endif %}
     <span class="uri-scheme">{{ doc.hash_scheme }}</span><wbr><code>{{ doc.hexhash }}</code>
-  {% if doc.archive_date %}</a>{% endif %}
+  {% if doc.archive_date %}
+  </a>
+  {% endif %}
 </span>
-{%- endmacro %}
+{% endmacro %}
 
 {% macro citation(doc, dsi_domain) %}
   {% for contributor in doc.contributors %}
     {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
   {% endfor %}
-  ({{ doc.date.year or '20??' }})
+  ({{ doc.year or '20??' }})
   "{{ doc.title }}"
   {{ dsi_doman }}
   {{ https_dsi_html(doc, "https://" ~ dsi_domain) }}
