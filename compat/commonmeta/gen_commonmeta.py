@@ -4,9 +4,10 @@ import argparse, json, sys
 from pathlib import Path
 from typing import Any
 
+from hidos import swhid_from_path
+
 from epijats.baseprint import Author, Baseprint
 from epijats.parse import parse_baseprint
-from epijats.util import swhid_from_files
 from epijats.html import HtmlGenerator
 
 
@@ -47,7 +48,7 @@ def extract_commonmeta(bdom: Baseprint) -> dict[str, Any]:
 
 def commonmeta_from_snapshot(path: Path) -> dict[str, Any]:
     ret = {
-        'id': swhid_from_files(path),
+        'id': swhid_from_path(path),
     }
     bdom = parse_baseprint(path)
     if bdom is None:

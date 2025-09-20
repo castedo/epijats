@@ -237,7 +237,8 @@ def test_author_restyle():
 
 
 def test_abstract_restyle() -> None:
-    model = _.abstract_model(None)
+    models = _.CoreModels(None)
+    model = _.AbstractModel(models.p_level)
 
     bad_style = """\
 <abstract>

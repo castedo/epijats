@@ -405,11 +405,6 @@ class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
         sess.bind(SectionModel(self._models), target.subsections.append)
 
 
-def abstract_model(biblio: BiblioRefPool | None) -> kit.LoadModel[bp.Abstract]:
-    models = CoreModels(biblio)
-    return AbstractModel(models.p_level)
-
-
 class SectionModel(kit.LoadModel[bp.Section]):
     """<sec> Section
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html

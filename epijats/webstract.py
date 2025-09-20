@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 from warnings import warn
 
-from hidos import Edition, EditionId
+from hidos import Edition, EditionId, swhid_from_path
 
-from .util import copytree_nostat, swhid_from_files
+from .util import copytree_nostat
 
 if TYPE_CHECKING:
     from .typeshed import StrPath
@@ -22,7 +22,7 @@ class _Source:
             raise ValueError("SWHID or path must be specified")
         if swhid is None:
             assert path is not None
-            swhid = swhid_from_files(path)
+            swhid = swhid_from_path(path)
         if not swhid.startswith("swh:1:"):
             raise ValueError("Source not identified by SWHID v1")
         self.swhid = swhid
