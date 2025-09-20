@@ -266,6 +266,5 @@ class WebstractFacade:
 
 
 def webstract_pod_from_edition(ed: Edition) -> dict[str, Any]:
-    os.environ["EPIJATS_NO_PANDOC"] = "1"
     with tempfile.TemporaryDirectory() as tempdir:
       return dict(Webstract.from_edition(ed, tempdir))

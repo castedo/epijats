@@ -17,6 +17,17 @@
 <span class="dsi-url"><span class="base-url">{{ dsi_base_url }}/</span><wbr>{{ dsi_html_code(doc) }}</span>
 {%- endmacro %}
 
+{% macro swhid_html(doc) -%}
+{% set swh_archive_url = "https://archive.softwareheritage.org/" %}
+<span class="uri">
+  {% if doc.archive_date %}
+  <a href="{{ swh_archive_url }}{{ doc.hash_scheme }}{{ doc.hexhash }}">
+  {% endif %}
+    <span class="uri-scheme">{{ doc.hash_scheme }}</span><wbr><code>{{ doc.hexhash }}</code>
+  {% if doc.archive_date %}</a>{% endif %}
+</span>
+{%- endmacro %}
+
 {% macro citation(doc, dsi_domain) %}
   {% for contributor in doc.contributors %}
     {{ (contributor['given-names'] ~ ' ' ~ contributor.surname) | escape }}
@@ -61,9 +72,7 @@
     <div class="page-left">
       <div class="article-swhid">
         Baseprint snapshot
-        <a class="uri" href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
-          <span class="uri-scheme">{{ doc.hash_scheme }}</span><code>{{ doc.hexhash }}</code>
-        </a>
+        {{ swhid_html(doc) }}
       </div>
     </div>
     <div class="page-center"></div>
@@ -184,12 +193,7 @@
       </dl>
       <div class="article-swhid">
         Baseprint snapshot
-        <a href="{{ swh_archive_url}}{{ doc.hash_scheme }}{{ doc.hexhash }}">
-          <span class="uri">
-            <span class="uri-scheme"
-              >{{ doc.hash_scheme }}</span><wbr><code>{{ doc.hexhash }}</code>
-          </span>
-        </a>
+        {{ swhid_html(doc) }}
       </div>
     </div>
 

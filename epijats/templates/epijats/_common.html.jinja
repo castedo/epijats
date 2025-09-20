@@ -2,8 +2,6 @@
 {% if not orcid.startswith("http") %}https://orcid.org/{% endif %}{{orcid | escape}}
 {%- endmacro %}
 
-{% set swh_archive_url = "https://archive.softwareheritage.org/" %}
-
 {% macro link_fonts() %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
