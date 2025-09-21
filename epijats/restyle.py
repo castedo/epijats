@@ -55,7 +55,7 @@ def contrib_group(src: list[baseprint.Author]) -> DataElement:
 
 def license(src: baseprint.License) -> DataElement:
     ret = DataElement('license')
-    license_ref = MarkupElement("{http://www.niso.org/schemas/ali/1.0/}license_ref")
+    license_ref = MarkupElement("license-ref")
     license_ref.content.text = src.license_ref
     if src.cc_license_type:
         license_ref.xml.attrib['content-type'] = src.cc_license_type
@@ -132,7 +132,7 @@ def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
     if src.article_title:
         ec.append(MarkupElement('article-title', src.article_title))
     if src.source:
-        ec.append(MarkupElement('source', src.source))
+        ec.append(MarkupElement('source-title', src.source))
     if src.edition is not None:
         ec.append(MarkupElement('edition', str(src.edition)))
     append_date_parts(src.date, ec)
@@ -172,7 +172,7 @@ def article(src: baseprint.Baseprint) -> DataElement:
         'article',
         [
             DataElement('front', [article_meta]),
-            proto_section('body', src.body, 0),
+            proto_section('article-body', src.body, 0),
         ],
     )
     if src.ref_list is not None:

@@ -16,7 +16,7 @@
       </abstract>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <p>X<sup>2</sup><sup>
         <xref rid="ref-1" ref-type="bibr">1</xref>
       </sup></p>
@@ -34,7 +34,7 @@
           <xref rid="ref-hartl_essential_2006" ref-type="bibr">3</xref>
         </sup></h2>
     </section>
-  </body>
+  </article-body>
   <back>
     <ref-list>
       <ref id="ref-1">
@@ -82,7 +82,7 @@
             </name>
           </person-group>
           <article-title>Open collaborative writing with Manubot</article-title>
-          <source>PLOS Computational Biology</source>
+          <source-title>PLOS Computational Biology</source-title>
           <year>2019</year>
           <month>06</month>
           <date-in-citation content-type="access-date">
@@ -110,7 +110,7 @@
               <given-names>Elizabeth W.</given-names>
             </name>
           </person-group>
-          <source>Essential genetics: A genomics perspective</source>
+          <source-title>Essential genetics: A genomics perspective</source-title>
           <edition>4</edition>
           <year>2006</year>
           <publisher-name>Jones; Bartlett Publishers</publisher-name>

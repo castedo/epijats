@@ -1,4 +1,4 @@
-<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/">
+<article>
   <front>
     <article-meta>
       <title-group>
@@ -15,13 +15,13 @@
       <permissions>
         <copyright-statement>Copyright: &#169; 2025 Innovations in Cardiac Rhythm Management</copyright-statement>
         <license>
-          <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</license-ref>
           <license-p>This article is available under a Creative Commons License (Attribution 4.0 International, as described at <a rel="external" href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a>).</license-p>
         </license>
       </permissions>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <p>Conduction system pacing (CSP) for the prevention of right ventricular (RV) pacing&#8211;induced cardiomyopathy and for resynchronization after left bundle (LB) branch block (LBBB) remains an important focus of research. In particular, LB pacing appears to be the most clinically applicable therapy as it avoids the disadvantages of His-bundle pacing (sensing challenges, higher thresholds, distal conduction system disease) and offers a simpler and quicker implant procedure.</p>
     <p>The terminology used to describe the various forms of LB pacing has become increasingly confusing, though some degree of agreement was reached after the recent European Heart Rhythm Association (EHRA) consensus statement on CSP.<sup>
         <xref rid="r1" ref-type="bibr">1</xref>
@@ -70,7 +70,7 @@
       </sup> The author found that the chronaxie of the LB was significantly shorter than the RV endocardium (0.25 vs. 0.77 ms). Their results were later confirmed by Kie&#322;basa et al.<sup>
         <xref rid="r17" ref-type="bibr">17</xref>
       </sup> in a larger group of patients, who measured the LB chronaxie to be 0.37 ms, revealing it to be significantly shorter than the RV endocardium. These findings support the concept that LB pacemakers should be programmed at shorter pulse widths than conventionally used for RV and LV epicardial pacing to minimize battery drain.</p>
-  </body>
+  </article-body>
   <back>
     <ref-list>
       <ref id="r1">
@@ -91,7 +91,7 @@
             <etal/>
           </person-group>
           <article-title>EHRA clinical consensus statement on conduction system pacing implantation: executive summary. Endorsed by the Asia-Pacific Heart Rhythm Society (APHRS), Canadian Heart Rhythm Society (CHRS) and Latin-American Heart Rhythm Society (LAHRS)</article-title>
-          <source>Europace</source>
+          <source-title>Europace</source-title>
           <year>2023</year>
           <volume>25</volume>
           <issue>4</issue>
@@ -130,7 +130,7 @@
             </name>
           </person-group>
           <article-title>A beginner&#8217;s guide to permanent left bundle branch pacing</article-title>
-          <source>Heart Rhythm</source>
+          <source-title>Heart Rhythm</source-title>
           <year>2019</year>
           <volume>16</volume>
           <issue>12</issue>
@@ -158,7 +158,7 @@
             <etal/>
           </person-group>
           <article-title>Evaluation of the criteria to distinguish left bundle branch pacing from left ventricular septal pacing</article-title>
-          <source>JACC Clin Electrophysiol</source>
+          <source-title>JACC Clin Electrophysiol</source-title>
           <year>2021</year>
           <volume>7</volume>
           <issue>9</issue>
@@ -186,7 +186,7 @@
             <etal/>
           </person-group>
           <article-title>The V6-V1 interpeak interval: a novel criterion for the diagnosis of left bundle branch capture</article-title>
-          <source>Europace</source>
+          <source-title>Europace</source-title>
           <year>2022</year>
           <volume>24</volume>
           <issue>1</issue>
@@ -214,7 +214,7 @@
             <etal/>
           </person-group>
           <article-title>Longitudinal comparison of dyssynchrony correction and &#8216;strain&#8217; improvement by conduction system pacing: LEVEL-AT trial secondary findings</article-title>
-          <source>Eur Heart J Cardiovasc Imaging</source>
+          <source-title>Eur Heart J Cardiovasc Imaging</source-title>
           <year>2024</year>
           <volume>25</volume>
           <issue>10</issue>
@@ -242,7 +242,7 @@
             <etal/>
           </person-group>
           <article-title>Left bundle branch area pacing for cardiac resynchronization therapy: results from the International LBBAP Collaborative Study Group</article-title>
-          <source>JACC Clin Electrophysiol</source>
+          <source-title>JACC Clin Electrophysiol</source-title>
           <year>2021</year>
           <volume>7</volume>
           <issue>2</issue>
@@ -280,7 +280,7 @@
             </name>
           </person-group>
           <article-title>The role of canine superficial ventricular muscle fibers in endocardial impulse distribution</article-title>
-          <source>Circ Res</source>
+          <source-title>Circ Res</source-title>
           <year>1978</year>
           <volume>42</volume>
           <issue>1</issue>
@@ -308,7 +308,7 @@
             <etal/>
           </person-group>
           <article-title>Left bundle branch pacing compared to left ventricular septal myocardial pacing increases interventricular dyssynchrony but accelerates left ventricular lateral wall depolarization</article-title>
-          <source>Heart Rhythm</source>
+          <source-title>Heart Rhythm</source-title>
           <year>2021</year>
           <volume>18</volume>
           <issue>8</issue>
@@ -336,7 +336,7 @@
             <etal/>
           </person-group>
           <article-title>Comparing ventricular synchrony in left bundle branch and left ventricular septal pacing in pacemaker patients</article-title>
-          <source>J Clin Med</source>
+          <source-title>J Clin Med</source-title>
           <year>2021</year>
           <volume>10</volume>
           <issue>4</issue>
@@ -363,7 +363,7 @@
             <etal/>
           </person-group>
           <article-title>Left ventricular septal and left ventricular apical pacing chronically maintain cardiac contractile coordination, pump function and efficiency</article-title>
-          <source>Circ Arrhythm Electrophysiol</source>
+          <source-title>Circ Arrhythm Electrophysiol</source-title>
           <year>2009</year>
           <volume>2</volume>
           <issue>5</issue>
@@ -391,7 +391,7 @@
             <etal/>
           </person-group>
           <article-title>Left bundle branch pacing vs left ventricular septal pacing vs biventricular pacing for cardiac resynchronization therapy</article-title>
-          <source>JACC Clin Electrophysiol</source>
+          <source-title>JACC Clin Electrophysiol</source-title>
           <year>2024</year>
           <volume>10</volume>
           <issue>2</issue>
@@ -419,7 +419,7 @@
             <etal/>
           </person-group>
           <article-title>Comparisons of long-term clinical outcomes with left bundle branch pacing, left ventricular septal pacing, and biventricular pacing for cardiac resynchronization therapy</article-title>
-          <source>Heart Rhythm</source>
+          <source-title>Heart Rhythm</source-title>
           <year>2024</year>
           <volume>21</volume>
           <issue>8</issue>
@@ -447,7 +447,7 @@
             <etal/>
           </person-group>
           <article-title>A comparison of the association of septal scar burden on responses to LBBAP-CRT and BVP-CRT</article-title>
-          <source>JACC Clin Electrophysiol</source>
+          <source-title>JACC Clin Electrophysiol</source-title>
           <year>2024</year>
           <volume>10</volume>
           <issue>7 Pt 1</issue>
@@ -475,7 +475,7 @@
             <etal/>
           </person-group>
           <article-title>Effect of scar and His&#8211;Purkinje and myocardium conduction on response to conduction system pacing</article-title>
-          <source>J Cardiovasc Electrophysiol</source>
+          <source-title>J Cardiovasc Electrophysiol</source-title>
           <year>2023</year>
           <volume>34</volume>
           <issue>4</issue>
@@ -503,7 +503,7 @@
             <etal/>
           </person-group>
           <article-title>Left bundle branch-optimized cardiac resynchronization therapy (LOT CRT): results from an international LBBAP collaborative study group</article-title>
-          <source>Heart Rhythm</source>
+          <source-title>Heart Rhythm</source-title>
           <year>2022</year>
           <volume>19</volume>
           <issue>1</issue>
@@ -541,7 +541,7 @@
             </name>
           </person-group>
           <article-title>PO-03-185 First characterization of the strength duration of the left bundle branch in humans</article-title>
-          <source>Heart Rhythm</source>
+          <source-title>Heart Rhythm</source-title>
           <year>2024</year>
           <volume>21</volume>
           <issue>5</issue>
@@ -566,7 +566,7 @@
             <etal/>
           </person-group>
           <article-title>Strength-duration curves for left bundle branch area pacing</article-title>
-          <source>Heart Rhythm</source>
+          <source-title>Heart Rhythm</source-title>
           <year>2024</year>
           <volume>21</volume>
           <issue>11</issue>

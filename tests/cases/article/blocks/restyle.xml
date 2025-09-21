@@ -6,7 +6,7 @@
       </title-group>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <pre>Preformated</pre>
     <blockquote>
       <p>A quote</p>
@@ -75,5 +75,5 @@
      and more!
       </p>
     </section>
-  </body>
+  </article-body>
 </article>

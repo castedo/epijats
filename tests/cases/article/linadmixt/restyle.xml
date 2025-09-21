@@ -1,4 +1,4 @@
-<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/">
+<article>
   <front>
     <article-meta>
       <title-group>
@@ -17,7 +17,7 @@
       <permissions>
         <copyright-statement>&#169; 2023, Ellerman et al</copyright-statement>
         <license>
-          <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</license-ref>
           <license-p>This document is distributed under a Creative Commons Attribution 4.0 International license.</license-p>
         </license>
       </permissions>
@@ -46,7 +46,7 @@ separated populations.</p>
       </abstract>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <section id="background">
       <h2>Background</h2>
       <p>The genealogies of a population reflect population events of the
@@ -69,5 +69,5 @@ separated populations.</p>
       <p><i>the amount of time since fertilization of the first admixed individual in the
      lineage</i>.</p>
     </section>
-  </body>
+  </article-body>
 </article>

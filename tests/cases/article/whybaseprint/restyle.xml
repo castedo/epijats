@@ -22,7 +22,7 @@ while also having the option to discover newer versions.</p>
       </abstract>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <section id="summary">
       <h2>Summary</h2>
       <p>Baseprint document successions are preserved in
@@ -104,7 +104,7 @@ while also having the option to discover newer versions.</p>
         </ul>
       </section>
     </section>
-  </body>
+  </article-body>
   <back>
     <ref-list>
       <ref id="ref-enwikiU003Agit">

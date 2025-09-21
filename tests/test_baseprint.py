@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import lxml.etree
 
-import epijats.parse.jats as _
+import epijats.parse.models as _
 from epijats import html
 from epijats import baseprint as bp
 from epijats.baseprint import Baseprint
@@ -288,7 +288,7 @@ def test_minimal_with_issues():
     assert set(i.condition for i in issues) == { 
         fc.MissingChild('article', None, 'front'),
         fc.MissingContent('article-title', 'title-group'),
-        fc.MissingContent('body', 'article'),
+        fc.MissingContent('article-body', 'article'),
     }
     assert len(issues) == 3
     expect = """\
@@ -300,8 +300,8 @@ def test_minimal_with_issues():
       </title-group>
     </article-meta>
   </front>
-  <body>
-  </body>
+  <article-body>
+  </article-body>
 </article>"""
     assert XML.to_str(restyle.article(bp)) == expect
 

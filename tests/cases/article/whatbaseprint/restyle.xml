@@ -31,7 +31,7 @@
       </abstract>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <section id="summary">
       <h2>Summary</h2>
       <p>Multiple independent websites
@@ -90,5 +90,5 @@
         </table>
       </table-wrap>
     </section>
-  </body>
+  </article-body>
 </article>

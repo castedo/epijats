@@ -6,7 +6,7 @@
       </title-group>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <dl>
       <div>
         <dt>One</dt>
@@ -40,5 +40,5 @@
         </dd>
       </div>
     </dl>
-  </body>
+  </article-body>
 </article>

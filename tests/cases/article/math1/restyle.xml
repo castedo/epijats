@@ -16,7 +16,7 @@
       </abstract>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <section id="notation">
       <h2>Notation</h2>
       <ul>
@@ -55,5 +55,5 @@
         </li>
       </ul>
     </section>
-  </body>
+  </article-body>
 </article>

@@ -464,6 +464,7 @@ CC_URLS = {
 class LicenseRefBinder(kit.BinderBase[bp.License]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in [
+            "license-ref",
             "license_ref",
             "{http://www.niso.org/schemas/ali/1.0/}license_ref",
         ]
@@ -801,7 +802,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     if ret.title.blank():
         log(fc.FormatIssue(fc.MissingContent('article-title', 'title-group')))
     if not ret.body.has_content():
-        log(fc.FormatIssue(fc.MissingContent('body', 'article')))
+        log(fc.FormatIssue(fc.MissingContent('article-body', 'article')))
     for issue in back_log:
         log(issue)
     return ret

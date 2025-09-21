@@ -1,4 +1,4 @@
-<article xmlns:ali="http://www.niso.org/schemas/ali/1.0/">
+<article>
   <front>
     <article-meta>
       <title-group>
@@ -17,7 +17,7 @@
       <permissions>
         <copyright-statement>&#169; 2022, Ellerman et al</copyright-statement>
         <license>
-          <ali:license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</ali:license_ref>
+          <license-ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</license-ref>
           <license-p>This document is distributed under a Creative Commons
 Attribution 4.0 International license.</license-p>
         </license>
@@ -27,10 +27,10 @@ Attribution 4.0 International license.</license-p>
       </abstract>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <section id="summary">
       <h2>Summary</h2>
       <p>Bego&#241;a Jos&#233; Sag&#252;es is test.</p>
     </section>
-  </body>
+  </article-body>
 </article>

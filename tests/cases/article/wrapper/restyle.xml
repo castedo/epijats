@@ -6,7 +6,7 @@
       </title-group>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <p>List items with block elements</p>
     <ul>
       <li>
@@ -42,5 +42,5 @@
         </dd>
       </div>
     </dl>
-  </body>
+  </article-body>
 </article>

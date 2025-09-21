@@ -10,7 +10,7 @@ from ..baseprint import Baseprint
 from ..xml import get_ET
 
 from .kit import Log, issue, nolog
-from .jats import load_article
+from .models import load_article
 
 if TYPE_CHECKING:
     from ..xml import XmlElement

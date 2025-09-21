@@ -6,7 +6,7 @@
       </title-group>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <p><i>Italic</i></p>
     <p><b>Bold</b></p>
     <section id="heading-1">
@@ -45,5 +45,5 @@ print '3 backticks or'
 print 'indent 4 spaces'</pre>
       </section>
     </section>
-  </body>
+  </article-body>
 </article>

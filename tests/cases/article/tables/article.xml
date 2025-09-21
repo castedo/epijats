@@ -16,7 +16,7 @@
       </abstract>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <table-wrap>
       <table>
         <thead>
@@ -48,5 +48,5 @@
         </table>
       </table-wrap>
     </section>
-  </body>
+  </article-body>
 </article>
