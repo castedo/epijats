@@ -131,8 +131,8 @@ def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
         ec.append(biblio_person_group('editor', src.editors))
     if src.article_title:
         ec.append(MarkupElement('article-title', src.article_title))
-    if src.source:
-        ec.append(MarkupElement('source-title', src.source))
+    if src.source_title:
+        ec.append(MarkupElement('source-title', src.source_title))
     if src.edition is not None:
         ec.append(MarkupElement('edition', str(src.edition)))
     append_date_parts(src.date, ec)
@@ -153,8 +153,6 @@ def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
 
 def ref_list(src: baseprint.BiblioRefList) -> DataElement:
     ret = DataElement('ref-list', [])
-    if src.title and src.title != "References":
-        ret.append(MarkupElement('title', src.title))
     for ref in src.references:
         ret.append(biblio_ref_item(ref))
     return ret

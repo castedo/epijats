@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import ClassVar
+from typing import ClassVar, Iterable
 
 from .tree import Element, MixedContent, MarkupElement
 
@@ -164,7 +164,7 @@ class BiblioRefItem:
     authors: PersonGroup
     editors: PersonGroup
     article_title: str | None
-    source: str | None
+    source_title: str | None
     edition: int | None
     date: Date | None
     access_date: Date | None
@@ -190,7 +190,7 @@ class BiblioRefItem:
         self.authors = PersonGroup()
         self.editors = PersonGroup()
         self.article_title = None
-        self.source = None
+        self.source_title = None
         self.edition = None
         self.date = None
         self.access_date = None
@@ -200,8 +200,10 @@ class BiblioRefItem:
 
 @dataclass
 class BiblioRefList:
-    title: str | None
     references: list[BiblioRefItem]
+
+    def __init__(self, refs: Iterable[BiblioRefItem]):
+        self.references = list(refs)
 
 
 @dataclass

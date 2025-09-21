@@ -99,10 +99,10 @@ class CsljsonItem(dict[str, 'JSONType']):
 
     def assign_csjson_titles(self, src: bp.BiblioRefItem) -> None:
         if src.article_title:
-            self.set_str('container-title', src.source)
+            self.set_str('container-title', src.source_title)
             self.set_str('title', src.article_title)
         else:
-            self.set_str('title', src.source)
+            self.set_str('title', src.source_title)
 
     @staticmethod
     def from_ref_item(src: bp.BiblioRefItem) -> CsljsonItem:

@@ -702,7 +702,7 @@ class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
     def read(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        source = sess.one(SourceTitleModel())
+        source_title = sess.one(SourceTitleModel())
         title = sess.one(tag_model('article-title', kit.load_string))
         authors = sess.one(PersonGroupModel('author'))
         editors = sess.one(PersonGroupModel('editor'))
@@ -714,7 +714,7 @@ class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
             fields[key] = sess.one(tag_model(key, kit.load_string))
         sess.bind(PubIdBinder(), dest.pub_ids)
         sess.parse_content(e)
-        dest.source = source.out
+        dest.source_title = source_title.out
         dest.article_title = title.out
         if authors.out:
             dest.authors = authors.out
@@ -759,10 +759,9 @@ class RefListModel(TagModelBase[bp.BiblioRefList]):
     def load(self, log: Log, e: XmlElement) -> bp.BiblioRefList | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        title = sess.one(tag_model('title', kit.load_string))
         references = sess.every(BiblioRefItemModel())
         sess.parse_content(e)
-        return bp.BiblioRefList(title.out, list(references))
+        return bp.BiblioRefList(references)
 
 
 def pop_load_sub_back(log: Log, xe: XmlElement) -> bp.BiblioRefList | None:

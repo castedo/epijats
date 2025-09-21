@@ -248,7 +248,7 @@ class HtmlGenerator:
     def html_references(self, src: bp.BiblioRefList, *, abridged: bool = False) -> str:
         frags: list[str | XmlElement] = []
         h = ET.Element('h2')
-        h.text = src.title or "References"
+        h.text = "References"
         h.tail = '\n'
         frags.append(h)
         formatter = CiteprocBiblioFormatter(abridged=abridged, use_lxml=False)
