@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from warnings import warn
 
-from .parse import parse_baseprint
-from .html import HtmlGenerator
-from .webstract import Webstract
+from .biblio import csljson_refs_from_baseprint
 from .condition import FormatIssue
+from .html import HtmlGenerator
+from .parse import parse_baseprint
+from .webstract import Webstract
 from . import baseprint
 
 if TYPE_CHECKING:
@@ -35,20 +37,27 @@ def webstract_from_jats(src: Path | str) -> Webstract:
     bp = parse_baseprint(jats_src, issues.append)
     if bp is None:
         raise ValueError()
-    ret = webstract_from_baseprint(bp)
+    ret = webstract_from_baseprint(bp, html_refs=True)
     ret.set_source_from_path(src)
     ret['issues'] = [i.as_pod() for i in issues]
     return ret
 
 
-def webstract_from_baseprint(bp: baseprint.Baseprint) -> Webstract:
+def webstract_from_baseprint(
+    bp: baseprint.Baseprint, *, html_refs: bool | None = None,
+) -> Webstract:
+    if html_refs is None:
+        warn("Set html_refs=True if references need to be in HTML", DeprecationWarning)
+        html_refs = True
     gen = HtmlGenerator()
     ret = Webstract()
     ret['body'] = gen.html_body_content(bp)
     ret['bare_tex'] = gen.bare_tex
     if bp.ref_list:
-        ret['references'] = gen.html_references(bp.ref_list)
-        ret['references_abridged'] = gen.html_references(bp.ref_list, abridged=True)
+        ret['csljson'] = csljson_refs_from_baseprint(bp)
+        if html_refs:
+            ret['references'] = gen.html_references(bp.ref_list)
+            ret['references_abridged'] = gen.html_references(bp.ref_list, abridged=True)
     ret['title'] = gen.content_to_str(bp.title)
     ret['contributors'] = [author_as_pod(a) for a in bp.authors]
     if bp.abstract:
@@ -63,3 +72,7 @@ def webstract_from_baseprint(bp: baseprint.Baseprint) -> Webstract:
         if bp.permissions.copyright:
             ret['copyright'] = gen.content_to_str(bp.permissions.copyright.statement)
     return ret
+
+
+def webstract_pod_from_baseprint(bp: baseprint.Baseprint) -> dict[str, Any]:
+    return dict(webstract_from_baseprint(bp, html_refs=False))

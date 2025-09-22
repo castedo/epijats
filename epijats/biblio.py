@@ -8,13 +8,13 @@ from html import escape
 from typing import TYPE_CHECKING, assert_type
 from warnings import warn
 
-import citeproc
 
 from . import baseprint as bp
 from .xml import get_ET
 
 if TYPE_CHECKING:
     from .typeshed import JSONType
+    import citeproc
     from .xml import XmlElement
 
 
@@ -151,6 +151,8 @@ def put_tags_on_own_lines(e: XmlElement) -> None:
 
 class CiteprocBiblioFormatter(BiblioFormatter):
     def __init__(self, *, abridged: bool = False, use_lxml: bool):
+        import citeproc
+
         self._abridged = abridged
         filename = "abridged.csl" if abridged else "full-preview.csl"
         r = resources.files(__package__) / f"csl/{filename}"
@@ -173,6 +175,8 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         return ret
 
     def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement:
+        import citeproc
+
         csljson = [CsljsonItem.from_ref_item(r).hyperlinkize() for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(
@@ -205,3 +209,10 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         e = self.to_element(refs)
         ret = self._ET.tostring(e, encoding='unicode', method='html')
         return ret  # type: ignore[no-any-return]
+
+
+def csljson_refs_from_baseprint(src: bp.Baseprint) -> list[JSONType] | None:
+    if not src.ref_list:
+        return None
+    refs = src.ref_list.references
+    return [dict(CsljsonItem.from_ref_item(r)) for r in refs]

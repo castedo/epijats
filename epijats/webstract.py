@@ -73,6 +73,7 @@ class Webstract(dict[str, Any]):
         "bare_tex",
         "body",
         "cc_license_type",
+        "csljson",
         "contributors",
         "copyright",
         "date",

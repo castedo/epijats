@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,7 @@ from .models import load_article
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
+    import hidos
 
 
 def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> Baseprint | None:
@@ -50,3 +52,13 @@ def parse_baseprint(
             issue(log, fc.EncodingNotUtf8(et.docinfo.encoding))
 
     return parse_baseprint_root(et.getroot(), log)
+
+
+def baseprint_from_edition(ed: hidos.Edition) -> Baseprint | None:
+    if not ed.snapshot:
+        raise ValueError(f"Edition {ed} is not a snapshot edition")
+    with tempfile.TemporaryDirectory() as tempdir:
+        snapshot = Path(tempdir) / "snapshot"
+        ed.snapshot.copy(snapshot)
+        article_xml = snapshot / "article.xml"
+        return parse_baseprint(article_xml, use_lxml=False)
