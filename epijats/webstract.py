@@ -240,6 +240,13 @@ class WebstractFacade:
         edid = self._edidata.get("edid")
         return EditionId(edid) if edid else None
 
+    def edid_trunc(self, size: int) -> str | None:
+        edid = self._edition_id
+        if edid is None:
+            return None
+        nums = list(edid)
+        return str(EditionId(nums[:size]))
+
     @property
     def seq_edid(self) -> str | None:
         edid = self._edition_id
