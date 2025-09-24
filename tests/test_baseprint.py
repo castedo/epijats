@@ -309,5 +309,4 @@ def test_minimal_with_issues():
 def test_no_issues():
     issues = []
     parse_baseprint(SNAPSHOT_CASE / "whybaseprint", issues.append)
-    assert len(issues) == 1
-    assert issues[0].condition == fc.UnsupportedElement('title', 'ref-list')
+    assert len(issues) == 0

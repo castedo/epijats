@@ -7,7 +7,7 @@ from citeproc import SCHEMA_PATH
 
 from epijats import restyle
 from epijats import baseprint as bp
-from epijats.parse import models
+from epijats.parse.references import BiblioRefItemModel
 from epijats import biblio
 from epijats import condition as fc
 
@@ -22,7 +22,7 @@ def parse_clean_ref_item(src: str | Path):
     if isinstance(src, Path):
         with open(src, "r") as f:
             src = f.read().strip()
-    model = models.BiblioRefItemModel()
+    model = BiblioRefItemModel()
     issues: list[fc.FormatIssue] = []
     ref_item = model.load(issues.append, lxml_element_from_str(src))
     assert not issues
@@ -42,7 +42,7 @@ KNOWN_PMC_NO_SUPPORT = {
 def parse_pmc_ref(p: Path):
     with open(p, "r") as f:
         src = f.read().strip()
-    model = models.BiblioRefItemModel()
+    model = BiblioRefItemModel()
     issues: list[fc.FormatIssue] = []
     ref_item = model.load(issues.append, lxml_element_from_str(src))
     conditions = set(i.condition for i in issues) - KNOWN_PMC_NO_SUPPORT

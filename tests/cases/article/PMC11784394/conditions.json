@@ -19,6 +19,5 @@
   ["UnsupportedElement", "copyright-year", "permissions"],
   ["UnsupportedAttribute", "{http://www.niso.org/schemas/ali/1.0/}license_ref", "specific-use"],
   ["UnsupportedElement", "kwd-group", "article-meta"],
-  ["UnsupportedElement", "title", "ref-list"],
   ["UnsupportedAttribute", "element-citation", "publication-type"]
 ]
