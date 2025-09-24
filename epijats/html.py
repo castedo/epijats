@@ -251,7 +251,7 @@ class HtmlGenerator:
         h.text = "References"
         h.tail = '\n'
         frags.append(h)
-        formatter = CiteprocBiblioFormatter(abridged=abridged, use_lxml=False)
+        formatter = CiteprocBiblioFormatter(abridged=abridged)
         ol = formatter.to_element(src.references)
         ol.tail = "\n"
         frags.append(ol)

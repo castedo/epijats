@@ -150,8 +150,11 @@ def put_tags_on_own_lines(e: XmlElement) -> None:
 
 
 class CiteprocBiblioFormatter(BiblioFormatter):
-    def __init__(self, *, abridged: bool = False, use_lxml: bool):
+    def __init__(self, *, abridged: bool = False, use_lxml: bool = False):
         import citeproc
+
+        if use_lxml:
+            warn("Option use_lxml will be removed", DeprecationWarning)
 
         self._abridged = abridged
         filename = "abridged.csl" if abridged else "full-preview.csl"

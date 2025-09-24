@@ -88,7 +88,20 @@ class MarkupElement(Element):
         return self._content
 
 
-class EmptyElement(Element): ...
+class EmptyElement(Element):
+    """Differential XML empty element serialization per HTML tag status.
+
+    XML empty elements need to be serialized differently depending on whether they
+    are HTML void elements or not (such as <br> and <col>). HTML parsers will parse
+    based on the HTML tag name and ignore the XML self-closing tag syntax.
+    In order to be parsable by both XML and HTML parsers, HTML void elements should
+    be self-closing XML empty elements and all other empty elements should not use
+    the XML self-closing syntax.
+    """
+
+    def __init__(self, tag: str, is_html_tag: bool):
+        super().__init__(tag)
+        self.is_html_tag = is_html_tag
 
 
 @dataclass

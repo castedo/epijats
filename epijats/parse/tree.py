@@ -36,13 +36,19 @@ def parse_mixed_content(
 
 
 class EmptyElementModel(kit.TagModelBase[Element]):
-    def __init__(self, tag: str, *, attrib: set[str] = set()):
+    def __init__(self, tag: str, *, is_html_tag: bool, attrib: set[str] = set()):
         super().__init__(tag)
+        self.is_html_tag = is_html_tag
         self._ok_attrib_keys = attrib
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
-        ret = EmptyElement(self.tag)
+        ret = EmptyElement(self.tag, is_html_tag=self.is_html_tag)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
+        if e.text and e.text.strip():
+            log(fc.IgnoredText.issue(e))
+        for s in e:
+            if s.tail and s.tail.strip():
+                log(fc.IgnoredTail.issue(s))
         return ret
 
 

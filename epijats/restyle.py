@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from warnings import warn
 
 from . import baseprint
 from . import baseprint as bp
@@ -118,7 +119,11 @@ def biblio_person_group(group_type: str, src: bp.PersonGroup) -> DataElement:
         else:
             ret.append(MarkupElement('string-name', person))
     if src.etal:
-        ret.append(EmptyElement('etal'))
+        # <etal> is not an HTML void element
+        # if it is saved as a self-closing XML element, an HTML parser
+        # will not close the element until the next open tag
+        # (probably just resulting in whitespace content being added)
+        ret.append(EmptyElement('etal', is_html_tag=False))
     return ret
 
 
@@ -181,6 +186,9 @@ def article(src: baseprint.Baseprint) -> DataElement:
 def write_baseprint(
     src: baseprint.Baseprint, dest: Path, *, use_lxml: bool = True
 ) -> None:
+    if not use_lxml:
+        warn("lxml needed to output HTML vs non-HTML empty elements differently")
+
     XML = XmlFormatter(use_lxml=use_lxml)
     root = XML.root(article(src))
     root.tail = "\n"

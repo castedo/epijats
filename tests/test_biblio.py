@@ -78,7 +78,7 @@ def check_html_match(html_path, ref_item, abridged: bool):
     if html_path.exists():
         with open(html_path, "r") as f:
             expect = f.read().strip()
-        bf = biblio.CiteprocBiblioFormatter(abridged=abridged, use_lxml=True)
+        bf = biblio.CiteprocBiblioFormatter(abridged=abridged)
         assert bf.to_str([ref_item]) == expect
 
 

@@ -102,7 +102,12 @@ class CommonContentFormatter:
     def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
         if isinstance(src, MarkupElement):
             self.markup.format(src.content, level, dest)
-        elif not isinstance(src, EmptyElement):
+        elif isinstance(src, EmptyElement):
+            # For interop with both XML and HTML parsers,
+            # HTML void elements must be self-closing and all others not
+            # lxml self-closes tag or not based on None vs empty string
+            dest.text = None if src.is_html_tag else ''
+        else:
             self.default.format_content(src, level, dest)
 
 

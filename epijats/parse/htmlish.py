@@ -51,7 +51,7 @@ class BreakModel(kit.LoadModel[Element]):
         return xe.tag in ['br', 'break']
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
-        return EmptyElement('br')
+        return EmptyElement('br', is_html_tag=True)
 
 
 def break_model() -> Model[Element]:
@@ -236,16 +236,14 @@ class TableCellModel(kit.TagModelBase[Element]):
     def load(self, log: Log, e: XmlElement) -> Element | None:
         align_attribs = {'left', 'right', 'center', 'justify', None}
         kit.confirm_attrib_value(log, e, 'align', align_attribs)
-        assert e.tag == self.tag
-        if isinstance(e.tag, str):
-            ret = MarkupElement(e.tag)
-            kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
+        ret = MarkupElement(self.tag)
+        kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
 
 def table_wrap_model(p_elements: Model[Element]) -> Model[Element]:
-    col = EmptyElementModel('col', attrib={'span', 'width'})
+    col = EmptyElementModel('col', attrib={'span', 'width'}, is_html_tag=True)
     colgroup = DataElementModel('colgroup', col, optional_attrib={'span', 'width'})
     br = break_model()
     th = TableCellModel(p_elements | br, header=True)
