@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING
 
 import lxml.etree
 
-import epijats.parse.models as _
+import epijats.parse.body as _
 from epijats import html
 from epijats import baseprint as bp
 from epijats.baseprint import Baseprint
 from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
+from epijats.parse.front import AbstractModel, load_author_group
 from epijats.tree import Element, MarkupElement
 from epijats.xml import XmlFormatter
 
@@ -229,7 +230,7 @@ def test_author_restyle():
   </contrib>
 </contrib-group>"""
     issues = []
-    authors = _.load_author_group(issues.append, lxml_element_from_str(expect))
+    authors = load_author_group(issues.append, lxml_element_from_str(expect))
     assert authors is not None
     assert len(issues) == 0
     ele = restyle.contrib_group(authors)
@@ -238,7 +239,7 @@ def test_author_restyle():
 
 def test_abstract_restyle() -> None:
     models = _.CoreModels(None)
-    model = _.AbstractModel(models.p_level)
+    model = AbstractModel(models.p_level)
 
     bad_style = """\
 <abstract>

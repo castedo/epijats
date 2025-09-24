@@ -2,7 +2,8 @@ import os, pytest
 from pathlib import Path
 
 from epijats.html import HtmlGenerator
-from epijats.parse import kit, models, tree
+from epijats.parse import kit, tree
+from epijats.parse.body import CoreModels
 from epijats.tree import MixedContent
 from epijats.xml import XmlFormatter
 
@@ -46,7 +47,7 @@ def parse_element(src: str | Path, model: kit.Model[kit.Element]):
 
 @pytest.mark.parametrize("case", os.listdir(P_CHILD_CASE))
 def test_p_child_html(case):
-    core = models.CoreModels(None)
+    core = CoreModels(None)
     jats_xml = P_CHILD_CASE/ case / "jats.xml"
     if jats_xml.exists():
         p_child = parse_element(jats_xml.read_text(), core.p_child)

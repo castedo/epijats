@@ -70,6 +70,14 @@ def formatted_text_model(content: Model[Element]) -> Model[Element]:
     return ret
 
 
+def hypotext_model() -> Model[Element]:
+    # Corresponds to {HYPOTEXT} in BpDF spec ed.2
+    # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
+    ret = kit.UnionModel[Element]()
+    ret |= formatted_text_model(ret)
+    return ret
+
+
 class JatsExtLinkModel(kit.TagModelBase[Element]):
     def __init__(self, content_model: Model[Element]):
         super().__init__('ext-link')
@@ -211,7 +219,9 @@ def def_def_model(def_child: Model[Element]) -> Model[Element]:
     return DataElementModel('dd', def_child, jats_tag='def')
 
 
-def def_item_model(term_text: Model[Element], def_child: Model[Element]) -> Model[Element]:
+def def_item_model(
+    term_text: Model[Element], def_child: Model[Element]
+) -> Model[Element]:
     """<def-item> Definition List: Definition Item
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html

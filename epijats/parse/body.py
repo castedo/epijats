@@ -16,11 +16,9 @@ from . import kit
 from .content import (
     ArrayContentSession,
     ContentBinder,
-    ContentInElementModel,
     ContentInElementModelBase,
-    MergedElementsContentBinder,
 )
-from .kit import Log, Model, tag_model
+from .kit import Log, Model
 from .htmlish import (
     HtmlParagraphModel,
     ListModel,
@@ -29,12 +27,10 @@ from .htmlish import (
     blockquote_model,
     ext_link_model,
     formatted_text_model,
-    minimally_formatted_text_model,
+    hypotext_model,
     table_wrap_model,
 )
-from .references import RefListModel, load_person_name
 from .tree import (
-    MixedContentModel,
     MixedContentModelBase,
     TextElementModel,
     parse_mixed_content,
@@ -44,26 +40,6 @@ from .math import disp_formula_model, inline_formula_model
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
-
-
-def hypotext_model() -> Model[Element]:
-    # Corresponds to {HYPOTEXT} in BpDF spec ed.2
-    # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
-    ret = kit.UnionModel[Element]()
-    ret |= formatted_text_model(ret)
-    return ret
-
-
-def copytext_model() -> Model[Element]:
-    # Corresponds to {COPYTEXT} in BpDF spec ed.2
-    ret = kit.UnionModel[Element]()
-    ret |= formatted_text_model(ret)
-    ret |= ext_link_model(hypotext_model())
-    return ret
-
-
-def copytext_element_model(tag: str) -> kit.MonoModel[MixedContent]:
-    return MixedContentModel(tag, copytext_model())
 
 
 def hypertext_model(biblio: BiblioRefPool | None) -> Model[Element]:
@@ -308,73 +284,12 @@ def cross_reference_model(
     return jats_xref | HtmlCrossReferenceModel(content_model)
 
 
-def article_title_model() -> kit.MonoModel[MixedContent]:
-    # Contents corresponds to {MINITEXT} in BpDF spec ed.2
-    # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
-    minitext_model = kit.UnionModel[Element]()
-    minitext_model |= minimally_formatted_text_model(minitext_model)
-    return MixedContentModel('article-title', minitext_model)
-
-
 class SectionTitleMonoModel(MixedContentModelBase):
     def __init__(self, child_model: Model[Element]):
         super().__init__(child_model)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']
-
-
-def title_group_model() -> Model[MixedContent]:
-    content = MergedElementsContentBinder(article_title_model())
-    return ContentInElementModel('title-group', content)
-
-
-def orcid_model() -> Model[bp.Orcid]:
-    return tag_model('contrib-id', load_orcid)
-
-
-def load_orcid(log: Log, e: XmlElement) -> bp.Orcid | None:
-    if e.tag != 'contrib-id' or e.attrib.get('contrib-id-type') != 'orcid':
-        return None
-    kit.check_no_attrib(log, e, ['contrib-id-type'])
-    for s in e:
-        log(fc.UnsupportedElement.issue(s))
-    try:
-        url = e.text or ""
-        return bp.Orcid.from_url(url)
-    except ValueError:
-        log(fc.InvalidOrcid.issue(e, url))
-        return None
-
-
-def load_author_group(log: Log, e: XmlElement) -> list[bp.Author] | None:
-    kit.check_no_attrib(log, e)
-    kit.check_required_child(log, e, 'contrib')
-    sess = ArrayContentSession(log)
-    ret = sess.every(tag_model('contrib', load_author))
-    sess.parse_content(e)
-    return list(ret)
-
-
-def person_name_model() -> Model[bp.PersonName]:
-    return tag_model('name', load_person_name)
-
-
-def load_author(log: Log, e: XmlElement) -> bp.Author | None:
-    if e.tag != 'contrib':
-        return None
-    if not kit.confirm_attrib_value(log, e, 'contrib-type', ['author']):
-        return None
-    kit.check_no_attrib(log, e, ['contrib-type'])
-    sess = ArrayContentSession(log)
-    name = sess.one(person_name_model())
-    email = sess.one(tag_model('email', kit.load_string))
-    orcid = sess.one(orcid_model())
-    sess.parse_content(e)
-    if name.out is None:
-        log(fc.MissingContent.issue(e, "Missing name"))
-        return None
-    return bp.Author(name.out, email.out, orcid.out)
 
 
 class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
@@ -411,120 +326,6 @@ class SectionModel(kit.LoadModel[bp.Section]):
         return ret
 
 
-CC_URLS = {
-    'https://creativecommons.org/publicdomain/zero/': bp.CcLicenseType.CC0,
-    'https://creativecommons.org/licenses/by/': bp.CcLicenseType.BY,
-    'https://creativecommons.org/licenses/by-sa/': bp.CcLicenseType.BYSA,
-    'https://creativecommons.org/licenses/by-nc/': bp.CcLicenseType.BYNC,
-    'https://creativecommons.org/licenses/by-nc-sa/': bp.CcLicenseType.BYNCSA,
-    'https://creativecommons.org/licenses/by-nd/': bp.CcLicenseType.BYND,
-    'https://creativecommons.org/licenses/by-nc-nd/': bp.CcLicenseType.BYNCND,
-}
-
-
-class LicenseRefBinder(kit.BinderBase[bp.License]):
-    def match(self, xe: XmlElement) -> bool:
-        return xe.tag in [
-            "license-ref",
-            "license_ref",
-            "{http://www.niso.org/schemas/ali/1.0/}license_ref",
-        ]
-
-    def read(self, log: Log, xe: XmlElement, dest: bp.License) -> None:
-        kit.check_no_attrib(log, xe, ['content-type'])
-        dest.license_ref = kit.load_string_content(log, xe)
-        got_license_type = kit.get_enum_value(log, xe, 'content-type', bp.CcLicenseType)
-        for prefix, matching_type in CC_URLS.items():
-            if dest.license_ref.startswith(prefix):
-                if got_license_type and got_license_type != matching_type:
-                    issue = fc.InvalidAttributeValue.issue
-                    log(issue(xe, 'content-type', got_license_type))
-                dest.cc_license_type = matching_type
-                return
-        dest.cc_license_type = got_license_type
-
-
-class LicenseModel(kit.TagModelBase[bp.License]):
-    TAG = 'license'
-
-    def load(self, log: Log, e: XmlElement) -> bp.License | None:
-        ret = bp.License(MixedContent(), "", None)
-        kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
-        sess.bind_mono(copytext_element_model('license-p'), ret.license_p)
-        sess.bind_once(LicenseRefBinder(), ret)
-        sess.parse_content(e)
-        return None if ret.blank() else ret
-
-
-class PermissionsModel(kit.TagModelBase[bp.Permissions]):
-    TAG = 'permissions'
-
-    def load(self, log: Log, e: XmlElement) -> bp.Permissions | None:
-        kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
-        statement = sess.one(copytext_element_model('copyright-statement'))
-        license = sess.one(LicenseModel())
-        sess.parse_content(e)
-        if license.out is None:
-            return None
-        if statement.out and not statement.out.blank():
-            copyright = bp.Copyright(statement.out)
-        else:
-            copyright = None
-        return bp.Permissions(license.out, copyright)
-
-
-class AbstractModel(kit.TagModelBase[bp.Abstract]):
-    def __init__(self, p_level: Model[Element]):
-        super().__init__('abstract')
-        self._p_level = p_level
-
-    def load(self, log: Log, e: XmlElement) -> bp.Abstract | None:
-        kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
-        blocks = sess.every(self._p_level)
-        sess.parse_content(e)
-        return bp.Abstract(list(blocks)) if blocks else None
-
-
-class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
-    def __init__(self, abstract_model: AbstractModel):
-        super().__init__('article-meta')
-        self._abstract_model = abstract_model
-
-    def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
-        kit.check_no_attrib(log, xe)
-        kit.check_required_child(log, xe, 'title-group')
-        sess = ArrayContentSession(log)
-        title = sess.one(title_group_model())
-        authors = sess.one(tag_model('contrib-group', load_author_group))
-        abstract = sess.one(self._abstract_model)
-        permissions = sess.one(PermissionsModel())
-        sess.parse_content(xe)
-        if title.out:
-            dest.title = title.out
-        if authors.out is not None:
-            dest.authors = authors.out
-        if abstract.out:
-            dest.abstract = abstract.out
-        if permissions.out is not None:
-            dest.permissions = permissions.out
-
-
-class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
-    def __init__(self, abstract_model: AbstractModel):
-        super().__init__('front')
-        self._meta_model = ArticleMetaBinder(abstract_model)
-
-    def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
-        kit.check_no_attrib(log, xe)
-        kit.check_required_child(log, xe, 'article-meta')
-        sess = ArrayContentSession(log)
-        sess.bind_once(self._meta_model, dest)
-        sess.parse_content(xe)
-
-
 class BodyModel(ContentInElementModelBase[bp.ProtoSection]):
     def __init__(self, models: CoreModels):
         self.content = ProtoSectionBinder(models)
@@ -533,46 +334,3 @@ class BodyModel(ContentInElementModelBase[bp.ProtoSection]):
         # JATS and HTML conflict in use of <body> tag
         # DOMParser moves <body> position when parsed as HTML
         return xe.tag in ['article-body', 'body']
-
-
-def pop_load_sub_back(log: Log, xe: XmlElement) -> bp.BiblioRefList | None:
-    back = xe.find("back")
-    if back is None:
-        return None
-    kit.check_no_attrib(log, back)
-    sess = ArrayContentSession(log)
-    result = sess.one(RefListModel())
-    sess.parse_content(back)
-    xe.remove(back)  # type: ignore[arg-type]
-    return result.out
-
-
-def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
-    """Loader function for <article>
-
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article.html
-    """
-    lang = '{http://www.w3.org/XML/1998/namespace}lang'
-    kit.confirm_attrib_value(log, e, lang, ['en', None])
-    kit.check_no_attrib(log, e, [lang])
-    ret = bp.Baseprint()
-    back_log = list[fc.FormatIssue]()
-    ret.ref_list = pop_load_sub_back(back_log.append, e)
-    biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
-    models = CoreModels(biblio)
-    abstract_model = AbstractModel(models.p_level)
-    kit.check_required_child(log, e, 'front')
-    sess = ArrayContentSession(log)
-    sess.bind_once(ArticleFrontBinder(abstract_model), ret)
-    sess.bind_mono(BodyModel(models), ret.body)
-    sess.parse_content(e)
-    if ret.ref_list:
-        assert biblio
-        ret.ref_list.references = biblio.used
-    if ret.title.blank():
-        log(fc.FormatIssue(fc.MissingContent('article-title', 'title-group')))
-    if not ret.body.has_content():
-        log(fc.FormatIssue(fc.MissingContent('article-body', 'article')))
-    for issue in back_log:
-        log(issue)
-    return ret

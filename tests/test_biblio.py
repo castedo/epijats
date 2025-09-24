@@ -7,7 +7,7 @@ from citeproc import SCHEMA_PATH
 
 from epijats import restyle
 from epijats import baseprint as bp
-from epijats.parse.references import BiblioRefItemModel
+from epijats.parse.back import BiblioRefItemModel
 from epijats import biblio
 from epijats import condition as fc
 
