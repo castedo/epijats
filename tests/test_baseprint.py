@@ -26,7 +26,7 @@ def assert_not(x):
     assert not x
 
 
-XML = XmlFormatter(use_lxml=True)
+XML = XmlFormatter(use_lxml=False)
 
 TEST_CASES = Path(__file__).parent / "cases"
 SNAPSHOT_CASE = Path(__file__).parent / "cases" / "snapshot"
@@ -297,7 +297,7 @@ def test_minimal_with_issues():
   <front>
     <article-meta>
       <title-group>
-        <article-title></article-title>
+        <article-title> </article-title>
       </title-group>
     </article-meta>
   </front>

@@ -1,10 +1,10 @@
 <table-wrap>
   <table frame="hsides" rules="groups">
     <colgroup span="1" width="11%">
-      <col span="1"/>
-      <col span="1"/>
-      <col span="1"/>
-      <col span="1"/>
+      <col span="1" />
+      <col span="1" />
+      <col span="1" />
+      <col span="1" />
     </colgroup>
     <thead>
       <tr>

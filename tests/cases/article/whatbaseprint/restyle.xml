@@ -60,7 +60,7 @@
           <tbody>
             <tr>
               <td align="left">Designed for different displays</td>
-              <td align="center"></td>
+              <td align="center"> </td>
               <td align="center">Yes</td>
               <td align="center">Yes</td>
               <td align="center">Yes</td>
@@ -68,22 +68,22 @@
             <tr>
               <td align="left">Clone documents across multiple websites</td>
               <td align="center">Yes</td>
-              <td align="center"></td>
-              <td align="center"></td>
+              <td align="center"> </td>
+              <td align="center"> </td>
               <td align="center">Yes</td>
             </tr>
             <tr>
               <td align="left">Document metadata like journal articles</td>
-              <td align="center"></td>
-              <td align="center"></td>
+              <td align="center"> </td>
+              <td align="center"> </td>
               <td align="center">Yes</td>
               <td align="center">Yes</td>
             </tr>
             <tr>
               <td align="left">Target of intrinsic identifier</td>
-              <td align="center"></td>
-              <td align="center"></td>
-              <td align="center"></td>
+              <td align="center"> </td>
+              <td align="center"> </td>
+              <td align="center"> </td>
               <td align="center">Yes</td>
             </tr>
           </tbody>

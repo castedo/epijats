@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import Protocol, TYPE_CHECKING, TypeAlias
+from warnings import warn
+
 import xml.etree.ElementTree
 
 from .tree import (
@@ -71,6 +73,14 @@ class MarkupFormatter:
             for sub in self.sub.format(it, sublevel):
                 dest.append(sub)  # type: ignore[arg-type]
             append_content(it.tail, dest)
+        if not dest.text and not len(dest):
+            warn("Space inserted into otherwise empty mixed content element")
+            # Markup elements with literally an empty string are not supported.
+            # Space is inserted to ensure XML parsers do not convert a mixed content
+            # element to a self-closing XML tag. Mixed content elements are not HTML
+            # void elements. To be compatible with HTML parsers, only HTML void elements
+            # can use the self-closing XML tag syntax.
+            dest.text = ' '
 
 
 class IndentFormatter:
@@ -104,9 +114,10 @@ class CommonContentFormatter:
             self.markup.format(src.content, level, dest)
         elif isinstance(src, EmptyElement):
             # For interop with both XML and HTML parsers,
-            # HTML void elements must be self-closing and all others not
-            # lxml self-closes tag or not based on None vs empty string
-            dest.text = None if src.is_html_tag else ''
+            # HTML void elements must be self-closing and all others not.
+            # A space will prevent XML parsers from converting a Baseprint XML
+            # whitespace-only content element to a self-closing XML tag.
+            dest.text = None if src.is_html_tag else ' '
         else:
             self.default.format_content(src, level, dest)
 

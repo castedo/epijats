@@ -14,7 +14,7 @@ def assert_not(x):
     assert not x
 
 
-XML = XmlFormatter(use_lxml=True)
+XML = XmlFormatter(use_lxml=False)
 
 
 P_CHILD_CASE = Path(__file__).parent / "cases" / "p_child"

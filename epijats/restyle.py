@@ -184,10 +184,10 @@ def article(src: baseprint.Baseprint) -> DataElement:
 
 
 def write_baseprint(
-    src: baseprint.Baseprint, dest: Path, *, use_lxml: bool = True
+    src: baseprint.Baseprint, dest: Path, *, use_lxml: bool = False
 ) -> None:
-    if not use_lxml:
-        warn("lxml needed to output HTML vs non-HTML empty elements differently")
+    if use_lxml:
+        warn("Avoid depending on lxml specific behavior", DeprecationWarning)
 
     XML = XmlFormatter(use_lxml=use_lxml)
     root = XML.root(article(src))
