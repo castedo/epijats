@@ -75,7 +75,8 @@ class MarkupFormatter:
                 dest.append(sub)  # type: ignore[arg-type]
             append_content(it.tail, dest)
         if not dest.text and not len(dest):
-            warn("Space inserted into otherwise empty mixed content element")
+            msg = "Space inserted into otherwise empty {} element"
+            warn(msg.format(dest.tag))
             # Markup elements with literally an empty string are not supported.
             # Space is inserted to ensure XML parsers do not convert a mixed content
             # element to a self-closing XML tag. Mixed content elements are not HTML

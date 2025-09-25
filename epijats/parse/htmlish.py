@@ -249,6 +249,8 @@ class TableCellModel(kit.TagModelBase[Element]):
         ret = MarkupElement(self.tag)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         parse_mixed_content(log, e, self.content_model, ret.content)
+        if ret.content.empty():
+            ret.content.text = ' '
         return ret
 
 
