@@ -15,5 +15,6 @@ fi
 npx domparse --inpath $1 \
   | sed 's/ xmlns="http:\/\/www.w3.org\/1999\/xhtml"//' \
   | xmllint --encode ascii - \
+  | sed -E 's/<(\w+)\/>/<\1 \/>/g' \
   | tail -n +2 \
-  | diff --report-identical-files $1 -
+  | diff --report-identical-files - $1
