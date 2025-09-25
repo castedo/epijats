@@ -23,6 +23,22 @@
     </article>
   </xsl:template>
 
+
+  <!-- rename HTML-compatible tags to HTML-incompatible JATS counterparts -->
+
+  <xsl:template match="article-body">
+    <body>
+      <xsl:apply-templates/>
+    </body>
+  </xsl:template>
+
+  <xsl:template match="source-title">
+    <source>
+      <xsl:apply-templates/>
+    </source>
+  </xsl:template>
+
+
   <!-- Rename HTML elements to JATS counterparts -->
 
   <xsl:template match="a[@rel='external']">
@@ -218,7 +234,7 @@
 
 
   <!-- add ali XML namespace if absent -->
-  <xsl:template match="license_ref">
+  <xsl:template match="license-ref">
     <ali:license_ref>
       <xsl:apply-templates select="node()|@*"/>
     </ali:license_ref>

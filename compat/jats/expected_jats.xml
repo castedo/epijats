@@ -119,11 +119,12 @@
       <ref id="ref-jats">
         <element-citation>
           <person-group person-group-type="author">
-            <string-name>U.S. National Library of Medicine (NLM)</string-name>
+            <string-name>National Institutes of Health</string-name>
           </person-group>
           <article-title>Journal Article Tag Suite</article-title>
           <year>2024</year>
           <uri>https://jats.nlm.nih.gov/</uri>
+          <source>U.S. National Library of Medicine (NLM)</source>
         </element-citation>
       </ref>
     </ref-list>

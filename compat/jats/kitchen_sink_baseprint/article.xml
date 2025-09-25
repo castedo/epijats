@@ -7,13 +7,13 @@
       <permissions>
         <copyright-statement>&#169; 2025, Ellerman et al</copyright-statement>
         <license>
-          <license_ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</license_ref>
+          <license-ref content-type="ccbylicense">https://creativecommons.org/licenses/by/4.0/</license-ref>
           <license-p>This document is distributed under a Creative Commons Attribution 4.0 International license.</license-p>
         </license>
       </permissions>
     </article-meta>
   </front>
-  <body>
+  <article-body>
     <p>This is Baseprint XML that is XML-transformable to
       <a rel="external" href="https://jats.nlm.nih.gov/">NISO JATS XML</a><sup>
         <xref rid="ref-jats" ref-type="bibr">1</xref>
@@ -83,18 +83,19 @@
         </div>
       </dl>
     </section>
-  </body>
+  </article-body>
   <back>
     <ref-list>
       <title>References</title>
       <ref id="ref-jats">
         <element-citation>
           <person-group person-group-type="author">
-            <string-name>U.S. National Library of Medicine (NLM)</string-name>
+            <string-name>National Institutes of Health</string-name>
           </person-group>
           <article-title>Journal Article Tag Suite</article-title>
           <year>2024</year>
           <uri>https://jats.nlm.nih.gov/</uri>
+          <source-title>U.S. National Library of Medicine (NLM)</source-title>
         </element-citation>
       </ref>
     </ref-list>
