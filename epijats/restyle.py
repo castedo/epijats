@@ -8,7 +8,7 @@ from . import baseprint
 from . import baseprint as bp
 from .parse import parse_baseprint
 from .parse.kit import Log, nolog
-from .tree import DataElement, EmptyElement, MarkupElement, MixedContent, StartTag
+from .tree import DataElement, MarkupElement, MixedContent, StartTag, WhitespaceElement
 from .xml import XmlFormatter
 
 
@@ -119,11 +119,11 @@ def biblio_person_group(group_type: str, src: bp.PersonGroup) -> DataElement:
         else:
             ret.append(MarkupElement('string-name', person))
     if src.etal:
-        # <etal> is not an HTML void element
-        # if it is saved as a self-closing XML element, an HTML parser
+        # <etal> is not an HTML void element.
+        # If it is saved as a self-closing XML element, an HTML parser
         # will not close the element until the next open tag
-        # (probably just resulting in whitespace content being added)
-        ret.append(EmptyElement('etal', is_html_tag=False))
+        # (probably merely resulting in whitespace content being added).
+        ret.append(WhitespaceElement('etal'))
     return ret
 
 

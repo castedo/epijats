@@ -7,7 +7,7 @@ from .. import condition as fc
 from ..tree import (
     DataElement,
     Element,
-    EmptyElement,
+    HtmlVoidElement,
     MarkupElement,
     MixedContent,
     StartTag,
@@ -51,7 +51,7 @@ class BreakModel(kit.LoadModel[Element]):
         return xe.tag in ['br', 'break']
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
-        return EmptyElement('br', is_html_tag=True)
+        return HtmlVoidElement('br')
 
 
 def break_model() -> Model[Element]:

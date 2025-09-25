@@ -8,10 +8,11 @@ import xml.etree.ElementTree
 
 from .tree import (
     CitationTuple,
-    EmptyElement,
+    HtmlVoidElement,
     MarkupElement,
     MixedContent,
     PureElement,
+    WhitespaceElement,
 )
 
 
@@ -112,12 +113,15 @@ class CommonContentFormatter:
     def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
         if isinstance(src, MarkupElement):
             self.markup.format(src.content, level, dest)
-        elif isinstance(src, EmptyElement):
+        elif isinstance(src, HtmlVoidElement):
+            # HTML void elements must be self-closing and all others not,
+            # for compatibility with HTML parsers.
+            dest.text = None
+        elif isinstance(src, WhitespaceElement):
             # For interop with both XML and HTML parsers,
-            # HTML void elements must be self-closing and all others not.
-            # A space will prevent XML parsers from converting a Baseprint XML
-            # whitespace-only content element to a self-closing XML tag.
-            dest.text = None if src.is_html_tag else ' '
+            # a space will prevent XML parsers from converting a Baseprint XML
+            # whitespace-only element to a self-closing XML tag.
+            dest.text = ' '
         else:
             self.default.format_content(src, level, dest)
 

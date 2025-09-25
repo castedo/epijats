@@ -8,10 +8,11 @@ from .. import condition as fc
 from ..tree import (
     DataElement,
     Element,
-    EmptyElement,
+    HtmlVoidElement,
     MarkupElement,
     MixedContent,
     StartTag,
+    WhitespaceElement,
 )
 
 from . import kit
@@ -42,7 +43,8 @@ class EmptyElementModel(kit.TagModelBase[Element]):
         self._ok_attrib_keys = attrib
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
-        ret = EmptyElement(self.tag, is_html_tag=self.is_html_tag)
+        klass = HtmlVoidElement if self.is_html_tag else WhitespaceElement
+        ret = klass(self.tag)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         if e.text and e.text.strip():
             log(fc.IgnoredText.issue(e))

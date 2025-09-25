@@ -88,20 +88,22 @@ class MarkupElement(Element):
         return self._content
 
 
-class EmptyElement(Element):
-    """Differential XML empty element serialization per HTML tag status.
+class HtmlVoidElement(Element):
+    """HTML void element (such as <br />).
 
-    XML empty elements need to be serialized differently depending on whether they
-    are HTML void elements or not (such as <br> and <col>). HTML parsers will parse
-    based on the HTML tag name and ignore the XML self-closing tag syntax.
-    In order to be parsable by both XML and HTML parsers, HTML void elements should
-    be self-closing XML empty elements and all other empty elements should not use
-    the XML self-closing syntax.
+    Only HTML void elements should be serialized in the self-closing XML syntax.
+    HTML parsers ignore the XML self-closing tag syntax and parse based
+    on a tag name being in a closed fixed list of HTML void elements.
     """
 
-    def __init__(self, tag: str, is_html_tag: bool):
-        super().__init__(tag)
-        self.is_html_tag = is_html_tag
+
+class WhitespaceElement(Element):
+    """Baseprint XML whitespace-only element.
+
+    To avoid interoperability problems between HTML and XML parsers,
+    whitespace-only elements are serialized with a space as content
+    to ensure XML parsers do not re-serialize to the self-closing XML syntax.
+    """
 
 
 @dataclass
