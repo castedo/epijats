@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "lib": ["ES6", "DOM"],
+
+    /* Modules */
+    "module": "nodenext",
+    "resolveJsonModule": true,
+    "rootDir": "src",
+    "types": ["node"],
+
+    /* Emit */
+    "declaration": true,
+    "outDir": "dist",
+
+    /* Linting */
+    "strict": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  }
+}

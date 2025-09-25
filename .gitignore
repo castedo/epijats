@@ -4,3 +4,4 @@ dist
 build
 *.egg-info
 epijats/_version.py
+node_modules

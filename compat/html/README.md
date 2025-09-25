@@ -1,7 +1,8 @@
 HTML Compatibility
 ==================
 
-HTML compatibility code is now in the repository for the [Baseprint Render Of Last
-Resort](https://gitlab.com/perm.pub/brolr).
+Three HTML compatibility tools related to epijats are:
 
-This epijats repo still has <./cathead/head.html>.
+* [Baseprint Render Of Last Resort](https://gitlab.com/perm.pub/brolr),
+* [utility to diff a roundtrip through DOMParser and then DOM XML serialization](./domparse/.),
+* and <./cathead/head.html>.
