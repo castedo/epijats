@@ -21,7 +21,7 @@ authors = [
 ]
 dependencies = [
   "citeproc-py >= 0.7",
-  "hidos >= 2.5",
+  "hidos >= 2.6",
   "jinja2",
   "lxml",
 ]

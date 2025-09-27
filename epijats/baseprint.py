@@ -208,7 +208,7 @@ class BiblioRefList:
 
 @dataclass
 class Baseprint:
-    title: MixedContent
+    title: MixedContent | None
     authors: list[Author]
     abstract: Abstract | None
     permissions: Permissions | None
@@ -216,7 +216,7 @@ class Baseprint:
     ref_list: BiblioRefList | None
 
     def __init__(self) -> None:
-        self.title = MixedContent()
+        self.title = None
         self.authors = []
         self.permissions = None
         self.abstract = None

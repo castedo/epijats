@@ -191,7 +191,7 @@ class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
         abstract = sess.one(self._abstract_model)
         permissions = sess.one(PermissionsModel())
         sess.parse_content(xe)
-        if title.out:
+        if title.out and not title.out.blank():
             dest.title = title.out
         if authors.out is not None:
             dest.authors = authors.out

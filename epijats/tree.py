@@ -121,6 +121,9 @@ class DataElement(Element):
     def __iter__(self) -> Iterator[PureElement]:
         return iter(self._array)
 
+    def __len__(self) -> int:
+        return len(self._array)
+
     def append(self, e: PureElement) -> None:
         self._array.append(e)
 

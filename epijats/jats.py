@@ -58,7 +58,11 @@ def webstract_from_baseprint(
         if html_refs:
             ret['references'] = gen.html_references(bp.ref_list)
             ret['references_abridged'] = gen.html_references(bp.ref_list, abridged=True)
-    ret['title'] = gen.content_to_str(bp.title)
+    if bp.title is None:
+        warn("Blank title")
+        ret['title'] = ' '
+    else:
+        ret['title'] = gen.content_to_str(bp.title)
     ret['contributors'] = [author_as_pod(a) for a in bp.authors]
     if bp.abstract:
         ret['abstract'] = gen.abstract_to_str(bp.abstract)

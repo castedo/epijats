@@ -56,7 +56,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     if ret.ref_list:
         assert biblio
         ret.ref_list.references = biblio.used
-    if ret.title.blank():
+    if not ret.title or ret.title.blank():
         log(fc.FormatIssue(fc.MissingContent('article-title', 'title-group')))
     if not ret.body.has_content():
         log(fc.FormatIssue(fc.MissingContent('article-body', 'article')))

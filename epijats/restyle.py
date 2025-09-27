@@ -12,15 +12,13 @@ from .tree import DataElement, MarkupElement, MixedContent, StartTag, Whitespace
 from .xml import XmlFormatter
 
 
-def markup_element(tag: str, src: MixedContent) -> MarkupElement:
-    ret = MarkupElement(tag, src.text)
-    for it in src:
-        ret.content.append(it)
-    return ret
-
-
-def title_group(src: MixedContent) -> DataElement:
-    title = markup_element('article-title', src)
+def title_group(src: MixedContent | None) -> DataElement:
+    # space prevents self-closing XML syntax
+    text = ' ' if src is None else src.text
+    title = MarkupElement('article-title', text)
+    if src:
+        for it in src:
+            title.content.append(it)
     return DataElement('title-group', [title])
 
 
@@ -164,20 +162,20 @@ def ref_list(src: baseprint.BiblioRefList) -> DataElement:
 
 
 def article(src: baseprint.Baseprint) -> DataElement:
-    article_meta = DataElement('article-meta', [title_group(src.title)])
+    article_meta = DataElement('article-meta')
+    if src.title:
+        article_meta.append(title_group(src.title))
     if src.authors:
         article_meta.append(contrib_group(src.authors))
     if src.permissions:
         article_meta.append(permissions(src.permissions))
     if src.abstract:
         article_meta.append(abstract(src.abstract))
-    ret = DataElement(
-        'article',
-        [
-            DataElement('front', [article_meta]),
-            proto_section('article-body', src.body, 0),
-        ],
-    )
+    ret = DataElement('article')
+    if len(article_meta):
+        ret.append(DataElement('front', [article_meta]))
+    if src.body.has_content(): 
+        ret.append(proto_section('article-body', src.body, 0))
     if src.ref_list is not None:
         ret.append(DataElement('back', [ref_list(src.ref_list)]))
     return ret

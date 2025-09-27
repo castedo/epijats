@@ -106,8 +106,11 @@ def test_article(case):
             conditions = Counter(i.condition for i in issues)
             assert [c.as_pod() for c in conditions] == json.load(f)
 
-    title = HTML.content_to_str(bp.title)
-    assert_eq_if_exists(title, case_path / "title.html")
+    if bp.title is None:
+        assert not os.path.exists(case_path / "title.html")
+    else:
+        title = HTML.content_to_str(bp.title)
+        assert_eq_if_exists(title, case_path / "title.html")
     abstract = HTML.abstract_to_str(bp.abstract) if bp.abstract else None
     assert_eq_if_exists(abstract, case_path / "abstract.html")
     body = HTML.html_body_content(bp)
@@ -292,18 +295,7 @@ def test_minimal_with_issues():
         fc.MissingContent('article-body', 'article'),
     }
     assert len(issues) == 3
-    expect = """\
-<article>
-  <front>
-    <article-meta>
-      <title-group>
-        <article-title> </article-title>
-      </title-group>
-    </article-meta>
-  </front>
-  <article-body>
-  </article-body>
-</article>"""
+    expect = "<article>\n</article>"
     assert XML.to_str(restyle.article(bp)) == expect
 
 
