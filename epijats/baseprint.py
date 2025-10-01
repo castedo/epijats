@@ -124,6 +124,10 @@ class ProtoSection:
         return bool(self.presection) or bool(self.subsections)
 
 
+class ArticleBody(ProtoSection):
+    ...
+
+
 @dataclass
 class Section(ProtoSection):
     id: str | None
@@ -212,7 +216,7 @@ class Baseprint:
     authors: list[Author]
     abstract: Abstract | None
     permissions: Permissions | None
-    body: ProtoSection
+    body: ArticleBody
     ref_list: BiblioRefList | None
 
     def __init__(self) -> None:
@@ -220,5 +224,5 @@ class Baseprint:
         self.authors = []
         self.permissions = None
         self.abstract = None
-        self.body = ProtoSection()
+        self.body = ArticleBody()
         self.ref_list = None

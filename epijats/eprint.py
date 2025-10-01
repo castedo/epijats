@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import os, shutil, tempfile
 from datetime import datetime, date, time, timezone
 from importlib import resources
 from pathlib import Path
-from typing import Any, Never, Protocol
+from typing import Any, Never, Protocol, TYPE_CHECKING
 from warnings import warn
 
 from .jats import webstract_from_jats
 from .util import copytree_nostat
 from .webstract import Webstract
+
+if TYPE_CHECKING:
+    from .typeshed import StrPath
 
 
 # WeasyPrint will inject absolute local file paths into a PDF file if the input HTML
@@ -170,16 +175,15 @@ class Eprint:
 def eprint_dir(
     config: EprinterConfig,
     src: Path | str,
-    target_dir: Path | str,
+    target_dir: StrPath,
     pdf_target: Never | None = None,
     *,
     issues_page: IssuesPage | None = None,
 ) -> None:
     src = Path(src)
-    target_dir = Path(target_dir)
     if pdf_target is not None:
         msg = "pdf_target argument is ignored; use EprinterConfig.show_pdf_icon"
         warn(msg, DeprecationWarning)
     webstract = webstract_from_jats(src)
     eprint = Eprint(webstract, config=config, issues_page=issues_page)
-    eprint.make(target_dir)
+    eprint.make(Path(target_dir))
