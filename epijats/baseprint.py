@@ -208,21 +208,3 @@ class BiblioRefList:
 
     def __init__(self, refs: Iterable[BiblioRefItem]):
         self.references = list(refs)
-
-
-@dataclass
-class Baseprint:
-    title: MixedContent | None
-    authors: list[Author]
-    abstract: Abstract | None
-    permissions: Permissions | None
-    body: ArticleBody
-    ref_list: BiblioRefList | None
-
-    def __init__(self) -> None:
-        self.title = None
-        self.authors = []
-        self.permissions = None
-        self.abstract = None
-        self.body = ArticleBody()
-        self.ref_list = None

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from .. import baseprint as bp
 from .. import condition as fc
+from .. import dom
 from ..xml import get_ET
 
 from . import kit
@@ -34,7 +35,7 @@ def pop_load_sub_back(log: Log, xe: XmlElement) -> bp.BiblioRefList | None:
     return result.out
 
 
-def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
+def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     """Loader function for <article>
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article.html
@@ -42,7 +43,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     lang = '{http://www.w3.org/XML/1998/namespace}lang'
     kit.confirm_attrib_value(log, e, lang, ['en', None])
     kit.check_no_attrib(log, e, [lang])
-    ret = bp.Baseprint()
+    ret = dom.Article()
     back_log = list[fc.FormatIssue]()
     ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
@@ -65,7 +66,7 @@ def load_article(log: Log, e: XmlElement) -> bp.Baseprint | None:
     return ret
 
 
-def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> bp.Baseprint | None:
+def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> dom.Article | None:
     if root.tag != 'article':
         log(fc.UnsupportedElement.issue(root))
         return None
@@ -74,7 +75,7 @@ def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> bp.Baseprint | N
 
 def parse_baseprint(
     src: Path, log: Log = nolog, *, use_lxml: bool = True
-) -> bp.Baseprint | None:
+) -> dom.Article | None:
     path = Path(src)
     if path.is_dir():
         xml_path = path / "article.xml"
@@ -101,7 +102,7 @@ def parse_baseprint(
     return parse_baseprint_root(et.getroot(), log)
 
 
-def baseprint_from_edition(ed: hidos.Edition) -> bp.Baseprint | None:
+def baseprint_from_edition(ed: hidos.Edition) -> dom.Article | None:
     if not ed.snapshot:
         raise ValueError(f"Edition {ed} is not a snapshot edition")
     with tempfile.TemporaryDirectory() as tempdir:

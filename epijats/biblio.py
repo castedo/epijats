@@ -10,6 +10,7 @@ from warnings import warn
 
 
 from . import baseprint as bp
+from . import dom
 from .xml import get_ET
 
 if TYPE_CHECKING:
@@ -214,7 +215,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         return ret  # type: ignore[no-any-return]
 
 
-def csljson_refs_from_baseprint(src: bp.Baseprint) -> list[JSONType] | None:
+def csljson_refs_from_baseprint(src: dom.Article) -> list[JSONType] | None:
     if not src.ref_list:
         return None
     refs = src.ref_list.references

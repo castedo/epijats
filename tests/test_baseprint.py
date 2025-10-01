@@ -10,7 +10,7 @@ import lxml.etree
 import epijats.parse.body as _
 from epijats import html
 from epijats import baseprint as bp
-from epijats.baseprint import Baseprint
+from epijats import dom
 from epijats import condition as fc
 from epijats import restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
@@ -68,7 +68,7 @@ def str_from_element(ele: Element) -> str:
     return str_from_xml_element(XML.root(ele))
 
 
-def assert_bdom_roundtrip(expect: Baseprint):
+def assert_bdom_roundtrip(expect: dom.Article):
     root = XML.ET.fromstring(XML.to_str(restyle.article(expect)))
     assert parse_baseprint_root(root) == expect
 
@@ -288,7 +288,7 @@ def test_minimal_with_issues():
     issues = set()
     bp = parse_baseprint_root(XML.ET.fromstring("<article/>"), issues.add)
     print(issues)
-    assert bp == Baseprint()
+    assert bp == dom.Article()
     assert set(i.condition for i in issues) == { 
         fc.MissingChild('article', None, 'front'),
         fc.MissingContent('article-title', 'title-group'),

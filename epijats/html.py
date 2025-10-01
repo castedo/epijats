@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Iterable, Iterator
 from warnings import warn
 
+from . import dom
 from . import baseprint as bp
 from .biblio import CiteprocBiblioFormatter
 from .math import FormulaElement
@@ -257,6 +258,6 @@ class HtmlGenerator:
         frags.append(ol)
         return self._html_content_to_str(frags)
 
-    def html_body_content(self, src: bp.Baseprint) -> str:
+    def html_body_content(self, src: dom.Article) -> str:
         frags = list(self._proto_section_content(src.body))
         return self._html_content_to_str(frags)

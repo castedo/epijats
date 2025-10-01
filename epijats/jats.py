@@ -10,6 +10,7 @@ from .html import HtmlGenerator
 from .parse import parse_baseprint
 from .webstract import Webstract
 from . import baseprint
+from . import dom
 
 if TYPE_CHECKING:
     from .typeshed import JSONType
@@ -44,7 +45,7 @@ def webstract_from_jats(src: Path | str) -> Webstract:
 
 
 def webstract_from_baseprint(
-    bp: baseprint.Baseprint, *, html_refs: bool | None = None,
+    bp: dom.Article, *, html_refs: bool | None = None,
 ) -> Webstract:
     if html_refs is None:
         warn("Set html_refs=True if references need to be in HTML", DeprecationWarning)
@@ -78,5 +79,5 @@ def webstract_from_baseprint(
     return ret
 
 
-def webstract_pod_from_baseprint(bp: baseprint.Baseprint) -> dict[str, Any]:
+def webstract_pod_from_baseprint(bp: dom.Article) -> dict[str, Any]:
     return dict(webstract_from_baseprint(bp, html_refs=False))

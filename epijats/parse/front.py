@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from .. import baseprint as bp
 from .. import condition as fc
+from .. import dom
 from ..tree import Element, MixedContent
 
 from . import kit
@@ -177,12 +178,12 @@ class AbstractModel(kit.TagModelBase[bp.Abstract]):
         return bp.Abstract(list(blocks)) if blocks else None
 
 
-class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
+class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
     def __init__(self, abstract_model: Model[bp.Abstract]):
         super().__init__('article-meta')
         self._abstract_model = abstract_model
 
-    def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
+    def read(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'title-group')
         sess = ArrayContentSession(log)
@@ -201,12 +202,12 @@ class ArticleMetaBinder(kit.TagBinderBase[bp.Baseprint]):
             dest.permissions = permissions.out
 
 
-class ArticleFrontBinder(kit.TagBinderBase[bp.Baseprint]):
+class ArticleFrontBinder(kit.TagBinderBase[dom.Article]):
     def __init__(self, abstract_model: Model[bp.Abstract]):
         super().__init__('front')
         self._meta_model = ArticleMetaBinder(abstract_model)
 
-    def read(self, log: Log, xe: XmlElement, dest: bp.Baseprint) -> None:
+    def read(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'article-meta')
         sess = ArrayContentSession(log)

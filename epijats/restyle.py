@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 from warnings import warn
 
 from . import baseprint
 from . import baseprint as bp
+from . import dom
 from .parse import parse_baseprint
 from .parse.kit import Log, nolog
 from .tree import DataElement, MarkupElement, MixedContent, StartTag, WhitespaceElement
 from .xml import XmlFormatter
+
+if TYPE_CHECKING:
+    from .typeshed import StrPath
 
 
 def title_group(src: MixedContent | None) -> DataElement:
@@ -161,7 +166,7 @@ def ref_list(src: baseprint.BiblioRefList) -> DataElement:
     return ret
 
 
-def article(src: baseprint.Baseprint) -> DataElement:
+def article(src: dom.Article) -> DataElement:
     article_meta = DataElement('article-meta')
     if src.title:
         article_meta.append(title_group(src.title))
@@ -182,21 +187,20 @@ def article(src: baseprint.Baseprint) -> DataElement:
 
 
 def write_baseprint(
-    src: baseprint.Baseprint, dest: Path, *, use_lxml: bool = False
+    src: dom.Article, dest: StrPath, *, use_lxml: bool = False
 ) -> None:
     if use_lxml:
         warn("Avoid depending on lxml specific behavior", DeprecationWarning)
-
     XML = XmlFormatter(use_lxml=use_lxml)
     root = XML.root(article(src))
     root.tail = "\n"
     os.makedirs(dest, exist_ok=True)
-    with open(dest / "article.xml", "wb") as f:
+    with open(Path(dest) / "article.xml", "wb") as f:
         tree = XML.ET.ElementTree(root)
         tree.write(f)
 
 
-def restyle_xml(src_xml: Path | str, target_dir: Path | str, log: Log = nolog) -> bool:
+def restyle_xml(src_xml: StrPath, target_dir: StrPath, log: Log = nolog) -> bool:
     bdom = parse_baseprint(Path(src_xml), log)
     if bdom is None:
         return False
