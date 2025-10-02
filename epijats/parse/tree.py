@@ -9,6 +9,7 @@ from ..tree import (
     DataElement,
     Element,
     HtmlVoidElement,
+    Inline,
     MarkupElement,
     MixedContent,
     StartTag,
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def parse_mixed_content(
-    log: Log, e: XmlElement, emodel: Model[Element], dest: MixedContent
+    log: Log, e: XmlElement, emodel: Model[Inline], dest: MixedContent
 ) -> None:
     dest.append_text(e.text)
     eparser = emodel.bound_parser(log, dest.append)
@@ -82,11 +83,38 @@ class DataElementModel(kit.LoadModel[Element]):
         return ret
 
 
-class TextElementModel(kit.LoadModel[Element]):
+class TextElementModel(kit.LoadModel[Inline]):
     def __init__(
         self,
         tag: str,
-        content_model: Model[Element],
+        content_model: Model[Inline],
+        *,
+        jats_tag: str | None = None,
+    ):
+        self.tag = tag
+        self.content_model = content_model
+        self.jats_tag = jats_tag
+
+    def match(self, xe: XmlElement) -> bool:
+        if self.jats_tag is not None and xe.tag == self.jats_tag:
+            return True
+        return xe.tag == self.tag
+
+    def check(self, log: Log, e: XmlElement) -> None:
+        kit.check_no_attrib(log, e)
+
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
+        self.check(log, e)
+        ret = MarkupElement(self.tag)
+        parse_mixed_content(log, e, self.content_model, ret.content)
+        return ret
+
+
+class ParaBlockModel(kit.LoadModel[Element]):
+    def __init__(
+        self,
+        tag: str,
+        content_model: Model[Inline],
         *,
         jats_tag: str | None = None,
     ):
@@ -110,7 +138,7 @@ class TextElementModel(kit.LoadModel[Element]):
 
 
 class MixedContentModelBase(kit.MonoModel[MixedContent]):
-    def __init__(self, child_model: Model[Element]):
+    def __init__(self, child_model: Model[Inline]):
         self.child_model = child_model
 
     @property
@@ -126,7 +154,7 @@ class MixedContentModelBase(kit.MonoModel[MixedContent]):
 
 
 class MixedContentModel(MixedContentModelBase):
-    def __init__(self, tag: str, child_model: Model[Element]):
+    def __init__(self, tag: str, child_model: Model[Inline]):
         super().__init__(child_model)
         self.tag = tag
 

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from .. import baseprint as bp
 from .. import condition as fc
 from .. import dom
-from ..tree import Element, MixedContent
+from ..tree import Element, Inline, MixedContent
 
 from . import kit
 from .kit import Log, Model, tag_model
@@ -28,9 +28,9 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
-def copytext_model() -> Model[Element]:
+def copytext_model() -> Model[Inline]:
     # Corresponds to {COPYTEXT} in BpDF spec ed.2
-    ret = kit.UnionModel[Element]()
+    ret = kit.UnionModel[Inline]()
     ret |= formatted_text_model(ret)
     ret |= ext_link_model(hypotext_model())
     return ret
@@ -43,7 +43,7 @@ def copytext_element_model(tag: str) -> kit.MonoModel[MixedContent]:
 def article_title_model() -> kit.MonoModel[MixedContent]:
     # Contents corresponds to {MINITEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
-    minitext_model = kit.UnionModel[Element]()
+    minitext_model = kit.UnionModel[Inline]()
     minitext_model |= minimally_formatted_text_model(minitext_model)
     return MixedContentModel('article-title', minitext_model)
 

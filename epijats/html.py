@@ -207,7 +207,8 @@ class HtmlGenerator:
         for it in src:
             for sub in self._html.format(it, 0):
                 ss.append(sub)
-            ss.append(it.tail)
+            if it.tail:
+                ss.append(it.tail)
         return self._html_content_to_str(ss)
 
     def abstract_to_str(self, src: bp.Abstract) -> str:

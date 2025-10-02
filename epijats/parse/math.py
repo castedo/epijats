@@ -8,7 +8,7 @@ from ..math import (
     FormulaElement,
     FormulaStyle,
 )
-from ..tree import Element, StartTag
+from ..tree import Element, Inline, StartTag
 
 from . import kit
 from .content import ArrayContentSession
@@ -52,13 +52,13 @@ MATHML_TAGS = [
 ]
 
 
-class AnyMathmlModel(kit.LoadModel[Element]):
+class AnyMathmlModel(kit.LoadModel[Inline]):
     XML_TAGS = {(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS}
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in self.XML_TAGS
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         ret = None
         if isinstance(e.tag, str):
             assert e.tag.startswith(MATHML_NAMESPACE_PREFIX)
@@ -67,7 +67,7 @@ class AnyMathmlModel(kit.LoadModel[Element]):
         return ret
 
 
-class MathmlElementModel(kit.TagModelBase[Element]):
+class MathmlElementModel(kit.TagModelBase[Inline]):
     """<mml:math> Math (MathML Tag Set)
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/mml-math.html
@@ -78,13 +78,13 @@ class MathmlElementModel(kit.TagModelBase[Element]):
         self._model = AnyMathmlModel()
         self.mathml_tag = mathml_tag
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         ret = MathmlElement(StartTag(self.tag, dict(e.attrib)))
         parse_mixed_content(log, e, self._model, ret.content)
         return ret
 
 
-class FormulaAlternativesModel(kit.TagModelBase[Element]):
+class FormulaAlternativesModel(kit.TagModelBase[Inline]):
     """<alternatives> within the context of <inline-formula> and <disp-formula>
 
     https://jats.nlm.nih.gov/publishing/tag-library/1.4/element/alternatives.html
@@ -94,7 +94,7 @@ class FormulaAlternativesModel(kit.TagModelBase[Element]):
         super().__init__('alternatives')
         self.formula_style = formula_style
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         kit.check_no_attrib(log, e)
         cp = ArrayContentSession(log)
         tex = cp.one(kit.tag_model('tex-math', kit.load_string))
@@ -111,12 +111,12 @@ class FormulaAlternativesModel(kit.TagModelBase[Element]):
         return ret
 
 
-class FormulaModel(kit.TagModelBase[Element]):
+class FormulaModel(kit.TagModelBase[Inline]):
     def __init__(self, formula_style: FormulaStyle):
         super().__init__(formula_style.jats_tag)
         self.child_model = FormulaAlternativesModel(formula_style)
 
-    def load(self, log: Log, xe: XmlElement) -> Element | None:
+    def load(self, log: Log, xe: XmlElement) -> Inline | None:
         kit.check_no_attrib(log, xe)
         sess = ArrayContentSession(log)
         result = sess.one(self.child_model)
@@ -124,7 +124,7 @@ class FormulaModel(kit.TagModelBase[Element]):
         return result.out
 
 
-def inline_formula_model() -> kit.Model[Element]:
+def inline_formula_model() -> kit.Model[Inline]:
     """<inline-formula> Formula, Inline
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/inline-formula.html
@@ -132,9 +132,20 @@ def inline_formula_model() -> kit.Model[Element]:
     return FormulaModel(FormulaStyle.INLINE)
 
 
+class CastModel(kit.Model[Element]):
+    def __init__(self, model: kit.Model[Inline]):
+        self.model = model
+
+    def match(self, xe: XmlElement) -> bool:
+        return self.model.match(xe)
+
+    def parse(self, log: Log, xe: XmlElement, dest: kit.Sink[Element]) -> bool:
+        return self.model.parse(log, xe, dest)
+
+
 def disp_formula_model() -> kit.Model[Element]:
     """<disp-formula> Formula, Display
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-formula.html
     """
-    return FormulaModel(FormulaStyle.DISPLAY)
+    return CastModel(FormulaModel(FormulaStyle.DISPLAY))

@@ -31,20 +31,37 @@ class PureElement:
 
 @dataclass
 class Element(PureElement):
-    tail: str
+    _tail: str | None
 
     def __init__(self, xml_tag: str | StartTag):
         super().__init__(xml_tag)
-        self.tail = ""
+        self._tail = None
+
+    @property
+    def tail(self) -> str | None:
+        return self._tail
+
+
+@dataclass
+class Inline(Element):
+    def __init__(self, xml_tag: str | StartTag):
+        super().__init__(xml_tag)
+
+    @property
+    def tail(self) -> str:
+        return self._tail or ""
+
+    @tail.setter
+    def tail(self, value: str) -> None:
+        self._tail = value
 
 
 @dataclass
 class MixedContent:
     text: str
-    _children: list[Element]
+    _children: list[Inline]
 
-    def __init__(self, content: str | MixedContent | Iterable[Element] = ""):
-        super().__init__()
+    def __init__(self, content: str | MixedContent | Iterable[Inline] = ""):
         if isinstance(content, str):
             self.text = content
             self._children = []
@@ -55,10 +72,10 @@ class MixedContent:
             self.text = ""
             self._children = list(content)
 
-    def __iter__(self) -> Iterator[Element]:
+    def __iter__(self) -> Iterator[Inline]:
         return iter(self._children)
 
-    def append(self, e: Element) -> None:
+    def append(self, e: Inline) -> None:
         self._children.append(e)
 
     def append_text(self, s: str | None) -> None:
@@ -76,7 +93,7 @@ class MixedContent:
 
 
 @dataclass
-class MarkupElement(Element):
+class MarkupElement(Inline):
     _content: MixedContent
 
     def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
@@ -88,7 +105,7 @@ class MarkupElement(Element):
         return self._content
 
 
-class HtmlVoidElement(Element):
+class HtmlVoidElement(Inline):
     """HTML void element (such as <br />).
 
     Only HTML void elements should be serialized in the self-closing XML syntax.
@@ -97,7 +114,7 @@ class HtmlVoidElement(Element):
     """
 
 
-class WhitespaceElement(Element):
+class WhitespaceElement(Inline):
     """Baseprint XML whitespace-only element.
 
     To avoid interoperability problems between HTML and XML parsers,
@@ -144,14 +161,14 @@ class Citation(MarkupElement):
 
 
 @dataclass
-class CitationTuple(Element):
+class CitationTuple(Inline):
     _citations: list[Citation]
 
     def __init__(self, citations: Iterable[Citation] = ()) -> None:
         super().__init__('sup')
         self._citations = list(citations)
 
-    def __iter__(self) -> Iterator[Element]:
+    def __iter__(self) -> Iterator[Citation]:
         return iter(self._citations)
 
     def append(self, c: Citation) -> None:
@@ -164,5 +181,20 @@ class CitationTuple(Element):
         return len(self._citations)
 
 
-def make_paragraph(content: str | MixedContent = "") -> MarkupElement:
-    return MarkupElement('p', content)
+@dataclass
+class ParaBlock(Element):
+    _content: MixedContent
+
+    def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
+        super().__init__(xml_tag)
+        self._content = MixedContent(content)
+
+    @property
+    def content(self) -> MixedContent:
+        return self._content
+
+
+@dataclass
+class Paragraph(ParaBlock):
+    def __init__(self, content: str | MixedContent = ""):
+        super().__init__('p', content)

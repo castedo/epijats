@@ -17,17 +17,18 @@ def assert_not(x):
 XML = XmlFormatter(use_lxml=False)
 
 
+BLOCK_CASE = Path(__file__).parent / "cases" / "block"
 P_CHILD_CASE = Path(__file__).parent / "cases" / "p_child"
 
 
-def html_from_element(src: tree.Element) -> str:
+def html_from_element(src: tree.Inline) -> str:
     html = HtmlGenerator()
     content = MixedContent()
     content.append(src)
     return html.content_to_str(content)
 
 
-def parse_element(src: str | Path, model: kit.Model[kit.Element]):
+def parse_element(src: str | Path, model: kit.Model[kit.Inline]):
     if isinstance(src, Path):
         with open(src, "r") as f:
             src = f.read().strip()
@@ -45,18 +46,43 @@ def parse_element(src: str | Path, model: kit.Model[kit.Element]):
     return result.out
 
 
+@pytest.mark.parametrize("case", os.listdir(BLOCK_CASE))
+def test_roll_content_html(case):
+    case_dir = BLOCK_CASE / case
+    core = CoreModels(None)
+    jats_xml = case_dir / "jats.xml"
+    if jats_xml.exists():
+        block = parse_element(jats_xml.read_text(), core.p_level)
+        with open(case_dir / "expect.xml", "r") as f:
+            expected_xml_str = f.read().strip()
+    else:
+        with open(case_dir / "xhtml.xml", "r") as f:
+            expected_xml_str = f.read().strip()
+        block = parse_element(expected_xml_str, core.p_level)
+
+    assert XML.to_str(block) == expected_xml_str
+
+    expect_html = case_dir / "expect.html"
+    with open(expect_html, "r") as f:
+        expect = f.read().strip()
+    html = HtmlGenerator()
+    got = html.content_to_str(MixedContent([block]))
+    assert html.bare_tex == case.startswith("math")
+    assert got == expect
+
+
 @pytest.mark.parametrize("case", os.listdir(P_CHILD_CASE))
 def test_p_child_html(case):
     core = CoreModels(None)
     jats_xml = P_CHILD_CASE/ case / "jats.xml"
     if jats_xml.exists():
-        p_child = parse_element(jats_xml.read_text(), core.p_child)
+        p_child = parse_element(jats_xml.read_text(), core.hypertext)
         with open(P_CHILD_CASE / case / "expect.xml", "r") as f:
             expected_xml_str = f.read().strip()
     else:
         with open(P_CHILD_CASE / case / "xhtml.xml", "r") as f:
             expected_xml_str = f.read().strip()
-        p_child = parse_element(expected_xml_str, core.p_child)
+        p_child = parse_element(expected_xml_str, core.hypertext)
 
     assert XML.to_str(p_child) == expected_xml_str
 

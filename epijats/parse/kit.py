@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
 from .. import condition as fc
-from ..tree import Element, StartTag
+from ..tree import Inline, StartTag
 
 if TYPE_CHECKING:
     from ..xml import XmlElement
@@ -264,7 +264,7 @@ class LoadModel(Model[ParsedT]):
     def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
         parsed = self.load(log, xe)
         if parsed is not None:
-            if isinstance(parsed, Element) and xe.tail:
+            if isinstance(parsed, Inline) and xe.tail:
                 parsed.tail = xe.tail
             # mypy v1.9 has issue below but not v1.15
             dest(parsed)  # type: ignore[arg-type, unused-ignore]

@@ -8,6 +8,7 @@ from ..tree import (
     DataElement,
     Element,
     HtmlVoidElement,
+    Inline,
     MarkupElement,
     MixedContent,
     StartTag,
@@ -18,6 +19,7 @@ from .content import ArrayContentSession
 from .tree import (
     DataElementModel,
     EmptyElementModel,
+    ParaBlockModel,
     TextElementModel,
     parse_mixed_content,
 )
@@ -27,8 +29,8 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
-def minimally_formatted_text_model(content: Model[Element]) -> Model[Element]:
-    ret = kit.UnionModel[Element]()
+def minimally_formatted_text_model(content: Model[Inline]) -> Model[Inline]:
+    ret = kit.UnionModel[Inline]()
     ret |= TextElementModel('b', content, jats_tag='bold')
     ret |= TextElementModel('i', content, jats_tag='italic')
     ret |= TextElementModel('sub', content)
@@ -36,25 +38,24 @@ def minimally_formatted_text_model(content: Model[Element]) -> Model[Element]:
     return ret
 
 
-def blockquote_model(p_elements: Model[Element]) -> Model[Element]:
+def blockquote_model(roll_content: Model[Element]) -> Model[Element]:
     """<disp-quote> Quote, Displayed
     Like HTML <blockquote>.
 
     https://jats.nlm.nih.gov/archiving/tag-library/1.4/element/disp-quote.html
     """
-    p = TextElementModel('p', p_elements)
-    return DataElementModel('blockquote', p, jats_tag='disp-quote')
+    return DataElementModel('blockquote', roll_content, jats_tag='disp-quote')
 
 
-class BreakModel(kit.LoadModel[Element]):
+class BreakModel(kit.LoadModel[Inline]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['br', 'break']
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         return HtmlVoidElement('br')
 
 
-def break_model() -> Model[Element]:
+def break_model() -> Model[Inline]:
     """<break> Line Break
     Like HTML <br>.
 
@@ -63,27 +64,27 @@ def break_model() -> Model[Element]:
     return BreakModel()
 
 
-def formatted_text_model(content: Model[Element]) -> Model[Element]:
-    ret = kit.UnionModel[Element]()
+def formatted_text_model(content: Model[Inline]) -> Model[Inline]:
+    ret = kit.UnionModel[Inline]()
     ret |= minimally_formatted_text_model(content)
     ret |= TextElementModel('tt', content, jats_tag='monospace')
     return ret
 
 
-def hypotext_model() -> Model[Element]:
+def hypotext_model() -> Model[Inline]:
     # Corresponds to {HYPOTEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
-    ret = kit.UnionModel[Element]()
+    ret = kit.UnionModel[Inline]()
     ret |= formatted_text_model(ret)
     return ret
 
 
-class JatsExtLinkModel(kit.TagModelBase[Element]):
-    def __init__(self, content_model: Model[Element]):
+class JatsExtLinkModel(kit.TagModelBase[Inline]):
+    def __init__(self, content_model: Model[Inline]):
         super().__init__('ext-link')
         self.content_model = content_model
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
             log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
@@ -100,12 +101,12 @@ class JatsExtLinkModel(kit.TagModelBase[Element]):
             return ret
 
 
-class HtmlExtLinkModel(kit.TagModelBase[Element]):
-    def __init__(self, content_model: Model[Element]):
+class HtmlExtLinkModel(kit.TagModelBase[Inline]):
+    def __init__(self, content_model: Model[Inline]):
         super().__init__(StartTag('a', {'rel': 'external'}))
         self.content_model = content_model
 
-    def load(self, log: Log, xe: XmlElement) -> Element | None:
+    def load(self, log: Log, xe: XmlElement) -> Inline | None:
         kit.check_no_attrib(log, xe, ['rel', 'href'])
         href = xe.attrib.get('href')
         if href is None:
@@ -120,7 +121,7 @@ class HtmlExtLinkModel(kit.TagModelBase[Element]):
             return ret
 
 
-def ext_link_model(content_model: Model[Element]) -> Model[Element]:
+def ext_link_model(content_model: Model[Inline]) -> Model[Inline]:
     return JatsExtLinkModel(content_model) | HtmlExtLinkModel(content_model)
 
 
@@ -144,7 +145,7 @@ class PendingParagraph:
 class HtmlParagraphModel(Model[Element]):
     def __init__(
         self,
-        hypertext_model: Model[Element],
+        hypertext_model: Model[Inline],
         non_p_child_model: Model[Element] | None,
     ):
         self.hypertext_model = hypertext_model
@@ -203,12 +204,12 @@ class ListModel(kit.LoadModel[Element]):
         return ret
 
 
-def def_term_model(term_text: Model[Element]) -> Model[Element]:
+def def_term_model(term_text: Model[Inline]) -> Model[Element]:
     """<term> Definition List: Term
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
-    return TextElementModel('dt', term_text, jats_tag='term')
+    return ParaBlockModel('dt', term_text, jats_tag='term')
 
 
 def def_def_model(def_child: Model[Element]) -> Model[Element]:
@@ -220,7 +221,7 @@ def def_def_model(def_child: Model[Element]) -> Model[Element]:
 
 
 def def_item_model(
-    term_text: Model[Element], def_child: Model[Element]
+    term_text: Model[Inline], def_child: Model[Element]
 ) -> Model[Element]:
     """<def-item> Definition List: Definition Item
 
@@ -231,14 +232,14 @@ def def_item_model(
 
 
 def def_list_model(
-    hypertext_model: Model[Element], block_model: Model[Element]
+    hypertext_model: Model[Inline], block_model: Model[Element]
 ) -> Model[Element]:
     content_model = def_item_model(hypertext_model, block_model)
     return DataElementModel('dl', content_model, jats_tag='def-list')
 
 
 class TableCellModel(kit.TagModelBase[Element]):
-    def __init__(self, content_model: Model[Element], *, header: bool):
+    def __init__(self, content_model: Model[Inline], *, header: bool):
         super().__init__('th' if header else 'td')
         self.content_model = content_model
         self._ok_attrib_keys = {'align', 'colspan', 'rowspan'}
@@ -254,12 +255,12 @@ class TableCellModel(kit.TagModelBase[Element]):
         return ret
 
 
-def table_wrap_model(p_elements: Model[Element]) -> Model[Element]:
+def table_wrap_model(text: Model[Inline]) -> Model[Element]:
     col = EmptyElementModel('col', attrib={'span', 'width'}, is_html_tag=True)
     colgroup = DataElementModel('colgroup', col, optional_attrib={'span', 'width'})
     br = break_model()
-    th = TableCellModel(p_elements | br, header=True)
-    td = TableCellModel(p_elements | br, header=False)
+    th = TableCellModel(text | br, header=True)
+    td = TableCellModel(text | br, header=False)
     tr = DataElementModel('tr', th | td)
     thead = DataElementModel('thead', tr)
     tbody = DataElementModel('tbody', tr)

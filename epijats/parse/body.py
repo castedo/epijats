@@ -9,6 +9,7 @@ from ..tree import (
     Citation,
     CitationTuple,
     Element,
+    Inline,
     MixedContent,
 )
 
@@ -32,7 +33,7 @@ from .htmlish import (
 )
 from .tree import (
     MixedContentModelBase,
-    TextElementModel,
+    ParaBlockModel,
     parse_mixed_content,
 )
 from .math import disp_formula_model, inline_formula_model
@@ -42,11 +43,11 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
-def hypertext_model(biblio: BiblioRefPool | None) -> Model[Element]:
+def hypertext_model(biblio: BiblioRefPool | None) -> Model[Inline]:
     # Corresponds to {HYPERTEXT} in BpDF spec ed.2
     # but with experimental inline math element too
     hypotext = hypotext_model()
-    hypertext = kit.UnionModel[Element]()
+    hypertext = kit.UnionModel[Inline]()
     if biblio:
         # model for <sup>~CITE must preempt regular <sup> model
         hypertext |= AutoCorrectCitationModel(biblio)
@@ -63,16 +64,15 @@ class CoreModels:
         self.hypertext = hypertext_model(biblio)
         self.heading_text = self.hypertext | break_model()
         block = kit.UnionModel[Element]()
-        p = HtmlParagraphModel(self.hypertext, block)
-        self.p_level = block | p
-        self.p_child = self.hypertext | block
+        block |= HtmlParagraphModel(self.hypertext, block)
         block |= disp_formula_model()
-        block |= TextElementModel('code', self.hypertext)
-        block |= TextElementModel('pre', self.hypertext, jats_tag='preformat')
-        block |= ListModel(self.p_level)
-        block |= def_list_model(self.hypertext, self.p_level)
-        block |= blockquote_model(self.p_child)
-        block |= table_wrap_model(self.p_child)
+        block |= ParaBlockModel('code', self.hypertext)
+        block |= ParaBlockModel('pre', self.hypertext, jats_tag='preformat')
+        block |= ListModel(block)
+        block |= def_list_model(self.hypertext, block)
+        block |= blockquote_model(block)
+        block |= table_wrap_model(self.hypertext)
+        self.p_level = block
 
 
 class BiblioRefPool:
@@ -146,7 +146,7 @@ class CitationModel(kit.LoadModel[Citation]):
         return ret
 
 
-class AutoCorrectCitationModel(kit.LoadModel[Element]):
+class AutoCorrectCitationModel(kit.LoadModel[Inline]):
     def __init__(self, biblio: BiblioRefPool):
         submodel = CitationModel(biblio)
         self._submodel = submodel
@@ -154,7 +154,7 @@ class AutoCorrectCitationModel(kit.LoadModel[Element]):
     def match(self, xe: XmlElement) -> bool:
         return self._submodel.match(xe)
 
-    def load(self, log: Log, e: XmlElement) -> CitationTuple | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         citation = self._submodel.load(log, e)
         if citation:
             return CitationTuple([citation])
@@ -199,7 +199,7 @@ class CitationRangeHelper:
         self.stopper = None
 
 
-class CitationTupleModel(kit.LoadModel[Element]):
+class CitationTupleModel(kit.LoadModel[Inline]):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__()
         self._submodel = CitationModel(biblio)
@@ -210,7 +210,7 @@ class CitationTupleModel(kit.LoadModel[Element]):
         # But no known archived baseprint did this.
         return xe.tag == 'sup' and any(c.tag == 'xref' for c in xe)
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         kit.check_no_attrib(log, e)
         range_helper = CitationRangeHelper(log, self._submodel.biblio)
         if not range_helper.is_tuple_open(e.text):
@@ -228,8 +228,8 @@ class CitationTupleModel(kit.LoadModel[Element]):
         return ret if len(ret) else None
 
 
-class JatsCrossReferenceModel(kit.LoadModel[Element]):
-    def __init__(self, content_model: Model[Element], biblio: BiblioRefPool | None):
+class JatsCrossReferenceModel(kit.LoadModel[Inline]):
+    def __init__(self, content_model: Model[Inline], biblio: BiblioRefPool | None):
         self.content_model = content_model
         self.biblio = biblio
 
@@ -241,7 +241,7 @@ class JatsCrossReferenceModel(kit.LoadModel[Element]):
             return False
         return not (self.biblio and self.biblio.is_bibr_rid(xe.attrib.get("rid")))
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> Inline | None:
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
             del e.attrib["alt"]
@@ -255,14 +255,14 @@ class JatsCrossReferenceModel(kit.LoadModel[Element]):
         return ret
 
 
-class HtmlCrossReferenceModel(kit.LoadModel[Element]):
-    def __init__(self, content_model: Model[Element]):
+class HtmlCrossReferenceModel(kit.LoadModel[Inline]):
+    def __init__(self, content_model: Model[Inline]):
         self.content_model = content_model
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'a' and 'rel' not in xe.attrib
 
-    def load(self, log: Log, xe: XmlElement) -> Element | None:
+    def load(self, log: Log, xe: XmlElement) -> Inline | None:
         kit.check_no_attrib(log, xe, ['href'])
         href = xe.attrib.get("href")
         if href is None:
@@ -278,14 +278,14 @@ class HtmlCrossReferenceModel(kit.LoadModel[Element]):
 
 
 def cross_reference_model(
-    content_model: Model[Element], biblio: BiblioRefPool | None
-) -> Model[Element]:
+    content_model: Model[Inline], biblio: BiblioRefPool | None
+) -> Model[Inline]:
     jats_xref = JatsCrossReferenceModel(content_model, biblio)
     return jats_xref | HtmlCrossReferenceModel(content_model)
 
 
 class SectionTitleMonoModel(MixedContentModelBase):
-    def __init__(self, child_model: Model[Element]):
+    def __init__(self, child_model: Model[Inline]):
         super().__init__(child_model)
 
     def match(self, xe: XmlElement) -> bool:
