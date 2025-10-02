@@ -10,7 +10,14 @@ from . import baseprint as bp
 from . import dom
 from .parse import parse_baseprint
 from .parse.kit import Log, nolog
-from .tree import DataElement, MarkupElement, MixedContent, StartTag, WhitespaceElement
+from .tree import (
+    DataElement,
+    ElementOnlyContent,
+    MarkupElement,
+    MixedContent,
+    StartTag,
+    WhitespaceElement,
+)
 from .xml import XmlFormatter
 
 if TYPE_CHECKING:
@@ -30,11 +37,11 @@ def title_group(src: MixedContent | None) -> DataElement:
 def person_name(src: baseprint.PersonName) -> DataElement:
     ret = DataElement('name')
     if src.surname:
-        ret.append(MarkupElement('surname', src.surname))
+        ret.content.append(MarkupElement('surname', src.surname))
     if src.given_names:
-        ret.append(MarkupElement('given-names', src.given_names))
+        ret.content.append(MarkupElement('given-names', src.given_names))
     if src.suffix:
-        ret.append(MarkupElement('suffix', src.suffix))
+        ret.content.append(MarkupElement('suffix', src.suffix))
     return ret
 
 
@@ -43,17 +50,17 @@ def contrib(src: baseprint.Author) -> DataElement:
     if src.orcid:
         url = str(src.orcid)
         xml_stag = StartTag('contrib-id', {'contrib-id-type': 'orcid'})
-        ret.append(MarkupElement(xml_stag, url))
-    ret.append(person_name(src.name))
+        ret.content.append(MarkupElement(xml_stag, url))
+    ret.content.append(person_name(src.name))
     if src.email:
-        ret.append(MarkupElement('email', src.email))
+        ret.content.append(MarkupElement('email', src.email))
     return ret
 
 
 def contrib_group(src: list[baseprint.Author]) -> DataElement:
     ret = DataElement('contrib-group')
     for a in src:
-        ret.append(contrib(a))
+        ret.content.append(contrib(a))
     return ret
 
 
@@ -63,17 +70,17 @@ def license(src: baseprint.License) -> DataElement:
     license_ref.content.text = src.license_ref
     if src.cc_license_type:
         license_ref.xml.attrib['content-type'] = src.cc_license_type
-    ret.append(license_ref)
-    ret.append(MarkupElement('license-p', src.license_p))
+    ret.content.append(license_ref)
+    ret.content.append(MarkupElement('license-p', src.license_p))
     return ret
 
 
 def permissions(src: baseprint.Permissions) -> DataElement:
     ret = DataElement('permissions')
     if src.copyright is not None:
-        ret.append(MarkupElement('copyright-statement', src.copyright.statement))
+        ret.content.append(MarkupElement('copyright-statement', src.copyright.statement))
     if src.license is not None:
-        ret.append(license(src.license))
+        ret.content.append(license(src.license))
     return ret
 
 
@@ -91,10 +98,10 @@ def proto_section(
         ret.xml.attrib['id'] = xid
     if title is not None:
         t = MarkupElement(f"h{level}", title)
-        ret.append(t)
-    ret.extend(src.presection)
+        ret.content.append(t)
+    ret.content.extend(src.presection)
     for ss in src.subsections:
-        ret.append(proto_section('section', ss, level, ss.id, ss.title))
+        ret.content.append(proto_section('section', ss, level, ss.id, ss.title))
     return ret
 
 
@@ -102,7 +109,7 @@ def abstract(src: baseprint.Abstract) -> DataElement:
     return DataElement('abstract', src.blocks)
 
 
-def append_date_parts(src: baseprint.Date | None, dest: DataElement) -> None:
+def append_date_parts(src: baseprint.Date | None, dest: ElementOnlyContent) -> None:
     if src is not None:
         y = str(src.year)
         dest.append(MarkupElement('year', y))
@@ -118,15 +125,15 @@ def biblio_person_group(group_type: str, src: bp.PersonGroup) -> DataElement:
     ret = DataElement(StartTag('person-group', {'person-group-type': group_type}))
     for person in src.persons:
         if isinstance(person, bp.PersonName):
-            ret.append(person_name(person))
+            ret.content.append(person_name(person))
         else:
-            ret.append(MarkupElement('string-name', person))
+            ret.content.append(MarkupElement('string-name', person))
     if src.etal:
         # <etal> is not an HTML void element.
         # If it is saved as a self-closing XML element, an HTML parser
         # will not close the element until the next open tag
         # (probably merely resulting in whitespace content being added).
-        ret.append(WhitespaceElement('etal'))
+        ret.content.append(WhitespaceElement('etal'))
     return ret
 
 
@@ -134,26 +141,26 @@ def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
     stag = StartTag('element-citation')
     ec = DataElement(stag)
     if src.authors:
-        ec.append(biblio_person_group('author', src.authors))
+        ec.content.append(biblio_person_group('author', src.authors))
     if src.editors:
-        ec.append(biblio_person_group('editor', src.editors))
+        ec.content.append(biblio_person_group('editor', src.editors))
     if src.article_title:
-        ec.append(MarkupElement('article-title', src.article_title))
+        ec.content.append(MarkupElement('article-title', src.article_title))
     if src.source_title:
-        ec.append(MarkupElement('source-title', src.source_title))
+        ec.content.append(MarkupElement('source-title', src.source_title))
     if src.edition is not None:
-        ec.append(MarkupElement('edition', str(src.edition)))
-    append_date_parts(src.date, ec)
+        ec.content.append(MarkupElement('edition', str(src.edition)))
+    append_date_parts(src.date, ec.content)
     if src.access_date:
         ad = DataElement(StartTag('date-in-citation', {'content-type': 'access-date'}))
-        append_date_parts(src.access_date, ad)
-        ec.append(ad)
+        append_date_parts(src.access_date, ad.content)
+        ec.content.append(ad)
     for key, value in src.biblio_fields.items():
-        ec.append(MarkupElement(key, value))
+        ec.content.append(MarkupElement(key, value))
     for pub_id_type, value in src.pub_ids.items():
         ele = MarkupElement('pub-id', value)
         ele.xml.attrib['pub-id-type'] = pub_id_type
-        ec.append(ele)
+        ec.content.append(ele)
     ret = DataElement('ref', [ec])
     ret.xml.attrib['id'] = src.id
     return ret
@@ -162,27 +169,27 @@ def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
 def ref_list(src: baseprint.BiblioRefList) -> DataElement:
     ret = DataElement('ref-list', [])
     for ref in src.references:
-        ret.append(biblio_ref_item(ref))
+        ret.content.append(biblio_ref_item(ref))
     return ret
 
 
 def article(src: dom.Article) -> DataElement:
     article_meta = DataElement('article-meta')
     if src.title:
-        article_meta.append(title_group(src.title))
+        article_meta.content.append(title_group(src.title))
     if src.authors:
-        article_meta.append(contrib_group(src.authors))
+        article_meta.content.append(contrib_group(src.authors))
     if src.permissions:
-        article_meta.append(permissions(src.permissions))
+        article_meta.content.append(permissions(src.permissions))
     if src.abstract:
-        article_meta.append(abstract(src.abstract))
+        article_meta.content.append(abstract(src.abstract))
     ret = DataElement('article')
-    if len(article_meta):
-        ret.append(DataElement('front', [article_meta]))
+    if len(article_meta.content):
+        ret.content.append(DataElement('front', [article_meta]))
     if src.body.has_content(): 
-        ret.append(proto_section('article-body', src.body, 0))
+        ret.content.append(proto_section('article-body', src.body, 0))
     if src.ref_list is not None:
-        ret.append(DataElement('back', [ref_list(src.ref_list)]))
+        ret.content.append(DataElement('back', [ref_list(src.ref_list)]))
     return ret
 
 

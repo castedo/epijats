@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, Iterator
 
@@ -19,14 +20,15 @@ class StartTag:
 
 
 @dataclass
-class PureElement:
+class PureElement(ABC):
     xml: StartTag
 
     def __init__(self, xml_tag: str | StartTag):
         self.xml = StartTag(xml_tag)
 
-    def __iter__(self) -> Iterator[PureElement]:
-        return iter(())
+    @property
+    @abstractmethod
+    def content(self) -> MixedContent | ElementOnlyContent | str | None: ...
 
 
 @dataclass
@@ -54,6 +56,26 @@ class Inline(Element):
     @tail.setter
     def tail(self, value: str) -> None:
         self._tail = value
+
+
+@dataclass
+class ElementOnlyContent:
+    _children: list[PureElement]
+
+    def __init__(self, content: Iterable[PureElement] = ()):
+        self._children = list(content)
+
+    def __iter__(self) -> Iterator[PureElement]:
+        return iter(self._children)
+
+    def __len__(self) -> int:
+        return len(self._children)
+
+    def append(self, e: PureElement) -> None:
+        self._children.append(e)
+
+    def extend(self, es: Iterable[PureElement]) -> None:
+        self._children.extend(es)
 
 
 @dataclass
@@ -113,6 +135,10 @@ class HtmlVoidElement(Inline):
     on a tag name being in a closed fixed list of HTML void elements.
     """
 
+    @property
+    def content(self) -> None:
+        return None
+
 
 class WhitespaceElement(Inline):
     """Baseprint XML whitespace-only element.
@@ -122,30 +148,29 @@ class WhitespaceElement(Inline):
     to ensure XML parsers do not re-serialize to the self-closing XML syntax.
     """
 
+    @property
+    def content(self) -> None:
+        return None
+
 
 @dataclass
 class DataElement(Element):
-    _array: list[PureElement]
+    _content: ElementOnlyContent
 
     def __init__(
         self,
         xml_tag: str | StartTag,
-        array: Iterable[PureElement] = [],
+        array: Iterable[PureElement] = (),
     ):
         super().__init__(xml_tag)
-        self._array = list(array)
+        self._content = ElementOnlyContent(array)
 
     def __iter__(self) -> Iterator[PureElement]:
-        return iter(self._array)
+        return iter(self._content)
 
-    def __len__(self) -> int:
-        return len(self._array)
-
-    def append(self, e: PureElement) -> None:
-        self._array.append(e)
-
-    def extend(self, es: Iterable[PureElement]) -> None:
-        self._array.extend(es)
+    @property
+    def content(self) -> ElementOnlyContent:
+        return self._content
 
 
 @dataclass
@@ -167,6 +192,10 @@ class CitationTuple(Inline):
     def __init__(self, citations: Iterable[Citation] = ()) -> None:
         super().__init__('sup')
         self._citations = list(citations)
+
+    @property
+    def content(self) -> ElementOnlyContent:
+        return ElementOnlyContent(self._citations)
 
     def __iter__(self) -> Iterator[Citation]:
         return iter(self._citations)

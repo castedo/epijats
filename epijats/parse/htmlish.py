@@ -199,7 +199,7 @@ class ListModel(kit.LoadModel[Element]):
             tag = str(xe.tag)
         ret = DataElement(tag)
         sess = ArrayContentSession(log)
-        sess.bind(self._list_content, ret.append)
+        sess.bind(self._list_content, ret.content.append)
         sess.parse_content(xe)
         return ret
 

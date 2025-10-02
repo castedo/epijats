@@ -8,6 +8,7 @@ import xml.etree.ElementTree
 
 from .tree import (
     CitationTuple,
+    ElementOnlyContent,
     HtmlVoidElement,
     MarkupElement,
     MixedContent,
@@ -90,7 +91,9 @@ class IndentFormatter:
         self.sub = sub
         self.sep = sep
 
-    def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
+    def format_content(
+        self, src: ElementOnlyContent, level: int, dest: XmlElement
+    ) -> None:
         assert not isinstance(src, MarkupElement)
         last_newline = "\n" + "  " * level
         newline = "\n" + ("  " * (level + 1))
@@ -112,19 +115,23 @@ class CommonContentFormatter:
         self.default = IndentFormatter(sub)
 
     def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
-        if isinstance(src, MarkupElement):
+        if isinstance(src.content, str):
+            dest.text = src.content
+        elif isinstance(src.content, ElementOnlyContent):
+            self.default.format_content(src.content, level, dest)
+        elif isinstance(src.content, MixedContent):
             self.markup.format(src.content, level, dest)
         elif isinstance(src, HtmlVoidElement):
             # HTML void elements must be self-closing and all others not,
             # for compatibility with HTML parsers.
             dest.text = None
-        elif isinstance(src, WhitespaceElement):
+        else:
+            if not isinstance(src, WhitespaceElement):
+                warn(f"Unknown element {src.xml.tag} wihtout content")
             # For interop with both XML and HTML parsers,
             # a space will prevent XML parsers from converting a Baseprint XML
             # whitespace-only element to a self-closing XML tag.
             dest.text = ' '
-        else:
-            self.default.format_content(src, level, dest)
 
 
 def root_namespaces(src: XmlElement) -> XmlElement:
@@ -151,7 +158,7 @@ class XmlFormatter(ElementFormatter):
     def to_one_only(self, src: PureElement, level: int) -> XmlElement:
         ret: XmlElement = self.ET.Element(src.xml.tag, src.xml.attrib)
         if isinstance(src, CitationTuple):
-            self.citation.format_content(src, level, ret)
+            self.citation.format_content(src.content, level, ret)
         else:
             self.common.format_content(src, level, ret)
         return ret

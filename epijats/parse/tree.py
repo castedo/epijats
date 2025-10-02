@@ -78,7 +78,7 @@ class DataElementModel(kit.LoadModel[Element]):
         ret = DataElement(self.stag.tag)
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, ret.xml.attrib)
         sess = ArrayContentSession(log)
-        sess.bind(self.content_model, ret.append)
+        sess.bind(self.content_model, ret.content.append)
         sess.parse_content(xe)
         return ret
 

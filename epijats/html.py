@@ -56,6 +56,7 @@ HTML_FROM_XML = {
     'code': 'pre',
     'dd': 'dd',
     'blockquote': 'blockquote',
+    'def-item': 'div',
     'div': 'div',
     'dl': 'dl',
     'dt': 'dt',
@@ -79,10 +80,6 @@ class DefaultHtmlizer(BaseHtmlizer):
         super().__init__(html)
 
     def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
-        if src.xml.tag == 'def-item':
-            for it in src:
-                dest.extend(self.format(it, level))
-            return True
         E = ET.Element
         html_tag = HTML_FROM_XML.get(src.xml.tag)
         ret: XmlElement
