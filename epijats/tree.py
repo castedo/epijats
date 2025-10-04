@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeAlias
+from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
     from .xml import XmlElement
@@ -133,19 +133,60 @@ class MixedContent:
 
 
 Content: TypeAlias = MixedContent | ArrayContent | str
+ContentT = TypeVar('ContentT', MixedContent, ArrayContent, str)
+ContentCovT = TypeVar('ContentCovT', covariant=True, bound=Content)
+ElementT = TypeVar('ElementT', bound=PureElement)
+
+
+class Parent(Protocol, Generic[ElementT, ContentCovT]):
+    this: ElementT
+
+    @property
+    def content(self) -> ContentCovT: ...
 
 
 @dataclass
-class MarkupElement(Inline):
-    _content: MixedContent
+class ParentInline(Inline, Parent[Inline, ContentT]):
+    _content: ContentT
 
-    def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
+    def __init__(self, xml_tag: str | StartTag, content: ContentT):
         super().__init__(xml_tag)
-        self._content = MixedContent(content)
+        self._content = content
+        self.this: Inline = self
 
     @property
-    def content(self) -> MixedContent:
+    def content(self) -> ContentT:
         return self._content
+
+
+@dataclass
+class ParentItem(Element, Parent[Element, ContentT]):
+    _content: ContentT
+
+    def __init__(self, xml_tag: str | StartTag, content: ContentT):
+        super().__init__(xml_tag)
+        self._content = content
+        self.this: Element = self
+
+    @property
+    def content(self) -> ContentT:
+        return self._content
+
+
+class MarkupElement(ParentInline[MixedContent]):
+    def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
+        super().__init__(xml_tag, MixedContent(content))
+
+
+class DataElement(ParentItem[ArrayContent]):
+    def __init__(self, xml_tag: str | StartTag, array: Iterable[PureElement] = ()):
+        super().__init__(xml_tag, ArrayContent(array))
+
+
+@dataclass
+class Paragraph(ParentItem[MixedContent]):
+    def __init__(self, content: str | MixedContent = ""):
+        super().__init__('p', MixedContent(content))
 
 
 class HtmlVoidElement(Inline):
@@ -172,26 +213,6 @@ class WhitespaceElement(Inline):
     @property
     def content(self) -> None:
         return None
-
-
-@dataclass
-class DataElement(Element):
-    _content: ArrayContent
-
-    def __init__(
-        self,
-        xml_tag: str | StartTag,
-        array: Iterable[PureElement] = (),
-    ):
-        super().__init__(xml_tag)
-        self._content = ArrayContent(array)
-
-    def __iter__(self) -> Iterator[PureElement]:
-        return iter(self._content)
-
-    @property
-    def content(self) -> ArrayContent:
-        return self._content
 
 
 @dataclass
@@ -229,22 +250,3 @@ class CitationTuple(Inline):
 
     def __len__(self) -> int:
         return len(self._citations)
-
-
-@dataclass
-class ParaBlock(Element):
-    _content: MixedContent
-
-    def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
-        super().__init__(xml_tag)
-        self._content = MixedContent(content)
-
-    @property
-    def content(self) -> MixedContent:
-        return self._content
-
-
-@dataclass
-class Paragraph(ParaBlock):
-    def __init__(self, content: str | MixedContent = ""):
-        super().__init__('p', content)

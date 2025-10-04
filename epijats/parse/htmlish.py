@@ -19,10 +19,10 @@ from .content import ArrayContentSession
 from .tree import (
     ArrayContentMold,
     EmptyElementModel,
+    InlineModel,
     ItemModel,
     MixedContentMold,
     TagMold,
-    TextElementModel,
     parse_mixed_content,
 )
 from .kit import Log, Model, Sink
@@ -31,13 +31,25 @@ if TYPE_CHECKING:
     from ..xml import XmlElement
 
 
+def markup_model(
+    tag: str, child_model: Model[Inline], *, jats_tag: str | None = None
+) -> Model[Inline]:
+    tm = TagMold(tag, jats_tag=jats_tag)
+    return InlineModel(tm, MixedContentMold(child_model))
+
+
 def minimally_formatted_text_model(content: Model[Inline]) -> Model[Inline]:
     ret = kit.UnionModel[Inline]()
-    ret |= TextElementModel('b', content, jats_tag='bold')
-    ret |= TextElementModel('i', content, jats_tag='italic')
-    ret |= TextElementModel('sub', content)
-    ret |= TextElementModel('sup', content)
+    ret |= markup_model('b', content, jats_tag='bold')
+    ret |= markup_model('i', content, jats_tag='italic')
+    ret |= markup_model('sub', content)
+    ret |= markup_model('sup', content)
     return ret
+
+
+def preformat_model(hypertext: Model[Inline]) -> Model[Element]:
+    tm = TagMold('pre', jats_tag='preformat')
+    return ItemModel(tm, MixedContentMold(hypertext))
 
 
 def blockquote_model(block_model: Model[Element]) -> Model[Element]:
@@ -48,7 +60,6 @@ def blockquote_model(block_model: Model[Element]) -> Model[Element]:
     """
     tm = TagMold('blockquote', jats_tag='disp-quote')
     return ItemModel(tm, ArrayContentMold(block_model))
-
 
 
 class BreakModel(kit.LoadModel[Inline]):
@@ -68,10 +79,15 @@ def break_model() -> Model[Inline]:
     return BreakModel()
 
 
+def code_model(hypertext: Model[Inline]) -> Model[Element]:
+    # TODO: flip to Model[Inline]
+    return ItemModel(TagMold('code'), MixedContentMold(hypertext))
+
+
 def formatted_text_model(content: Model[Inline]) -> Model[Inline]:
     ret = kit.UnionModel[Inline]()
     ret |= minimally_formatted_text_model(content)
-    ret |= TextElementModel('tt', content, jats_tag='monospace')
+    ret |= markup_model('tt', content, jats_tag='monospace')
     return ret
 
 

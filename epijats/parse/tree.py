@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Generic, Protocol, TYPE_CHECKING, TypeVar
+from typing import Generic, Protocol, TYPE_CHECKING
 
 from .. import condition as fc
 from ..tree import (
     ArrayContent,
-    Content,
+    ContentT,
     Element,
+    ElementT,
     HtmlVoidElement,
     Inline,
     MixedContent,
+    Parent,
+    ParentInline,
+    ParentItem,
     PureElement,
     StartTag,
     WhitespaceElement,
@@ -80,8 +84,6 @@ class TagMold:
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
 
 
-ContentT = TypeVar('ContentT', MixedContent, ArrayContent, str)
-ContentCovT = TypeVar('ContentCovT', covariant=True, bound=Content)
 
 
 class ContentMold(Protocol, Generic[ContentT]):
@@ -110,38 +112,6 @@ class ArrayContentMold(ContentMold[ArrayContent]):
         sess.parse_content(xe)
 
 
-ElementT = TypeVar('ElementT', bound=PureElement)
-
-
-class Parent(Protocol, Generic[ElementT, ContentCovT]):
-    this: ElementT
-
-    @property
-    def content(self) -> ContentCovT: ...
-
-
-class ParentInline(Inline, Parent[Inline, ContentT]):
-    def __init__(self, xml_tag: str | StartTag, content: type[ContentT]):
-        super().__init__(xml_tag)
-        self._content: ContentT = content()
-        self.this: Inline = self
-
-    @property
-    def content(self) -> ContentT:
-        return self._content
-
-
-class ParentItem(Element, Parent[Element, ContentT]):
-    def __init__(self, xml_tag: str | StartTag, content: type[ContentT]):
-        super().__init__(xml_tag)
-        self._content: ContentT = content()
-        self.this: Element = self
-
-    @property
-    def content(self) -> ContentT:
-        return self._content
-
-
 class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
     def __init__(self, mold: TagMold, content_mold: ContentMold[ContentT]):
         self.tag_mold = mold
@@ -165,37 +135,11 @@ class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
 
 class InlineModel(ElementModelBase[Inline, ContentT]):
     def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Inline, ContentT] | None:
-        return ParentInline(stag, content)
+        return ParentInline(stag, content())
 
 class ItemModel(ElementModelBase[Element, ContentT]):
     def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Element, ContentT] | None:
-        return ParentItem(stag, content)
-
-
-class TextElementModel(InlineModel[MixedContent]):
-    def __init__(
-        self,
-        tag: str,
-        content_model: Model[Inline],
-        *,
-        jats_tag: str | None = None,
-    ):
-        tm = TagMold(tag, jats_tag=jats_tag)
-        cm = MixedContentMold(content_model)
-        super().__init__(tm, cm)
-
-
-class ParaBlockModel(ItemModel[MixedContent]):
-    def __init__(
-        self,
-        tag: str,
-        content_model: Model[Inline],
-        *,
-        jats_tag: str | None = None,
-    ):
-        tm = TagMold(tag, jats_tag=jats_tag)
-        cm = MixedContentMold(content_model)
-        super().__init__(tm, cm)
+        return ParentItem(stag, content())
 
 
 class MixedContentModelBase(kit.MonoModel[MixedContent]):

@@ -23,17 +23,18 @@ from .kit import Log, Model
 from .htmlish import (
     HtmlParagraphModel,
     ListModel,
-    break_model,
-    def_list_model,
     blockquote_model,
+    break_model,
+    code_model,
+    def_list_model,
     ext_link_model,
     formatted_text_model,
     hypotext_model,
+    preformat_model,
     table_wrap_model,
 )
 from .tree import (
     MixedContentModelBase,
-    ParaBlockModel,
     parse_mixed_content,
 )
 from .math import disp_formula_model, inline_formula_model
@@ -66,8 +67,8 @@ class CoreModels:
         block = kit.UnionModel[Element]()
         block |= HtmlParagraphModel(self.hypertext, block)
         block |= disp_formula_model()
-        block |= ParaBlockModel('code', self.hypertext)
-        block |= ParaBlockModel('pre', self.hypertext, jats_tag='preformat')
+        block |= code_model(self.hypertext)
+        block |= preformat_model(self.hypertext)
         block |= ListModel(block)
         block |= def_list_model(self.hypertext, block)
         block |= blockquote_model(block)
