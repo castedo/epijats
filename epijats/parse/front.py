@@ -8,7 +8,7 @@ from .. import dom
 from ..tree import Element, Inline, MixedContent
 
 from . import kit
-from .kit import Log, Model, tag_model
+from .kit import Log, Model, LoaderTagModel as tag_model
 
 from .content import (
     ArrayContentSession,

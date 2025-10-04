@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from .tree import DataElement, ElementOnlyContent, Inline, MarkupElement, StartTag
+from .tree import DataElement, ArrayContent, Inline, MarkupElement, StartTag
 
 
 MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
@@ -36,10 +36,10 @@ class FormulaElement(Inline):
         self.mathml = None
 
     @property
-    def content(self) -> ElementOnlyContent:
+    def content(self) -> ArrayContent:
         alts = DataElement("alternatives")
         if self.tex:
             alts.content.append(MarkupElement('tex-math', self.tex))
         if self.mathml:
             alts.content.append(self.mathml)
-        return ElementOnlyContent((alts,))
+        return ArrayContent((alts,))

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Iterable, Iterator
+from typing import TYPE_CHECKING, TypeAlias
+
+if TYPE_CHECKING:
+    from .xml import XmlElement
 
 
 @dataclass
@@ -10,13 +14,27 @@ class StartTag:
     tag: str
     attrib: dict[str, str]
 
-    def __init__(self, tag: str | StartTag, attrib: dict[str, str] = {}):
+    def __init__(self, tag: str | StartTag, attrib: Mapping[str, str] = {}):
         if isinstance(tag, str):
             self.tag = tag
-            self.attrib = attrib.copy()
+            self.attrib = dict(attrib)
         else:
             self.tag = tag.tag
-            self.attrib = tag.attrib | attrib
+            self.attrib = tag.attrib.copy()
+            self.attrib.update(attrib)
+
+    @staticmethod
+    def from_xml(xe: XmlElement) -> StartTag | None:
+        attrib = dict(**xe.attrib)
+        return StartTag(xe.tag, attrib) if isinstance(xe.tag, str) else None
+
+    def issubset(self, other: StartTag) -> bool:
+        if self.tag != other.tag:
+            return False
+        for key, value in self.attrib.items():
+            if other.attrib.get(key) != value:
+                return False
+        return True
 
 
 @dataclass
@@ -28,7 +46,7 @@ class PureElement(ABC):
 
     @property
     @abstractmethod
-    def content(self) -> MixedContent | ElementOnlyContent | str | None: ...
+    def content(self) -> Content | None: ...
 
 
 @dataclass
@@ -42,6 +60,9 @@ class Element(PureElement):
     @property
     def tail(self) -> str | None:
         return self._tail
+
+
+Item = Element
 
 
 @dataclass
@@ -59,7 +80,7 @@ class Inline(Element):
 
 
 @dataclass
-class ElementOnlyContent:
+class ArrayContent:
     _children: list[PureElement]
 
     def __init__(self, content: Iterable[PureElement] = ()):
@@ -114,6 +135,9 @@ class MixedContent:
         return not self._children and not self.text.strip()
 
 
+Content: TypeAlias = MixedContent | ArrayContent | str
+
+
 @dataclass
 class MarkupElement(Inline):
     _content: MixedContent
@@ -155,7 +179,7 @@ class WhitespaceElement(Inline):
 
 @dataclass
 class DataElement(Element):
-    _content: ElementOnlyContent
+    _content: ArrayContent
 
     def __init__(
         self,
@@ -163,13 +187,13 @@ class DataElement(Element):
         array: Iterable[PureElement] = (),
     ):
         super().__init__(xml_tag)
-        self._content = ElementOnlyContent(array)
+        self._content = ArrayContent(array)
 
     def __iter__(self) -> Iterator[PureElement]:
         return iter(self._content)
 
     @property
-    def content(self) -> ElementOnlyContent:
+    def content(self) -> ArrayContent:
         return self._content
 
 
@@ -194,8 +218,8 @@ class CitationTuple(Inline):
         self._citations = list(citations)
 
     @property
-    def content(self) -> ElementOnlyContent:
-        return ElementOnlyContent(self._citations)
+    def content(self) -> ArrayContent:
+        return ArrayContent(self._citations)
 
     def __iter__(self) -> Iterator[Citation]:
         return iter(self._citations)

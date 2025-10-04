@@ -329,10 +329,6 @@ class LoaderTagModel(TagModelBase[ParsedT]):
         return self._loader(log, e)
 
 
-def tag_model(tag: str, loader: Loader[ParsedT]) -> Model[ParsedT]:
-    return LoaderTagModel(tag, loader)
-
-
 class OnlyOnceParser(Parser):
     def __init__(self, log: Log, parser: Parser):
         self.log = log

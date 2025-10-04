@@ -12,7 +12,7 @@ from .parse import parse_baseprint
 from .parse.kit import Log, nolog
 from .tree import (
     DataElement,
-    ElementOnlyContent,
+    ArrayContent,
     MarkupElement,
     MixedContent,
     StartTag,
@@ -109,7 +109,7 @@ def abstract(src: baseprint.Abstract) -> DataElement:
     return DataElement('abstract', src.blocks)
 
 
-def append_date_parts(src: baseprint.Date | None, dest: ElementOnlyContent) -> None:
+def append_date_parts(src: baseprint.Date | None, dest: ArrayContent) -> None:
     if src is not None:
         y = str(src.year)
         dest.append(MarkupElement('year', y))

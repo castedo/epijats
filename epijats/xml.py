@@ -8,9 +8,8 @@ import xml.etree.ElementTree
 
 from .tree import (
     CitationTuple,
-    ElementOnlyContent,
+    ArrayContent,
     HtmlVoidElement,
-    MarkupElement,
     MixedContent,
     PureElement,
     WhitespaceElement,
@@ -71,7 +70,7 @@ class MarkupFormatter:
     def format(self, src: MixedContent, level: int, dest: XmlElement) -> None:
         dest.text = src.text
         for it in src:
-            sublevel = level if isinstance(it, MarkupElement) else level + 1
+            sublevel = level if isinstance(it.content, MixedContent) else level + 1
             for sub in self.sub.format(it, sublevel):
                 dest.append(sub)  # type: ignore[arg-type]
             append_content(it.tail, dest)
@@ -92,9 +91,8 @@ class IndentFormatter:
         self.sep = sep
 
     def format_content(
-        self, src: ElementOnlyContent, level: int, dest: XmlElement
+        self, src: ArrayContent, level: int, dest: XmlElement
     ) -> None:
-        assert not isinstance(src, MarkupElement)
         last_newline = "\n" + "  " * level
         newline = "\n" + ("  " * (level + 1))
         sub: XmlElement | None = None
@@ -117,7 +115,7 @@ class CommonContentFormatter:
     def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
         if isinstance(src.content, str):
             dest.text = src.content
-        elif isinstance(src.content, ElementOnlyContent):
+        elif isinstance(src.content, ArrayContent):
             self.default.format_content(src.content, level, dest)
         elif isinstance(src.content, MixedContent):
             self.markup.format(src.content, level, dest)

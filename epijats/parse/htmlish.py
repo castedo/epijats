@@ -17,9 +17,11 @@ from ..tree import (
 from . import kit
 from .content import ArrayContentSession
 from .tree import (
-    DataElementModel,
+    ArrayContentMold,
     EmptyElementModel,
-    ParaBlockModel,
+    ItemModel,
+    MixedContentMold,
+    TagMold,
     TextElementModel,
     parse_mixed_content,
 )
@@ -38,13 +40,15 @@ def minimally_formatted_text_model(content: Model[Inline]) -> Model[Inline]:
     return ret
 
 
-def blockquote_model(roll_content: Model[Element]) -> Model[Element]:
+def blockquote_model(block_model: Model[Element]) -> Model[Element]:
     """<disp-quote> Quote, Displayed
     Like HTML <blockquote>.
 
     https://jats.nlm.nih.gov/archiving/tag-library/1.4/element/disp-quote.html
     """
-    return DataElementModel('blockquote', roll_content, jats_tag='disp-quote')
+    tm = TagMold('blockquote', jats_tag='disp-quote')
+    return ItemModel(tm, ArrayContentMold(block_model))
+
 
 
 class BreakModel(kit.LoadModel[Inline]):
@@ -184,7 +188,8 @@ class HtmlParagraphModel(Model[Element]):
 
 class ListModel(kit.LoadModel[Element]):
     def __init__(self, block_model: Model[Element]):
-        self._list_content = DataElementModel('li', block_model, jats_tag='list-item')
+        tm = TagMold('li', jats_tag='list-item')
+        self._list_content = ItemModel(tm, ArrayContentMold(block_model))
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['ul', 'ol', 'list']
@@ -209,7 +214,8 @@ def def_term_model(term_text: Model[Inline]) -> Model[Element]:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
-    return ParaBlockModel('dt', term_text, jats_tag='term')
+    tm = TagMold('dt', jats_tag='term')
+    return ItemModel(tm, MixedContentMold(term_text))
 
 
 def def_def_model(def_child: Model[Element]) -> Model[Element]:
@@ -217,7 +223,8 @@ def def_def_model(def_child: Model[Element]) -> Model[Element]:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
-    return DataElementModel('dd', def_child, jats_tag='def')
+    tm = TagMold('dd', jats_tag='def')
+    return ItemModel(tm, ArrayContentMold(def_child))
 
 
 def def_item_model(
@@ -227,15 +234,17 @@ def def_item_model(
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
     """
-    content_model = def_term_model(term_text) | def_def_model(def_child)
-    return DataElementModel('div', content_model, jats_tag='def-item')
+    tm = TagMold('div', jats_tag='def-item')
+    child_model = def_term_model(term_text) | def_def_model(def_child)
+    return ItemModel(tm, ArrayContentMold(child_model))
 
 
 def def_list_model(
     hypertext_model: Model[Inline], block_model: Model[Element]
 ) -> Model[Element]:
-    content_model = def_item_model(hypertext_model, block_model)
-    return DataElementModel('dl', content_model, jats_tag='def-list')
+    tm = TagMold('dl', jats_tag='def-list')
+    child_model = def_item_model(hypertext_model, block_model)
+    return ItemModel(tm, ArrayContentMold(child_model))
 
 
 class TableCellModel(kit.TagModelBase[Element]):
@@ -255,16 +264,24 @@ class TableCellModel(kit.TagModelBase[Element]):
         return ret
 
 
-def table_wrap_model(text: Model[Inline]) -> Model[Element]:
+def data_element_model(tag: str, child_model: Model[Element]) -> Model[Element]:
+    return ItemModel(TagMold(tag), ArrayContentMold(child_model))
+
+
+def col_group_model() -> Model[Element]:
     col = EmptyElementModel('col', attrib={'span', 'width'}, is_html_tag=True)
-    colgroup = DataElementModel('colgroup', col, optional_attrib={'span', 'width'})
+    tm = TagMold('colgroup', optional_attrib={'span', 'width'})
+    return ItemModel(tm, ArrayContentMold(col))
+
+
+def table_wrap_model(text: Model[Inline]) -> Model[Element]:
     br = break_model()
     th = TableCellModel(text | br, header=True)
     td = TableCellModel(text | br, header=False)
-    tr = DataElementModel('tr', th | td)
-    thead = DataElementModel('thead', tr)
-    tbody = DataElementModel('tbody', tr)
-    table = DataElementModel(
-        'table', colgroup | thead | tbody, optional_attrib={'frame', 'rules'}
-    )
-    return DataElementModel('table-wrap', table)
+    tr = data_element_model('tr', th | td)
+    thead = data_element_model('thead', tr)
+    tbody = data_element_model('tbody', tr)
+    table_mold = TagMold('table', optional_attrib={'frame', 'rules'})
+    content_parser = ArrayContentMold(col_group_model() | thead | tbody)
+    table = ItemModel(table_mold, content_parser)
+    return data_element_model('table-wrap', table)

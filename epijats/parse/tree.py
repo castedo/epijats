@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from abc import abstractmethod
+from typing import Generic, Protocol, TYPE_CHECKING, TypeVar
 
 from .. import condition as fc
 from ..tree import (
-    DataElement,
+    ArrayContent,
+    Content,
     Element,
     HtmlVoidElement,
     Inline,
-    MarkupElement,
+    Item,
     MixedContent,
+    PureElement,
     StartTag,
     WhitespaceElement,
 )
@@ -46,6 +49,7 @@ class EmptyElementModel(kit.TagModelBase[Element]):
     def load(self, log: Log, e: XmlElement) -> Element | None:
         klass = HtmlVoidElement if self.is_html_tag else WhitespaceElement
         ret = klass(self.tag)
+        kit.check_no_attrib(log, e, self._ok_attrib_keys)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         if e.text and e.text.strip():
             log(fc.IgnoredText.issue(e))
@@ -55,35 +59,121 @@ class EmptyElementModel(kit.TagModelBase[Element]):
         return ret
 
 
-class DataElementModel(kit.LoadModel[Element]):
+class TagMold:
     def __init__(
         self,
         tag: str | StartTag,
-        content_model: Model[Element],
         *,
         optional_attrib: set[str] = set(),
         jats_tag: str | None = None,
     ):
         self.stag = StartTag(tag)
-        self.content_model = content_model
         self._ok_attrib_keys = optional_attrib | set(self.stag.attrib.keys())
         self.jats_tag = jats_tag
 
-    def match(self, xe: XmlElement) -> bool:
-        if self.jats_tag is not None and xe.tag == self.jats_tag:
+    def match(self, stag: StartTag) -> bool:
+        if self.jats_tag is not None and stag.tag == self.jats_tag:
             return True
-        return kit.match_start_tag(xe, self.stag)
+        return self.stag.issubset(stag)
 
-    def load(self, log: Log, xe: XmlElement) -> Element | None:
-        ret = DataElement(self.stag.tag)
-        kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, ret.xml.attrib)
+    def copy_attributes(self, log: Log, xe: XmlElement, dest: PureElement) -> None:
+        kit.check_no_attrib(log, xe, self._ok_attrib_keys)
+        kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
+
+
+ContentT = TypeVar('ContentT', MixedContent, ArrayContent, str)
+ContentCovT = TypeVar('ContentCovT', covariant=True, bound=Content)
+
+
+class ContentMold(Protocol, Generic[ContentT]):
+    content_type: type[ContentT]
+
+    def read(self, log: Log, xe: XmlElement, dest: ContentT) -> None: ...
+
+
+class MixedContentMold(ContentMold[MixedContent]):
+    def __init__(self, child_model: Model[Inline]):
+        self.content_type = MixedContent
+        self.child_model = child_model
+
+    def read(self, log: Log, xe: XmlElement, dest: MixedContent) -> None:
+        parse_mixed_content(log, xe, self.child_model, dest)
+
+
+class ArrayContentMold(ContentMold[ArrayContent]):
+    def __init__(self, child_model: Model[Item]):
+        self.content_type = ArrayContent
+        self.child_model = child_model
+
+    def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
         sess = ArrayContentSession(log)
-        sess.bind(self.content_model, ret.content.append)
+        sess.bind(self.child_model, dest.append)
         sess.parse_content(xe)
-        return ret
 
 
-class TextElementModel(kit.LoadModel[Inline]):
+ElementT = TypeVar('ElementT', bound=PureElement)
+
+
+class Parent(Protocol, Generic[ElementT, ContentCovT]):
+    this: ElementT
+
+    @property
+    def content(self) -> ContentCovT: ...
+
+
+class ParentInline(Inline, Parent[Inline, ContentT]):
+    def __init__(self, xml_tag: str | StartTag, content: type[ContentT]):
+        super().__init__(xml_tag)
+        self._content: ContentT = content()
+        self.this: Inline = self
+
+    @property
+    def content(self) -> ContentT:
+        return self._content
+
+
+class ParentItem(Item, Parent[Item, ContentT]):
+    def __init__(self, xml_tag: str | StartTag, content: type[ContentT]):
+        super().__init__(xml_tag)
+        self._content: ContentT = content()
+        self.this: Item = self
+
+    @property
+    def content(self) -> ContentT:
+        return self._content
+
+
+class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
+    def __init__(self, mold: TagMold, content_mold: ContentMold[ContentT]):
+        self.tag_mold = mold
+        self.content_mold: ContentMold[ContentT] = content_mold
+
+    def match(self, xe: XmlElement) -> bool:
+        stag = StartTag.from_xml(xe)
+        return stag is not None and self.tag_mold.match(stag)
+
+    def load(self, log: Log, xe: XmlElement) -> ElementT | None:
+        ret = self.start(self.tag_mold.stag, self.content_mold.content_type)
+        if ret is not None:
+            self.tag_mold.copy_attributes(log, xe, ret.this)
+            self.content_mold.read(log, xe, ret.content)
+            return ret.this
+        return None
+
+    @abstractmethod
+    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[ElementT, ContentT] | None: ...
+
+
+class InlineModel(ElementModelBase[Inline, ContentT]):
+    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Inline, ContentT] | None:
+        return ParentInline(stag, content)
+
+class ItemModel(ElementModelBase[Item, ContentT]):
+    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Item, ContentT] | None:
+        return ParentItem(stag, content)
+
+
+class TextElementModel(InlineModel[MixedContent]):
     def __init__(
         self,
         tag: str,
@@ -91,26 +181,12 @@ class TextElementModel(kit.LoadModel[Inline]):
         *,
         jats_tag: str | None = None,
     ):
-        self.tag = tag
-        self.content_model = content_model
-        self.jats_tag = jats_tag
-
-    def match(self, xe: XmlElement) -> bool:
-        if self.jats_tag is not None and xe.tag == self.jats_tag:
-            return True
-        return xe.tag == self.tag
-
-    def check(self, log: Log, e: XmlElement) -> None:
-        kit.check_no_attrib(log, e)
-
-    def load(self, log: Log, e: XmlElement) -> Inline | None:
-        self.check(log, e)
-        ret = MarkupElement(self.tag)
-        parse_mixed_content(log, e, self.content_model, ret.content)
-        return ret
+        tm = TagMold(tag, jats_tag=jats_tag)
+        cm = MixedContentMold(content_model)
+        super().__init__(tm, cm)
 
 
-class ParaBlockModel(kit.LoadModel[Element]):
+class ParaBlockModel(ItemModel[MixedContent]):
     def __init__(
         self,
         tag: str,
@@ -118,23 +194,9 @@ class ParaBlockModel(kit.LoadModel[Element]):
         *,
         jats_tag: str | None = None,
     ):
-        self.tag = tag
-        self.content_model = content_model
-        self.jats_tag = jats_tag
-
-    def match(self, xe: XmlElement) -> bool:
-        if self.jats_tag is not None and xe.tag == self.jats_tag:
-            return True
-        return xe.tag == self.tag
-
-    def check(self, log: Log, e: XmlElement) -> None:
-        kit.check_no_attrib(log, e)
-
-    def load(self, log: Log, e: XmlElement) -> Element | None:
-        self.check(log, e)
-        ret = MarkupElement(self.tag)
-        parse_mixed_content(log, e, self.content_model, ret.content)
-        return ret
+        tm = TagMold(tag, jats_tag=jats_tag)
+        cm = MixedContentMold(content_model)
+        super().__init__(tm, cm)
 
 
 class MixedContentModelBase(kit.MonoModel[MixedContent]):

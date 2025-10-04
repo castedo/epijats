@@ -97,7 +97,7 @@ class FormulaAlternativesModel(kit.TagModelBase[Inline]):
     def load(self, log: Log, e: XmlElement) -> Inline | None:
         kit.check_no_attrib(log, e)
         cp = ArrayContentSession(log)
-        tex = cp.one(kit.tag_model('tex-math', kit.load_string))
+        tex = cp.one(kit.LoaderTagModel('tex-math', kit.load_string))
         mathml = cp.one(MathmlElementModel('math'))
         cp.parse_content(e)
         if not tex.out:

@@ -10,7 +10,7 @@ from .content import (
     ArrayContentSession,
 )
 from . import kit
-from .kit import Log, tag_model
+from .kit import Log, LoaderTagModel as tag_model
 from .tree import EmptyElementModel
 
 if TYPE_CHECKING:
