@@ -62,9 +62,6 @@ class Element(PureElement):
         return self._tail
 
 
-Item = Element
-
-
 @dataclass
 class Inline(Element):
     def __init__(self, xml_tag: str | StartTag):

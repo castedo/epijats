@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from ..math import (
     MATHML_NAMESPACE_PREFIX,
@@ -111,12 +111,14 @@ class FormulaAlternativesModel(kit.TagModelBase[Inline]):
         return ret
 
 
-class FormulaModel(kit.TagModelBase[Inline]):
+InlineOrElement = TypeVar('InlineOrElement', Inline, Element)
+
+class FormulaModel(kit.TagModelBase[InlineOrElement]):
     def __init__(self, formula_style: FormulaStyle):
         super().__init__(formula_style.jats_tag)
         self.child_model = FormulaAlternativesModel(formula_style)
 
-    def load(self, log: Log, xe: XmlElement) -> Inline | None:
+    def load(self, log: Log, xe: XmlElement) -> InlineOrElement | None:
         kit.check_no_attrib(log, xe)
         sess = ArrayContentSession(log)
         result = sess.one(self.child_model)
@@ -132,20 +134,9 @@ def inline_formula_model() -> kit.Model[Inline]:
     return FormulaModel(FormulaStyle.INLINE)
 
 
-class CastModel(kit.Model[Element]):
-    def __init__(self, model: kit.Model[Inline]):
-        self.model = model
-
-    def match(self, xe: XmlElement) -> bool:
-        return self.model.match(xe)
-
-    def parse(self, log: Log, xe: XmlElement, dest: kit.Sink[Element]) -> bool:
-        return self.model.parse(log, xe, dest)
-
-
 def disp_formula_model() -> kit.Model[Element]:
     """<disp-formula> Formula, Display
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/disp-formula.html
     """
-    return CastModel(FormulaModel(FormulaStyle.DISPLAY))
+    return FormulaModel(FormulaStyle.DISPLAY)

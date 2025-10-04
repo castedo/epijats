@@ -12,7 +12,6 @@ from ..tree import (
     Element,
     HtmlVoidElement,
     Inline,
-    Item,
     MixedContent,
     PureElement,
     StartTag,
@@ -101,7 +100,7 @@ class MixedContentMold(ContentMold[MixedContent]):
 
 
 class ArrayContentMold(ContentMold[ArrayContent]):
-    def __init__(self, child_model: Model[Item]):
+    def __init__(self, child_model: Model[Element]):
         self.content_type = ArrayContent
         self.child_model = child_model
 
@@ -132,11 +131,11 @@ class ParentInline(Inline, Parent[Inline, ContentT]):
         return self._content
 
 
-class ParentItem(Item, Parent[Item, ContentT]):
+class ParentItem(Element, Parent[Element, ContentT]):
     def __init__(self, xml_tag: str | StartTag, content: type[ContentT]):
         super().__init__(xml_tag)
         self._content: ContentT = content()
-        self.this: Item = self
+        self.this: Element = self
 
     @property
     def content(self) -> ContentT:
@@ -168,8 +167,8 @@ class InlineModel(ElementModelBase[Inline, ContentT]):
     def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Inline, ContentT] | None:
         return ParentInline(stag, content)
 
-class ItemModel(ElementModelBase[Item, ContentT]):
-    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Item, ContentT] | None:
+class ItemModel(ElementModelBase[Element, ContentT]):
+    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Element, ContentT] | None:
         return ParentItem(stag, content)
 
 
