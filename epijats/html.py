@@ -88,9 +88,9 @@ class DefaultHtmlizer(BaseHtmlizer):
             ret = E(html_tag)
         elif isinstance(src, Citation):
             ret = E('a', {'href': '#' + src.rid})
-        elif isinstance(src, bp.CrossReference):
+        elif isinstance(src, dom.CrossReference):
             ret = E('a', {'href': '#' + src.rid})
-        elif isinstance(src, bp.ExternalHyperlink):
+        elif isinstance(src, dom.ExternalHyperlink):
             ret = E('a', {'href': src.href, 'rel': 'external'})
         else:
             return False

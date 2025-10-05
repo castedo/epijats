@@ -251,7 +251,7 @@ class JatsCrossReferenceModel(kit.LoadModel[Inline]):
         if rid is None:
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
-        ret = bp.CrossReference(rid)
+        ret = dom.CrossReference(rid)
         parse_mixed_content(log, e, self.content_model, ret.content)
         return ret
 
@@ -273,7 +273,7 @@ class HtmlCrossReferenceModel(kit.LoadModel[Inline]):
         if not href.startswith("#"):
             log(fc.InvalidAttributeValue.issue(xe, 'href', href))
             return None
-        ret = bp.CrossReference(href[1:])
+        ret = dom.CrossReference(href[1:])
         parse_mixed_content(log, xe, self.content_model, ret.content)
         return ret
 

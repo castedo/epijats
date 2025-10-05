@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import baseprint as bp
+from .. import dom
 from .. import condition as fc
 from ..tree import (
     DataElement,
@@ -116,7 +116,7 @@ class JatsExtLinkModel(kit.TagModelBase[Inline]):
             log(fc.MissingAttribute.issue(e, k_href))
             return None
         else:
-            ret = bp.ExternalHyperlink(href)
+            ret = dom.ExternalHyperlink(href)
             parse_mixed_content(log, e, self.content_model, ret.content)
             return ret
 
@@ -136,7 +136,7 @@ class HtmlExtLinkModel(kit.TagModelBase[Inline]):
             log(fc.InvalidAttributeValue.issue(xe, 'href', href))
             return None
         else:
-            ret = bp.ExternalHyperlink(href)
+            ret = dom.ExternalHyperlink(href)
             parse_mixed_content(log, xe, self.content_model, ret.content)
             return ret
 

@@ -4,23 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar, Iterable
 
-from .tree import Element, MixedContent, MarkupElement
-
-
-@dataclass
-class ExternalHyperlink(MarkupElement):
-    def __init__(self, href: str):
-        super().__init__('a')
-        self.href = href
-        self.xml.attrib = {'rel': 'external', 'href': href}
-
-
-@dataclass
-class CrossReference(MarkupElement):
-    def __init__(self, rid: str):
-        super().__init__('a')
-        self.rid = rid
-        self.xml.attrib = {"href": "#" + rid}
+from .tree import Element, MixedContent
 
 
 @dataclass(frozen=True)
