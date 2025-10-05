@@ -212,7 +212,7 @@ class HtmlGenerator:
     def abstract_to_str(self, src: bp.Abstract) -> str:
         return self._html_content_to_str(self._blocks_content(src.blocks))
 
-    def proto_section_to_str(self, src: bp.ProtoSection) -> str:
+    def proto_section_to_str(self, src: dom.ProtoSection) -> str:
         return self._html_content_to_str(self._proto_section_content(src))
 
     def _blocks_content(self, src: Iterable[PureElement]) -> Iterator[XmlElement]:
@@ -223,7 +223,7 @@ class HtmlGenerator:
 
     def _proto_section_content(
         self,
-        src: bp.ProtoSection,
+        src: dom.ProtoSection,
         title: MixedContent | None = None,
         xid: str | None = None,
         level: int = 0,

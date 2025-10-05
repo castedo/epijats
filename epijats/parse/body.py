@@ -4,13 +4,13 @@ from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING
 
 from .. import baseprint as bp
+from .. import dom
 from .. import condition as fc
 from ..tree import (
     Citation,
     CitationTuple,
     Element,
     Inline,
-    MixedContent,
 )
 
 from . import kit
@@ -293,17 +293,17 @@ class SectionTitleMonoModel(MixedContentModelBase):
         return xe.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']
 
 
-class ProtoSectionBinder(ContentBinder[bp.ProtoSection]):
+class ProtoSectionBinder(ContentBinder[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
-        super().__init__(bp.ProtoSection)
+        super().__init__(dom.ProtoSection)
         self._models = models
 
-    def binds(self, sess: ArrayContentSession, target: bp.ProtoSection) -> None:
+    def binds(self, sess: ArrayContentSession, target: dom.ProtoSection) -> None:
         sess.bind(self._models.p_level, target.presection.append)
         sess.bind(SectionModel(self._models), target.subsections.append)
 
 
-class SectionModel(kit.LoadModel[bp.Section]):
+class SectionModel(kit.LoadModel[dom.Section]):
     """<sec> Section
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
@@ -315,9 +315,9 @@ class SectionModel(kit.LoadModel[bp.Section]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['section', 'sec']
 
-    def load(self, log: Log, e: XmlElement) -> bp.Section | None:
+    def load(self, log: Log, e: XmlElement) -> dom.Section | None:
         kit.check_no_attrib(log, e, ['id'])
-        ret = bp.Section([], [], e.attrib.get('id'), MixedContent())
+        ret = dom.Section(e.attrib.get('id'))
         sess = ArrayContentSession(log)
         self._proto.binds(sess, ret)
         sess.bind_mono(self._title_model, ret.title)
@@ -327,7 +327,7 @@ class SectionModel(kit.LoadModel[bp.Section]):
         return ret
 
 
-class BodyModel(ContentInElementModelBase[bp.ProtoSection]):
+class BodyModel(ContentInElementModelBase[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
         self.content = ProtoSectionBinder(models)
 

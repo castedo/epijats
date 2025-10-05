@@ -111,28 +111,6 @@ class Abstract:
     blocks: list[Element]
 
 
-@dataclass
-class ProtoSection:
-    presection: list[Element]
-    subsections: list[Section]
-
-    def __init__(self) -> None:
-        self.presection = []
-        self.subsections = []
-
-    def has_content(self) -> bool:
-        return bool(self.presection) or bool(self.subsections)
-
-
-class ArticleBody(ProtoSection):
-    ...
-
-
-@dataclass
-class Section(ProtoSection):
-    id: str | None
-    title: MixedContent
-
 
 @dataclass
 class Date:

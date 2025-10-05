@@ -183,12 +183,6 @@ class DataElement(ParentItem[ArrayContent]):
         super().__init__(xml_tag, ArrayContent(array))
 
 
-@dataclass
-class Paragraph(ParentItem[MixedContent]):
-    def __init__(self, content: str | MixedContent = ""):
-        super().__init__('p', MixedContent(content))
-
-
 class HtmlVoidElement(Inline):
     """HTML void element (such as <br />).
 

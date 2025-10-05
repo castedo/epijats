@@ -1,13 +1,43 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from ..baseprint import (
     Abstract,
-    ArticleBody,
     Author,
     BiblioRefList,
     Permissions,
 )
-from ..tree import MixedContent
+from ..tree import Element, MixedContent
+
+
+
+@dataclass
+class ProtoSection:
+    presection: list[Element]
+    subsections: list[Section]
+
+    def __init__(self) -> None:
+        self.presection = []
+        self.subsections = []
+
+    def has_content(self) -> bool:
+        return bool(self.presection) or bool(self.subsections)
+
+
+class ArticleBody(ProtoSection):
+    ...
+
+
+@dataclass
+class Section(ProtoSection):
+    id: str | None
+    title: MixedContent
+
+    def __init__(self, id: str | None = None, title: MixedContent | str = ""):
+        super().__init__()
+        self.title = MixedContent(title)
+        self.id = id
 
 
 @dataclass

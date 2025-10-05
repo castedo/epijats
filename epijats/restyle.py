@@ -86,7 +86,7 @@ def permissions(src: baseprint.Permissions) -> DataElement:
 
 def proto_section(
     tag: str,
-    src: baseprint.ProtoSection,
+    src: dom.ProtoSection,
     level: int,
     xid: str | None = None,
     title: MixedContent | None = None,
