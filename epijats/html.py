@@ -60,6 +60,7 @@ HTML_FROM_XML = {
     'div': 'div',
     'dl': 'dl',
     'dt': 'dt',
+    'format-issue': 'output',
     'i': 'em',
     'li': 'li',
     'tt': 'samp',
