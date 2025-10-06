@@ -8,6 +8,7 @@ __all__ = [
     'ExternalHyperlink',
     'IssueElement',
     'ItemElement',
+    'MarkupBlock',
     'MarkupElement',
     'MixedContent',
     'Paragraph',
@@ -18,6 +19,7 @@ __all__ = [
 
 from ..tree import (
     Element,
+    MarkupBlock,
     MarkupElement,
     MixedContent,
     ArrayContent,

@@ -116,7 +116,11 @@ class CommonContentFormatter:
         if isinstance(src.content, str):
             dest.text = src.content
         elif isinstance(src.content, ArrayContent):
-            self.default.format_content(src.content, level, dest)
+            markup = src.content.just_phrasing()
+            if markup is not None:
+                self.markup.format(markup, level, dest)
+            else:
+                self.default.format_content(src.content, level, dest)
         elif isinstance(src.content, MixedContent):
             self.markup.format(src.content, level, dest)
         elif isinstance(src, HtmlVoidElement):

@@ -95,6 +95,12 @@ class ArrayContent:
     def extend(self, es: Iterable[PureElement]) -> None:
         self._children.extend(es)
 
+    def just_phrasing(self) -> MixedContent | None:
+        solo = self._children[0] if len(self._children) == 1 else None
+        if isinstance(solo, MarkupBlock):
+            return solo.content
+        return None
+
 
 @dataclass
 class MixedContent:
@@ -171,6 +177,12 @@ class ParentItem(Element, Parent[Element, ContentT]):
     @property
     def content(self) -> ContentT:
         return self._content
+
+
+class MarkupBlock(ParentItem[MixedContent]):
+    """Semantic of HTML div containing only phrasing content"""
+    def __init__(self, content: MixedContent | str = ""):
+        super().__init__('div', MixedContent(content))
 
 
 class MarkupElement(ParentInline[MixedContent]):
