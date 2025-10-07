@@ -25,7 +25,7 @@ from .back import load_person_name
 from .tree import MixedContentModel
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 def copytext_model() -> Model[Inline]:

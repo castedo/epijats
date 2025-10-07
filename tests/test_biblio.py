@@ -5,7 +5,7 @@ from lxml import etree
 
 from citeproc import SCHEMA_PATH
 
-from epijats import restyle
+from epijats.xml import baseprint as restyle
 from epijats import baseprint as bp
 from epijats.parse.back import BiblioRefItemModel
 from epijats import biblio

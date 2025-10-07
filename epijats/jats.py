@@ -6,18 +6,18 @@ from warnings import warn
 
 from .biblio import csljson_refs_from_baseprint
 from .condition import FormatIssue
-from .html import HtmlGenerator
+from .xml.html import HtmlGenerator
 from .parse import parse_baseprint
 from .webstract import Webstract
 from . import baseprint
 from . import dom
 
 if TYPE_CHECKING:
-    from .typeshed import JSONType
+    from .typeshed import JsonData
 
 
-def author_as_pod(self: baseprint.Author) -> JSONType:
-    ret: dict[str, JSONType] = {'type': 'author'}
+def author_as_pod(self: baseprint.Author) -> JsonData:
+    ret: dict[str, JsonData] = {'type': 'author'}
     if self.name.surname:
         ret['surname'] = self.name.surname
     if self.name.given_names:

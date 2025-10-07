@@ -41,7 +41,7 @@ from .math import disp_formula_model, inline_formula_model
 
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 def hypertext_model(biblio: BiblioRefPool | None) -> Model[Inline]:

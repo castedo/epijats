@@ -16,7 +16,7 @@ from .kit import Log
 from .tree import parse_mixed_content
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 # Unknown MathML element per https://www.w3.org/TR/mathml-core/

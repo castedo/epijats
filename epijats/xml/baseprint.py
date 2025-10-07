@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from warnings import warn
 
-from . import baseprint
-from . import baseprint as bp
-from . import dom
-from .parse import parse_baseprint
-from .parse.kit import Log, nolog
-from .tree import (
+from .. import baseprint
+from .. import baseprint as bp
+from .. import dom
+from ..parse import parse_baseprint
+from ..parse.kit import Log, nolog
+from ..tree import (
     DataElement,
     ArrayContent,
     MarkupElement,
@@ -18,10 +18,10 @@ from .tree import (
     StartTag,
     WhitespaceElement,
 )
-from .xml import XmlFormatter
+from .format import XmlFormatter
 
 if TYPE_CHECKING:
-    from .typeshed import StrPath
+    from ..typeshed import StrPath
 
 
 def title_group(src: MixedContent | None) -> DataElement:

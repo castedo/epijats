@@ -8,18 +8,18 @@ from typing import TYPE_CHECKING
 import lxml.etree
 
 import epijats.parse.body as _
-from epijats import html
 from epijats import baseprint as bp
 from epijats import dom
 from epijats import condition as fc
-from epijats import restyle
+from epijats.xml import baseprint as restyle
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.parse.front import AbstractModel, load_author_group
 from epijats.tree import Element, MarkupElement
-from epijats.xml import XmlFormatter
+from epijats.xml import html
+from epijats.xml.format import XmlFormatter
 
 if TYPE_CHECKING:
-    from epijats.xml import XmlElement
+    from epijats.typeshed import XmlElement
 
 
 def assert_not(x):

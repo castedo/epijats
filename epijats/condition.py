@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias
 
 if TYPE_CHECKING:
-    from .typeshed import JSONType
-    from .xml import XmlElement
+    from .typeshed import JsonData
+    from .typeshed import XmlElement
     import xml.etree.ElementTree, lxml.etree
 
     QName: TypeAlias = xml.etree.ElementTree.QName | lxml.etree.QName
@@ -16,7 +16,7 @@ class FormatCondition:
     def __str__(self) -> str:
         return self.__doc__ or type(self).__name__
 
-    def as_pod(self) -> JSONType:
+    def as_pod(self) -> JsonData:
         return type(self).__name__
 
 
@@ -34,8 +34,8 @@ class FormatIssue:
             msg += f": {self.info}"
         return msg
 
-    def as_pod(self) -> dict[str, JSONType]:
-        ret: dict[str, JSONType] = {}
+    def as_pod(self) -> dict[str, JsonData]:
+        ret: dict[str, JsonData] = {}
         ret['condition'] = self.condition.as_pod()
         if self.sourceline is not None:
             ret['sourceline'] = self.sourceline
@@ -89,7 +89,7 @@ class ElementFormatCondition(FormatCondition):
         sourceline = getattr(e, 'sourceline', None)
         return FormatIssue(klas(e.tag, ptag), sourceline, info)
 
-    def as_pod(self) -> JSONType:
+    def as_pod(self) -> JsonData:
         parent = str(self.parent) if self.parent else None
         return [type(self).__name__, str(self.tag), parent]
 
@@ -163,7 +163,7 @@ class MissingChild(FormatCondition):
         sourceline = getattr(e, 'sourceline', None)
         return FormatIssue(klas(e.tag, ptag, child), sourceline, info)
 
-    def as_pod(self) -> JSONType:
+    def as_pod(self) -> JsonData:
         parent = str(self.parent) if self.parent else None
         return [type(self).__name__, str(self.child), str(self.tag), parent]
 
@@ -183,7 +183,7 @@ class UnsupportedAttribute(FormatCondition):
         sourceline = getattr(e, 'sourceline', None)
         return FormatIssue(UnsupportedAttribute(e.tag, key), sourceline)
 
-    def as_pod(self) -> JSONType:
+    def as_pod(self) -> JsonData:
         return [type(self).__name__, str(self.tag), self.attribute]
 
 
@@ -202,7 +202,7 @@ class AttributeValueCondition(FormatCondition):
         sourceline = getattr(e, 'sourceline', None)
         return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), sourceline)
 
-    def as_pod(self) -> JSONType:
+    def as_pod(self) -> JsonData:
         return [type(self).__name__, str(self.tag), self.attribute, self.value]
 
 

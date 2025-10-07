@@ -9,13 +9,14 @@ from typing import TYPE_CHECKING, TypeAlias, assert_type
 from warnings import warn
 
 from . import baseprint as bp
-from .xml import get_ET
+from .article import BiblioRefList
+from .parse.baseprint import get_ET
 
 if TYPE_CHECKING:
-    from .typeshed import JSONType as JsonData
+    from .typeshed import JsonData
     import citeproc
-    from .dom.article import Article
-    from .xml import XmlElement
+    from .article import Article
+    from .typeshed import XmlElement
 
     CslJson: TypeAlias = dict[str, JsonData]
 
@@ -252,6 +253,16 @@ def ref_item_from_csljson(csljson: JsonData) -> bp.BiblioRefItem | None:
         pub_id = get_str_or_none(csljson, pub_id_type.upper())
         if pub_id is not None:
             ret.pub_ids[pub_id_type] = pub_id
+    return ret
+
+
+def ref_list_from_csljson(csljson: JsonData) -> BiblioRefList | None:
+    if not isinstance(csljson, list):
+        return None
+    ret = BiblioRefList()
+    for j_item in csljson:
+        if r_item := ref_item_from_csljson(j_item):
+            ret.references.append(r_item)
     return ret
 
 

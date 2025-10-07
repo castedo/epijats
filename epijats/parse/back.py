@@ -15,7 +15,7 @@ from .kit import Log, LoaderTagModel as tag_model
 from .tree import EmptyElementModel
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 def load_person_name(log: Log, e: XmlElement) -> bp.PersonName | None:

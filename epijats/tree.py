@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    from .xml import XmlElement
+    from .typeshed import XmlElement
 
 
 @dataclass

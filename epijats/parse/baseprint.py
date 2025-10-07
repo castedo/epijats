@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import tempfile
+import xml.etree.ElementTree
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .. import condition as fc
-from .. import dom
-from ..xml import get_ET
+from ..article import (
+    Article,
+    BiblioRefList,
+)
 
 from . import kit
 from .back import RefListModel
@@ -18,11 +21,39 @@ from .front import AbstractModel, ArticleFrontBinder
 from .kit import Log, nolog
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from types import ModuleType
+    from ..typeshed import XmlElement
     import hidos
 
 
-def pop_load_sub_back(log: Log, xe: XmlElement) -> dom.BiblioRefList | None:
+NAMESPACE_MAP = {
+    'ali': "http://www.niso.org/schemas/ali/1.0/",
+    'mml': "http://www.w3.org/1998/Math/MathML",
+    'xlink': "http://www.w3.org/1999/xlink",
+}
+
+
+# key is (use_lxml: bool)
+_NAMESPACES_REGISTERED = {False: False, True: False}
+
+
+def get_ET(*, use_lxml: bool) -> ModuleType:
+    ret: ModuleType
+    if use_lxml:
+        import lxml.etree
+
+        ret = lxml.etree
+    else:
+        ret = xml.etree.ElementTree
+
+    if not _NAMESPACES_REGISTERED[use_lxml]:
+        for prefix, name in NAMESPACE_MAP.items():
+            ret.register_namespace(prefix, name)
+        _NAMESPACES_REGISTERED[use_lxml] = True
+    return ret
+
+
+def pop_load_sub_back(log: Log, xe: XmlElement) -> BiblioRefList | None:
     back = xe.find("back")
     if back is None:
         return None
@@ -34,7 +65,7 @@ def pop_load_sub_back(log: Log, xe: XmlElement) -> dom.BiblioRefList | None:
     return result.out
 
 
-def load_article(log: Log, e: XmlElement) -> dom.Article | None:
+def load_article(log: Log, e: XmlElement) -> Article | None:
     """Loader function for <article>
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article.html
@@ -42,7 +73,7 @@ def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     lang = '{http://www.w3.org/XML/1998/namespace}lang'
     kit.confirm_attrib_value(log, e, lang, ['en', None])
     kit.check_no_attrib(log, e, [lang])
-    ret = dom.Article()
+    ret = Article()
     back_log = list[fc.FormatIssue]()
     ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
@@ -65,7 +96,7 @@ def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     return ret
 
 
-def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> dom.Article | None:
+def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> Article | None:
     if root.tag != 'article':
         log(fc.UnsupportedElement.issue(root))
         return None
@@ -74,7 +105,7 @@ def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> dom.Article | No
 
 def parse_baseprint(
     src: Path, log: Log = nolog, *, use_lxml: bool = True
-) -> dom.Article | None:
+) -> Article | None:
     path = Path(src)
     if path.is_dir():
         xml_path = path / "article.xml"
@@ -101,7 +132,7 @@ def parse_baseprint(
     return parse_baseprint_root(et.getroot(), log)
 
 
-def baseprint_from_edition(ed: hidos.Edition) -> dom.Article | None:
+def baseprint_from_edition(ed: hidos.Edition) -> Article | None:
     if not ed.snapshot:
         raise ValueError(f"Edition {ed} is not a snapshot edition")
     with tempfile.TemporaryDirectory() as tempdir:

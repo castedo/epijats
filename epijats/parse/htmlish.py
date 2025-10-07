@@ -28,7 +28,7 @@ from .tree import (
 from .kit import Log, Model, Sink
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 def markup_model(

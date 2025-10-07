@@ -18,7 +18,7 @@ __all__ = [
     'Section',
 ]
 
-from ..tree import (
+from .tree import (
     Element,
     MarkupBlock,
     MarkupElement,

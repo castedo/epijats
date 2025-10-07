@@ -4,9 +4,9 @@ from sys import stderr
 from typing import Any
 
 from . import Eprint, EprinterConfig
-from . import restyle
 from .eprint import SimpleIssuesPage
 from .jats import webstract_from_jats
+from .xml.baseprint import restyle_xml
 
 
 def weasyprint_setup() -> bool:
@@ -62,7 +62,7 @@ class Main:
         return self.restyle() if self.outform == "xml" else self.convert()
 
     def restyle(self) -> int:
-        if not restyle.restyle_xml(self.inpath, self.outpath):
+        if not restyle_xml(self.inpath, self.outpath):
             print(f"Invalid XML file {self.inpath}", file=stderr)
             return 1
         return 0

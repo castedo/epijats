@@ -10,7 +10,7 @@ from .. import condition as fc
 from ..tree import Inline, StartTag
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
     import lxml.etree
 
     AttribView: TypeAlias = lxml.etree._Attrib | Mapping[str, str]

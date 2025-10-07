@@ -19,7 +19,7 @@ from .kit import (
 )
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 def prep_array_elements(log: Log, e: XmlElement) -> None:

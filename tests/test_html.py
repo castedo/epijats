@@ -1,11 +1,11 @@
 import os, pytest
 from pathlib import Path
 
-from epijats.html import HtmlGenerator
 from epijats.parse import kit, tree
 from epijats.parse.body import CoreModels
 from epijats.tree import MixedContent
-from epijats.xml import XmlFormatter
+from epijats.xml.format import XmlFormatter
+from epijats.xml.html import HtmlGenerator
 
 from .test_baseprint import lxml_element_from_str
 

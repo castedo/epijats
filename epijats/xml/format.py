@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Protocol, TYPE_CHECKING, TypeAlias
+from typing import Protocol, TYPE_CHECKING
 from warnings import warn
 
 import xml.etree.ElementTree
 
-from .tree import (
+from ..parse.baseprint import get_ET
+from ..tree import (
     CitationTuple,
     ArrayContent,
     HtmlVoidElement,
@@ -17,37 +18,7 @@ from .tree import (
 
 
 if TYPE_CHECKING:
-    from types import ModuleType
-    import lxml.etree
-
-    XmlElement: TypeAlias = lxml.etree._Element | xml.etree.ElementTree.Element
-
-
-NAMESPACE_MAP = {
-    'ali': "http://www.niso.org/schemas/ali/1.0/",
-    'mml': "http://www.w3.org/1998/Math/MathML",
-    'xlink': "http://www.w3.org/1999/xlink",
-}
-
-
-# key is (use_lxml: bool)
-_NAMESPACES_REGISTERED = {False: False, True: False}
-
-
-def get_ET(*, use_lxml: bool) -> ModuleType:
-    ret: ModuleType
-    if use_lxml:
-        import lxml.etree
-
-        ret = lxml.etree
-    else:
-        ret = xml.etree.ElementTree
-
-    if not _NAMESPACES_REGISTERED[use_lxml]:
-        for prefix, name in NAMESPACE_MAP.items():
-            ret.register_namespace(prefix, name)
-        _NAMESPACES_REGISTERED[use_lxml] = True
-    return ret
+    from ..typeshed import XmlElement
 
 
 class ElementFormatter(Protocol):
@@ -152,9 +123,11 @@ def root_namespaces(src: XmlElement) -> XmlElement:
 
 
 class XmlFormatter(ElementFormatter):
-    def __init__(self, *, use_lxml: bool):
+    def __init__(self, *, use_lxml: bool = False):
         self.citation = IndentFormatter(self, sep=",")
         self.common = CommonContentFormatter(self)
+        if use_lxml:
+            warn("lxml specific output will be removed.", DeprecationWarning)
         self.ET = get_ET(use_lxml=use_lxml)
 
     def to_one_only(self, src: PureElement, level: int) -> XmlElement:

@@ -4,15 +4,16 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Iterable, Iterator
 from warnings import warn
 
-from . import dom
-from . import baseprint as bp
-from .biblio import CiteprocBiblioFormatter
-from .math import FormulaElement
-from .tree import Citation, CitationTuple, MixedContent, PureElement
-from .xml import CommonContentFormatter, get_ET, ElementFormatter, MarkupFormatter
+from .. import dom
+from .. import baseprint as bp
+from ..biblio import CiteprocBiblioFormatter
+from ..math import FormulaElement
+from ..parse.baseprint import get_ET
+from ..tree import Citation, CitationTuple, MixedContent, PureElement
+from .format import CommonContentFormatter, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
-    from .xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 ET = get_ET(use_lxml=False)

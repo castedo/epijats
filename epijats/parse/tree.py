@@ -28,7 +28,7 @@ from .kit import Log, Model
 
 
 if TYPE_CHECKING:
-    from ..xml import XmlElement
+    from ..typeshed import XmlElement
 
 
 def parse_mixed_content(

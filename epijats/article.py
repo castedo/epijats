@@ -1,20 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable
 
-from ..baseprint import (
+from .baseprint import (
     Abstract,
     Author,
     BiblioRefItem,
     Permissions,
 )
-from ..tree import Element, MixedContent
-
-from ..biblio import ref_item_from_csljson
-
-if TYPE_CHECKING:
-    from ..typeshed import JSONType as JsonData
+from .tree import Element, MixedContent
 
 
 @dataclass
@@ -51,16 +46,6 @@ class BiblioRefList:
 
     def __init__(self, refs: Iterable[BiblioRefItem] = ()):
         self.references = list(refs)
-
-    @staticmethod
-    def from_csljson(csljson: JsonData) -> BiblioRefList | None:
-        if not isinstance(csljson, list):
-            return None
-        ret = BiblioRefList()
-        for j_item in csljson:
-            if r_item := ref_item_from_csljson(j_item):
-                ret.references.append(r_item)
-        return ret
 
 
 @dataclass
