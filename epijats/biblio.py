@@ -44,21 +44,21 @@ def hyperlink(xhtml_content: str, prepend: str | None = None) -> str:
     return xml.etree.ElementTree.tostring(element, encoding='unicode', method='html')
 
 
-def hyperlinkize_csljson(jd: CslJson) -> CslJson:
-    for key, value in jd.items():
-        match key:
-            case 'URL':
-                jd[key] = hyperlink(str(value))
-            case 'DOI':
-                jd[key] = hyperlink(str(value), "https://doi.org/")
-    return jd
-
-
 def set_str(cj: CslJson, key: str, val: str | int | None) -> None:
     if val is not None:
         if isinstance(val, int):
             val = str(val)
         cj[key] = escape(val, quote=False)
+
+
+def set_csljson_titles(dest: CslJson, src: bp.BiblioRefItem) -> None:
+    if src.article_title:
+        # add json null even if source title is missing
+        # this way solitary article title will roundtrip through CSLJSON
+        dest['container-title'] = src.source_title
+        set_str(dest, 'title', src.article_title)
+    else:
+        set_str(dest, 'title', src.source_title)
 
 
 def csljson_from_date(src: bp.Date) -> JsonData:
@@ -102,14 +102,6 @@ def set_csjson_persons(dest: CslJson, src: bp.BiblioRefItem) -> None:
         dest['editor'] = csljson_from_person_group(src.editors)
 
 
-def set_csljson_titles(dest: CslJson, src: bp.BiblioRefItem) -> None:
-    if src.article_title:
-        set_str(dest, 'container-title', src.source_title)
-        set_str(dest, 'title', src.article_title)
-    else:
-        set_str(dest, 'title', src.source_title)
-
-
 def set_csljson_pages(dest: CslJson, src: bp.BiblioRefItem) -> None:
     if fpage := src.biblio_fields.get('fpage'):
         page = fpage
@@ -128,8 +120,8 @@ def csljson_from_ref_item(src: bp.BiblioRefItem) -> CslJson:
     set_csljson_titles(ret, src)
     set_csljson_dates(ret, src)
     set_csjson_persons(ret, src)
-    set_str(ret, 'edition', src.edition)
     set_csljson_pages(ret, src)
+    set_str(ret, 'edition', src.edition)
     for pub_id_type, value in src.pub_ids.items():
         set_str(ret, pub_id_type.upper(), value)
     return ret
@@ -144,6 +136,16 @@ def csljson_refs_from_baseprint(src: dom.Article) -> list[CslJson] | None:
 class BiblioFormatter(ABC):
     @abstractmethod
     def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement: ...
+
+
+def prep_citeproc_csljson(jd: CslJson) -> CslJson:
+    for key, value in jd.items():
+        match key:
+            case 'URL':
+                jd[key] = hyperlink(str(value))
+            case 'DOI':
+                jd[key] = hyperlink(str(value), "https://doi.org/")
+    return {k: v for k, v in jd.items() if v is not None}
 
 
 def put_tags_on_own_lines(e: XmlElement) -> None:
@@ -188,7 +190,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
     def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement:
         import citeproc
 
-        csljson = [hyperlinkize_csljson(csljson_from_ref_item(r)) for r in refs]
+        csljson = [prep_citeproc_csljson(csljson_from_ref_item(r)) for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(
             self._style, bib_source, citeproc.formatter.html
