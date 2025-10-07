@@ -1,4 +1,5 @@
 __all__ = [
+    'BiblioRefPool',
     'Eprint',
     'EprinterConfig',
     'FormatIssue',
@@ -15,7 +16,7 @@ __all__ = [
     'write_baseprint',
 ]
 
-from .biblio import ref_list_from_csljson
+from .biblio import BiblioRefPool, ref_list_from_csljson
 from .condition import FormatIssue
 from .eprint import EprinterConfig, Eprint, IssuesPage, eprint_dir
 from .parse.baseprint import baseprint_from_edition

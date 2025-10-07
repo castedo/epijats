@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from importlib import resources
 from html import escape, unescape
 from typing import TYPE_CHECKING, TypeAlias, assert_type
@@ -10,7 +10,7 @@ from warnings import warn
 
 from . import baseprint as bp
 from .article import BiblioRefList
-from .parse.baseprint import get_ET
+from .elements import Citation
 
 if TYPE_CHECKING:
     from .typeshed import JsonData
@@ -19,6 +19,37 @@ if TYPE_CHECKING:
     from .typeshed import XmlElement
 
     CslJson: TypeAlias = dict[str, JsonData]
+
+
+class BiblioRefPool:
+    def __init__(self, orig: Iterable[bp.BiblioRefItem]):
+        self._orig = list(orig)
+        self.used: list[bp.BiblioRefItem] = []
+        self._orig_order = True
+
+    def is_bibr_rid(self, rid: str | None) -> bool:
+        return bool(rid) and any(rid == ref.id for ref in self._orig)
+
+    def cite(self, rid: str, ideal_rord: int | None = None) -> Citation | None:
+        for zidx, ref in enumerate(self.used):
+            if rid == ref.id:
+                return Citation(rid, zidx + 1)
+        for zidx, ref in enumerate(self._orig):
+            if rid == ref.id:
+                if self._orig_order:
+                    if zidx + 1 == ideal_rord:
+                        for j in range(len(self.used), zidx):
+                            self.used.append(self._orig[j])
+                    else:
+                        self._orig_order = False
+                self.used.append(ref)
+                return Citation(rid, len(self.used))
+        return None
+
+    def get_by_rord(self, rord: int) -> bp.BiblioRefItem:
+        """Get using one-based index of 'rord' value"""
+
+        return self.used[rord - 1]
 
 
 JATS_TO_CSL_VAR = {
@@ -295,6 +326,7 @@ def put_tags_on_own_lines(e: XmlElement) -> None:
 class CiteprocBiblioFormatter(BiblioFormatter):
     def __init__(self, *, abridged: bool = False, use_lxml: bool = False):
         import citeproc
+        from .parse.baseprint import get_ET
 
         if use_lxml:
             warn("Option use_lxml will be removed", DeprecationWarning)

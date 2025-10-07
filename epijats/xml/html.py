@@ -9,7 +9,8 @@ from .. import baseprint as bp
 from ..biblio import CiteprocBiblioFormatter
 from ..math import FormulaElement
 from ..parse.baseprint import get_ET
-from ..tree import Citation, CitationTuple, MixedContent, PureElement
+from ..elements import Citation, CitationTuple
+from ..tree import MixedContent, PureElement
 from .format import CommonContentFormatter, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:

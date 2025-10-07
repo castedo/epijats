@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
-from .. import baseprint as bp
 from .. import dom
 from .. import condition as fc
-from ..tree import (
-    Citation,
-    CitationTuple,
-    Element,
-    Inline,
-)
+from ..biblio import BiblioRefPool
+from ..elements import Citation, CitationTuple
+from ..tree import Element, Inline
 
 from . import kit
 from .content import (
@@ -74,42 +70,6 @@ class CoreModels:
         block |= blockquote_model(block)
         block |= table_wrap_model(self.hypertext)
         self.p_level = block
-
-
-class BiblioRefPool:
-    def __init__(self, orig: Iterable[bp.BiblioRefItem]):
-        self._orig = list(orig)
-        self.used: list[bp.BiblioRefItem] = []
-        self._orig_order = True
-
-    def is_bibr_rid(self, rid: str | None) -> bool:
-        return bool(rid) and any(rid == ref.id for ref in self._orig)
-
-    def cite(self, rid: str, ideal_rord: int | None) -> Citation | None:
-        for zidx, ref in enumerate(self.used):
-            if rid == ref.id:
-                return Citation(rid, zidx + 1)
-        for zidx, ref in enumerate(self._orig):
-            if rid == ref.id:
-                if self._orig_order:
-                    if zidx + 1 == ideal_rord:
-                        for j in range(len(self.used), zidx):
-                            self.used.append(self._orig[j])
-                    else:
-                        self._orig_order = False
-                self.used.append(ref)
-                return Citation(rid, len(self.used))
-        return None
-
-    def get_by_rord(self, rord: int) -> bp.BiblioRefItem:
-        """Get using one-based index of 'rord' value"""
-
-        return self.used[rord - 1]
-
-    def inner_range(self, before: Citation, after: Citation) -> Iterator[Citation]:
-        for rord in range(before.rord + 1, after.rord):
-            rid = self.get_by_rord(rord).id
-            yield Citation(rid, rord)
 
 
 class CitationModel(kit.LoadModel[Citation]):
@@ -175,12 +135,17 @@ class CitationRangeHelper:
         delim = text.strip() if text else ''
         return delim in {'', '[', '('}
 
+    def _inner_range(self, before: Citation, after: Citation) -> Iterator[Citation]:
+        for rord in range(before.rord + 1, after.rord):
+            rid = self._biblio.get_by_rord(rord).id
+            yield Citation(rid, rord)
+
     def get_range(self, child: XmlElement, citation: Citation) -> Iterator[Citation]:
         if citation.matching_text(child.text):
             self.stopper = citation
         if self.starter:
             if self.stopper:
-                return self._biblio.inner_range(self.starter, self.stopper)
+                return self._inner_range(self.starter, self.stopper)
             else:
                 msg = f"Invalid citation '{citation.rid}' to end range"
                 self.log(fc.InvalidCitation.issue(child, msg))

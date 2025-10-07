@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from .tree import (
     ArrayContent,
+    Inline,
     MarkupElement,
     MixedContent,
     ParentInline,
     ParentItem,
     PureElement,
+    StartTag,
 )
 
 
@@ -42,6 +44,43 @@ class BlockQuote(ParentItem[ArrayContent]):
 class PreElement(ParentItem[MixedContent]):
     def __init__(self, content: MixedContent | str = "") -> None:
         super().__init__('pre', MixedContent(content))
+
+
+@dataclass
+class Citation(MarkupElement):
+    def __init__(self, rid: str, rord: int):
+        super().__init__(StartTag('xref', {'rid': rid, 'ref-type': 'bibr'}))
+        self.rid = rid
+        self.rord = rord
+        self.content.append_text(str(rord))
+
+    def matching_text(self, text: str | None) -> bool:
+        return text is not None and text.strip() == self.content.text
+
+
+@dataclass
+class CitationTuple(Inline):
+    _citations: list[Citation]
+
+    def __init__(self, citations: Iterable[Citation] = ()) -> None:
+        super().__init__('sup')
+        self._citations = list(citations)
+
+    @property
+    def content(self) -> ArrayContent:
+        return ArrayContent(self._citations)
+
+    def __iter__(self) -> Iterator[Citation]:
+        return iter(self._citations)
+
+    def append(self, c: Citation) -> None:
+        self._citations.append(c)
+
+    def extend(self, cs: Iterable[Citation]) -> None:
+        self._citations.extend(cs)
+
+    def __len__(self) -> int:
+        return len(self._citations)
 
 
 class ItemElement(ParentItem[ArrayContent]):

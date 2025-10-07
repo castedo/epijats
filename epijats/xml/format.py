@@ -7,8 +7,8 @@ from warnings import warn
 import xml.etree.ElementTree
 
 from ..parse.baseprint import get_ET
+from ..elements import CitationTuple
 from ..tree import (
-    CitationTuple,
     ArrayContent,
     HtmlVoidElement,
     MixedContent,

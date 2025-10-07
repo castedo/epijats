@@ -12,10 +12,11 @@ from ..article import (
     Article,
     BiblioRefList,
 )
+from ..biblio import BiblioRefPool
 
 from . import kit
 from .back import RefListModel
-from .body import BiblioRefPool, BodyModel, CoreModels
+from .body import BodyModel, CoreModels
 from .content import ArrayContentSession
 from .front import AbstractModel, ArticleFrontBinder
 from .kit import Log, nolog

@@ -3,6 +3,8 @@ __all__ = [
     'Article',
     'BiblioRefList',
     'BlockQuote',
+    'Citation',
+    'CitationTuple',
     'CrossReference',
     'Document',
     'Element',
@@ -19,11 +21,11 @@ __all__ = [
 ]
 
 from .tree import (
+    ArrayContent,
     Element,
     MarkupBlock,
     MarkupElement,
     MixedContent,
-    ArrayContent,
 )
 
 from .article import (
@@ -36,6 +38,8 @@ from .article import (
 
 from .elements import (
     BlockQuote,
+    Citation,
+    CitationTuple,
     CrossReference,
     ExternalHyperlink,
     IssueElement,
