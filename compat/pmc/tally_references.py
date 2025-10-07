@@ -90,8 +90,8 @@ if __name__ == "__main__":
     index = FastIndex(args.pmcpath)
     paths = list(index.journal_list_paths('unmixed_journals.txt'))
     for p in paths[::JUMP]:
-        assert p.exists()
-        tally_article(p)
+        if p.exists():
+            tally_article(p)
     print("\n<element-citation publication-type=")
     pprint(PUB_TYPES)
     print("\n<pub-id pub-id-type=")

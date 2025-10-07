@@ -5,36 +5,30 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib import resources
 from html import escape
-from typing import TYPE_CHECKING, assert_type
+from typing import TYPE_CHECKING, TypeAlias, assert_type
 from warnings import warn
-
 
 from . import baseprint as bp
 from . import dom
 from .xml import get_ET
 
 if TYPE_CHECKING:
-    from .typeshed import JSONType
+    from .typeshed import JSONType as JsonData
     import citeproc
     from .xml import XmlElement
+
+    CslJson: TypeAlias = dict[str, JsonData]
 
 
 JATS_TO_CSL_VAR = {
     'comment': 'note',
-    'edition': 'edition',
     'isbn': 'ISBN',
     'issn': 'ISSN',
     'issue': 'issue',
     'publisher-loc': 'publisher-place',
     'publisher-name': 'publisher',
-    'title': 'title',
     'uri': 'URL',
     'volume': 'volume',
-}
-
-JATS_TO_CSL_TYPE = {
-    'book': 'book',
-    'journal': 'article-journal',
 }
 
 
@@ -50,8 +44,25 @@ def hyperlink(xhtml_content: str, prepend: str | None = None) -> str:
     return xml.etree.ElementTree.tostring(element, encoding='unicode', method='html')
 
 
-def date_parts(src: bp.Date) -> JSONType:
-    parts: list[JSONType] = [src.year]
+def hyperlinkize_csljson(jd: CslJson) -> CslJson:
+    for key, value in jd.items():
+        match key:
+            case 'URL':
+                jd[key] = hyperlink(str(value))
+            case 'DOI':
+                jd[key] = hyperlink(str(value), "https://doi.org/")
+    return jd
+
+
+def set_str(cj: CslJson, key: str, val: str | int | None) -> None:
+    if val is not None:
+        if isinstance(val, int):
+            val = str(val)
+        cj[key] = escape(val, quote=False)
+
+
+def csljson_from_date(src: bp.Date) -> JsonData:
+    parts: list[JsonData] = [src.year]
     if src.month:
         parts.append(src.month)
         if src.day:
@@ -59,10 +70,17 @@ def date_parts(src: bp.Date) -> JSONType:
     return {'date-parts': [parts]}
 
 
-def person_group(src: bp.PersonGroup) -> JSONType:
-    ret = list['JSONType']()
+def set_csljson_dates(dest: CslJson, src: bp.BiblioRefItem) -> None:
+    if src.date:
+        dest['issued'] = csljson_from_date(src.date)
+    if src.access_date:
+        dest['accessed'] = csljson_from_date(src.access_date)
+
+
+def csljson_from_person_group(src: bp.PersonGroup) -> JsonData:
+    ret = list['JsonData']()
     for person in src.persons:
-        a: dict[str, JSONType] = {}
+        a: dict[str, JsonData] = {}
         if isinstance(person, bp.PersonName):
             if person.surname:
                 a['family'] = escape(person.surname, quote=False)
@@ -77,59 +95,50 @@ def person_group(src: bp.PersonGroup) -> JSONType:
     return ret
 
 
-class CsljsonItem(dict[str, 'JSONType']):
-    def __init__(self) -> None:
-        self['type'] = ''
+def set_csjson_persons(dest: CslJson, src: bp.BiblioRefItem) -> None:
+    if src.authors:
+        dest['author'] = csljson_from_person_group(src.authors)
+    if src.editors:
+        dest['editor'] = csljson_from_person_group(src.editors)
 
-    def set_str(self, key: str, src: str | int | None) -> None:
-        if src is not None:
-            if isinstance(src, int):
-                src = str(src)
-            self[key] = escape(src, quote=False)
 
-    def hyperlinkize(self) -> CsljsonItem:
-        for key, value in self.items():
-            match key:
-                case 'URL':
-                    assert isinstance(value, str)
-                    self[key] = hyperlink(value)
-                case 'DOI':
-                    assert isinstance(value, str)
-                    self[key] = hyperlink(value, "https://doi.org/")
-        return self
+def set_csljson_titles(dest: CslJson, src: bp.BiblioRefItem) -> None:
+    if src.article_title:
+        set_str(dest, 'container-title', src.source_title)
+        set_str(dest, 'title', src.article_title)
+    else:
+        set_str(dest, 'title', src.source_title)
 
-    def assign_csjson_titles(self, src: bp.BiblioRefItem) -> None:
-        if src.article_title:
-            self.set_str('container-title', src.source_title)
-            self.set_str('title', src.article_title)
-        else:
-            self.set_str('title', src.source_title)
 
-    @staticmethod
-    def from_ref_item(src: bp.BiblioRefItem) -> CsljsonItem:
-        ret = CsljsonItem()
-        ret.set_str('id', src.id)
-        for jats_key, value in src.biblio_fields.items():
-            if csl_key := JATS_TO_CSL_VAR.get(jats_key):
-                ret.set_str(csl_key, value)
-        ret.assign_csjson_titles(src)
-        if src.date:
-            ret['issued'] = date_parts(src.date)
-        if src.access_date:
-            ret['accessed'] = date_parts(src.access_date)
-        if src.authors:
-            ret['author'] = person_group(src.authors)
-        if src.editors:
-            ret['editor'] = person_group(src.editors)
-        ret.set_str('edition', src.edition)
-        if fpage := src.biblio_fields.get('fpage'):
-            page = fpage
-            if lpage := src.biblio_fields.get('lpage'):
-                page += f"-{lpage}"
-            ret.set_str('page', page)
-        for pub_id_type, value in src.pub_ids.items():
-            ret.set_str(pub_id_type.upper(), value)
-        return ret
+def set_csljson_pages(dest: CslJson, src: bp.BiblioRefItem) -> None:
+    if fpage := src.biblio_fields.get('fpage'):
+        page = fpage
+        if lpage := src.biblio_fields.get('lpage'):
+            page += f"-{lpage}"
+        set_str(dest, 'page', page)
+
+
+def csljson_from_ref_item(src: bp.BiblioRefItem) -> CslJson:
+    ret = dict[str, 'JsonData']()
+    ret['type'] = ''
+    set_str(ret, 'id', src.id)
+    for jats_key, value in src.biblio_fields.items():
+        if csl_key := JATS_TO_CSL_VAR.get(jats_key):
+            set_str(ret, csl_key, value)
+    set_csljson_titles(ret, src)
+    set_csljson_dates(ret, src)
+    set_csjson_persons(ret, src)
+    set_str(ret, 'edition', src.edition)
+    set_csljson_pages(ret, src)
+    for pub_id_type, value in src.pub_ids.items():
+        set_str(ret, pub_id_type.upper(), value)
+    return ret
+
+
+def csljson_refs_from_baseprint(src: dom.Article) -> list[CslJson] | None:
+    if not src.ref_list:
+        return None
+    return [csljson_from_ref_item(r) for r in src.ref_list.references]
 
 
 class BiblioFormatter(ABC):
@@ -179,7 +188,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
     def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement:
         import citeproc
 
-        csljson = [CsljsonItem.from_ref_item(r).hyperlinkize() for r in refs]
+        csljson = [hyperlinkize_csljson(csljson_from_ref_item(r)) for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(
             self._style, bib_source, citeproc.formatter.html
@@ -211,10 +220,3 @@ class CiteprocBiblioFormatter(BiblioFormatter):
         e = self.to_element(refs)
         ret = self._ET.tostring(e, encoding='unicode', method='html')
         return ret  # type: ignore[no-any-return]
-
-
-def csljson_refs_from_baseprint(src: dom.Article) -> list[JSONType] | None:
-    if not src.ref_list:
-        return None
-    refs = src.ref_list.references
-    return [dict(CsljsonItem.from_ref_item(r)) for r in refs]

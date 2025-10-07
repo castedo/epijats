@@ -65,12 +65,12 @@ def test_biblio_ref_xml(case):
 
 
 @pytest.mark.parametrize("case", os.listdir(REF_ITEM_CASE))
-def test_csljson(case):
+def test_csljson_from_ref_item(case):
     path = REF_ITEM_CASE / case / "csl.json"
     with open(path, "r") as f:
         expect = json.load(f)[0]
     ref_item = parse_clean_ref_item(REF_ITEM_CASE / case / "article.xml")
-    got = biblio.CsljsonItem.from_ref_item(ref_item)
+    got = biblio.csljson_from_ref_item(ref_item)
     assert got == expect
 
 
@@ -88,7 +88,7 @@ def test_pmc_ref(case):
     with open(case_path / "csl.json", "r") as f:
         expect = json.load(f)[0]
     ref_item = parse_pmc_ref(PMC_REF_CASE / case / "jats.xml")
-    got = biblio.CsljsonItem.from_ref_item(ref_item)
+    got = biblio.csljson_from_ref_item(ref_item)
     assert got == expect
     check_html_match(case_path / "full.html", ref_item, False)
     check_html_match(case_path / "abridged.html", ref_item, True)
