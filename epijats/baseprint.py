@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import ClassVar, Iterable
+from typing import ClassVar
 
 from .tree import Element, MixedContent
 
@@ -161,11 +161,3 @@ class BiblioRefItem:
         self.access_date = None
         self.biblio_fields = {}
         self.pub_ids = {}
-
-
-@dataclass
-class BiblioRefList:
-    references: list[BiblioRefItem]
-
-    def __init__(self, refs: Iterable[BiblioRefItem]):
-        self.references = list(refs)

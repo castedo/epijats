@@ -245,7 +245,7 @@ class HtmlGenerator:
             section.tail = "\n"
             yield section
 
-    def html_references(self, src: bp.BiblioRefList, *, abridged: bool = False) -> str:
+    def html_references(self, src: dom.BiblioRefList, *, abridged: bool = False) -> str:
         frags: list[str | XmlElement] = []
         h = ET.Element('h2')
         h.text = "References"

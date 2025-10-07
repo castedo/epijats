@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Iterable
 
 from ..baseprint import (
     Abstract,
     Author,
-    BiblioRefList,
+    BiblioRefItem,
     Permissions,
 )
 from ..tree import Element, MixedContent
 
+from ..biblio import ref_item_from_csljson
+
+if TYPE_CHECKING:
+    from ..typeshed import JSONType as JsonData
 
 
 @dataclass
@@ -38,6 +43,24 @@ class Section(ProtoSection):
         super().__init__()
         self.title = MixedContent(title)
         self.id = id
+
+
+@dataclass
+class BiblioRefList:
+    references: list[BiblioRefItem]
+
+    def __init__(self, refs: Iterable[BiblioRefItem] = ()):
+        self.references = list(refs)
+
+    @staticmethod
+    def from_csljson(csljson: JsonData) -> BiblioRefList | None:
+        if not isinstance(csljson, list):
+            return None
+        ret = BiblioRefList()
+        for j_item in csljson:
+            if r_item := ref_item_from_csljson(j_item):
+                ret.references.append(r_item)
+        return ret
 
 
 @dataclass

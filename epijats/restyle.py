@@ -166,7 +166,7 @@ def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
     return ret
 
 
-def ref_list(src: baseprint.BiblioRefList) -> DataElement:
+def ref_list(src: dom.BiblioRefList) -> DataElement:
     ret = DataElement('ref-list', [])
     for ref in src.references:
         ret.content.append(biblio_ref_item(ref))

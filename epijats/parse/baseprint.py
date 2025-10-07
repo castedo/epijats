@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .. import baseprint as bp
 from .. import condition as fc
 from .. import dom
 from ..xml import get_ET
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
     import hidos
 
 
-def pop_load_sub_back(log: Log, xe: XmlElement) -> bp.BiblioRefList | None:
+def pop_load_sub_back(log: Log, xe: XmlElement) -> dom.BiblioRefList | None:
     back = xe.find("back")
     if back is None:
         return None

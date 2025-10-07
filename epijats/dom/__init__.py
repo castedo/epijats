@@ -1,6 +1,7 @@
 __all__ = [
     'ArrayContent',
     'Article',
+    'BiblioRefList',
     'BlockQuote',
     'CrossReference',
     'Document',
@@ -27,6 +28,7 @@ from ..tree import (
 
 from .article import (
     Article,
+    BiblioRefList,
     Document,
     ProtoSection,
     Section,

@@ -4,17 +4,17 @@ import xml.etree.ElementTree
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from importlib import resources
-from html import escape
+from html import escape, unescape
 from typing import TYPE_CHECKING, TypeAlias, assert_type
 from warnings import warn
 
 from . import baseprint as bp
-from . import dom
 from .xml import get_ET
 
 if TYPE_CHECKING:
     from .typeshed import JSONType as JsonData
     import citeproc
+    from .dom.article import Article
     from .xml import XmlElement
 
     CslJson: TypeAlias = dict[str, JsonData]
@@ -51,6 +51,16 @@ def set_str(cj: CslJson, key: str, val: str | int | None) -> None:
         cj[key] = escape(val, quote=False)
 
 
+def get_str(cj: CslJson, key: str) -> str:
+    val = cj.get(key)
+    return unescape(val) if isinstance(val, str) else ''
+
+
+def get_str_or_none(cj: CslJson, key: str) -> str | None:
+    val = cj.get(key)
+    return unescape(val) if isinstance(val, str) else None
+
+
 def set_csljson_titles(dest: CslJson, src: bp.BiblioRefItem) -> None:
     if src.article_title:
         # add json null even if source title is missing
@@ -59,6 +69,21 @@ def set_csljson_titles(dest: CslJson, src: bp.BiblioRefItem) -> None:
         set_str(dest, 'title', src.article_title)
     else:
         set_str(dest, 'title', src.source_title)
+
+
+def set_ref_item_titles(dest: bp.BiblioRefItem, src: CslJson) -> None:
+    if 'container-title' in src:
+        container_title = src['container-title']
+        if container_title is None:
+            # literally null is the JSON value for 'container-title' key
+            dest.article_title = get_str_or_none(src, 'title')
+        elif isinstance(container_title, str):
+            dest.source_title = unescape(container_title)
+            dest.article_title = get_str_or_none(src, 'title')
+        else:
+            warn("CSLJSON container-title is not of string type")
+    else:
+        dest.source_title = get_str_or_none(src, 'title')
 
 
 def csljson_from_date(src: bp.Date) -> JsonData:
@@ -70,11 +95,46 @@ def csljson_from_date(src: bp.Date) -> JsonData:
     return {'date-parts': [parts]}
 
 
+def date_from_csljson(src: JsonData) -> bp.Date | None:
+    if not isinstance(src, dict):
+        return None
+    dates = src.get('date-parts')
+    if not isinstance(dates, list) or len(dates) < 1:
+        return None
+    if len(dates) > 1:
+        warn(f"CSLJSON date range unsupported: {dates}")
+    parts = dates[0]
+    if not isinstance(parts, list) or len(parts) < 1:
+        return None
+    if len(parts) > 3:
+        warn(f"CSLJSON date has too many parts: {parts}")
+    year = parts[0]
+    if not isinstance(year, int):
+        return None
+    ret = bp.Date(year)
+    if len(parts) > 1:
+        month = parts[1]
+        if isinstance(month, int):
+            ret.month = month
+            if len(parts) > 2:
+                day = parts[2]
+                if isinstance(day, int):
+                    ret.day = day
+    return ret
+
+
 def set_csljson_dates(dest: CslJson, src: bp.BiblioRefItem) -> None:
     if src.date:
         dest['issued'] = csljson_from_date(src.date)
     if src.access_date:
         dest['accessed'] = csljson_from_date(src.access_date)
+
+
+def set_ref_item_dates(dest: bp.BiblioRefItem, src: CslJson) -> None:
+    if issued := date_from_csljson(src.get('issued')):
+        dest.date = issued
+    if accessed := date_from_csljson(src.get('accessed')):
+        dest.access_date = accessed
 
 
 def csljson_from_person_group(src: bp.PersonGroup) -> JsonData:
@@ -95,11 +155,41 @@ def csljson_from_person_group(src: bp.PersonGroup) -> JsonData:
     return ret
 
 
+def person_group_from_csljson(src: JsonData) -> bp.PersonGroup | None:
+    if not isinstance(src, list):
+        return None
+    ret = bp.PersonGroup()
+    for person in src:
+        if isinstance(person, dict):
+            str_name = get_str_or_none(person, 'literal')
+            if str_name is not None:
+                if str_name == 'others':
+                    ret.etal = True
+                else:
+                    ret.persons.append(str_name)
+            else:
+                family = get_str_or_none(person, 'family')
+                given = get_str_or_none(person, 'given')
+                if family is None and given is None:
+                    ValueError(f"CSLJSON missing literal, family, or given value: {person}")
+                ret.persons.append(bp.PersonName(family, given))
+        else:
+            ValueError(f"Unrecognized CSLJSON: {person}")
+    return ret
+
+
 def set_csjson_persons(dest: CslJson, src: bp.BiblioRefItem) -> None:
     if src.authors:
         dest['author'] = csljson_from_person_group(src.authors)
     if src.editors:
         dest['editor'] = csljson_from_person_group(src.editors)
+
+
+def set_ref_item_persons(dest: bp.BiblioRefItem, src: CslJson) -> None:
+    if group := person_group_from_csljson(src.get('author')):
+        dest.authors = group
+    if group := person_group_from_csljson(src.get('editor')):
+        dest.editors = group
 
 
 def set_csljson_pages(dest: CslJson, src: bp.BiblioRefItem) -> None:
@@ -108,6 +198,14 @@ def set_csljson_pages(dest: CslJson, src: bp.BiblioRefItem) -> None:
         if lpage := src.biblio_fields.get('lpage'):
             page += f"-{lpage}"
         set_str(dest, 'page', page)
+
+
+def set_ref_item_pages(dest: bp.BiblioRefItem, src: CslJson) -> None:
+    if page := get_str_or_none(src, 'page'):
+        pages = page.split('-')
+        dest.biblio_fields['fpage'] = pages[0]
+        if len(pages) > 1:
+            dest.biblio_fields['lpage'] = pages[1]
 
 
 def csljson_from_ref_item(src: bp.BiblioRefItem) -> CslJson:
@@ -127,10 +225,34 @@ def csljson_from_ref_item(src: bp.BiblioRefItem) -> CslJson:
     return ret
 
 
-def csljson_refs_from_baseprint(src: dom.Article) -> list[CslJson] | None:
+def csljson_refs_from_baseprint(src: Article) -> list[CslJson] | None:
     if not src.ref_list:
         return None
     return [csljson_from_ref_item(r) for r in src.ref_list.references]
+
+
+def ref_item_from_csljson(csljson: JsonData) -> bp.BiblioRefItem | None:
+    if not isinstance(csljson, dict):
+        return None
+    ret = bp.BiblioRefItem()
+    ret.id = get_str(csljson, 'id')
+    for jats_key, csl_key in JATS_TO_CSL_VAR.items():
+        value = csljson.get(csl_key)
+        if isinstance(value, str):
+            ret.biblio_fields[jats_key] = value
+        elif value is not None:
+            warn(f"CSLJSON entry {csl_key} is not of string type")
+    set_ref_item_titles(ret, csljson)
+    set_ref_item_dates(ret, csljson)
+    set_ref_item_persons(ret, csljson)
+    if edition := get_str_or_none(csljson, 'edition'):
+        ret.edition = int(edition)
+    set_ref_item_pages(ret, csljson)
+    for pub_id_type in bp.PubIdType:
+        pub_id = get_str_or_none(csljson, pub_id_type.upper())
+        if pub_id is not None:
+            ret.pub_ids[pub_id_type] = pub_id
+    return ret
 
 
 class BiblioFormatter(ABC):

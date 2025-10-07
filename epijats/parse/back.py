@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from .. import baseprint as bp
 from .. import condition as fc
+from .. import dom
 from ..tree import StartTag
 
 from .content import (
@@ -233,11 +234,11 @@ class BiblioRefItemModel(kit.TagModelBase[bp.BiblioRefItem]):
         return ret
 
 
-class RefListModel(kit.TagModelBase[bp.BiblioRefList]):
+class RefListModel(kit.TagModelBase[dom.BiblioRefList]):
     def __init__(self) -> None:
         super().__init__('ref-list')
 
-    def load(self, log: Log, e: XmlElement) -> bp.BiblioRefList | None:
+    def load(self, log: Log, e: XmlElement) -> dom.BiblioRefList | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         title = sess.one(tag_model('title', kit.load_string))
@@ -245,4 +246,4 @@ class RefListModel(kit.TagModelBase[bp.BiblioRefList]):
         sess.parse_content(e)
         if title.out and title.out != "References":
             log(fc.IgnoredText.issue(e, 'ref-list/title ignored'))
-        return bp.BiblioRefList(references)
+        return dom.BiblioRefList(references)

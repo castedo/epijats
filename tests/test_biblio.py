@@ -74,6 +74,17 @@ def test_csljson_from_ref_item(case):
     assert got == expect
 
 
+@pytest.mark.parametrize("case", os.listdir(REF_ITEM_CASE))
+def test_ref_item_from_csljson(case):
+    with open(REF_ITEM_CASE / case / "article.xml") as f:
+        expected = parse_clean_ref_item(f.read())
+    path = REF_ITEM_CASE / case / "csl.json"
+    with open(path, "r") as f:
+        data = json.load(f)[0]
+        got = biblio.ref_item_from_csljson(data)
+    assert got == expected
+
+
 def check_html_match(html_path, ref_item, abridged: bool):
     if html_path.exists():
         with open(html_path, "r") as f:
