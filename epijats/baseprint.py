@@ -140,7 +140,6 @@ class BiblioRefItem:
     BIBLIO_FIELD_KEYS: ClassVar[list[str]] = [
         'volume',
         'issue',
-        'elocation-id',
         'publisher-name',
         'publisher-loc',
         'fpage',

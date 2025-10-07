@@ -189,6 +189,7 @@ class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
         fields = {}
         for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
             fields[key] = sess.one(tag_model(key, kit.load_string))
+        elocation_id = sess.one(tag_model('elocation-id', kit.load_string))
         sess.bind(PubIdBinder(), dest.pub_ids)
         sess.parse_content(e)
         dest.source_title = source_title.out
@@ -203,9 +204,12 @@ class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
         for key, parser in fields.items():
             if parser.out:
                 dest.biblio_fields[key] = parser.out
-        if 'elocation-id' in dest.biblio_fields and 'fpage' in dest.biblio_fields:
-            msg = "fpage field might prevent display of elocation-id or vice-versa"
-            log(fc.ElementFormatCondition.issue(e, msg))
+        if elocation_id.out:
+            if 'fpage' in dest.biblio_fields:
+                msg = "elocation-id dropped since fpage present"
+                log(fc.ElementFormatCondition.issue(e, msg))
+            else:
+                dest.biblio_fields['fpage'] = elocation_id.out
 
 
 class BiblioRefItemModel(kit.TagModelBase[bp.BiblioRefItem]):

@@ -127,8 +127,6 @@ class CsljsonItem(dict[str, 'JSONType']):
             if lpage := src.biblio_fields.get('lpage'):
                 page += f"-{lpage}"
             ret.set_str('page', page)
-        elif elocation := src.biblio_fields.get('elocation-id'):
-            ret.set_str('page', elocation)
         for pub_id_type, value in src.pub_ids.items():
             ret.set_str(pub_id_type.upper(), value)
         return ret
