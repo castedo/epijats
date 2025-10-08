@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Iterable, Iterator
 from warnings import warn
 
 from .. import dom
-from .. import baseprint as bp
 from ..biblio import CiteprocBiblioFormatter
+from ..document import Abstract
 from ..math import FormulaElement
 from ..parse.baseprint import get_ET
 from ..elements import Citation, CitationTuple
@@ -211,7 +211,7 @@ class HtmlGenerator:
                 ss.append(it.tail)
         return self._html_content_to_str(ss)
 
-    def abstract_to_str(self, src: bp.Abstract) -> str:
+    def abstract_to_str(self, src: Abstract) -> str:
         return self._html_content_to_str(self._blocks_content(src.blocks))
 
     def proto_section_to_str(self, src: dom.ProtoSection) -> str:

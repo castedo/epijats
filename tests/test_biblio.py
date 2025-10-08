@@ -6,7 +6,7 @@ from lxml import etree
 from citeproc import SCHEMA_PATH
 
 from epijats.xml import baseprint as restyle
-from epijats import baseprint as bp
+from epijats.metadata import BiblioRefItem
 from epijats.parse.back import BiblioRefItemModel
 from epijats import biblio
 from epijats import condition as fc
@@ -26,7 +26,7 @@ def parse_clean_ref_item(src: str | Path):
     issues: list[fc.FormatIssue] = []
     ref_item = model.load(issues.append, lxml_element_from_str(src))
     assert not issues
-    assert isinstance(ref_item, bp.BiblioRefItem)
+    assert isinstance(ref_item, BiblioRefItem)
     return ref_item
 
 
@@ -47,7 +47,7 @@ def parse_pmc_ref(p: Path):
     ref_item = model.load(issues.append, lxml_element_from_str(src))
     conditions = set(i.condition for i in issues) - KNOWN_PMC_NO_SUPPORT
     assert not conditions
-    assert isinstance(ref_item, bp.BiblioRefItem)
+    assert isinstance(ref_item, BiblioRefItem)
     return ref_item
 
 

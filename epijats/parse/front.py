@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import baseprint as bp
 from .. import condition as fc
 from .. import dom
+from .. import metadata as bp
+from ..document import Abstract
 from ..tree import Element, Inline, MixedContent
 
 from . import kit
@@ -153,21 +154,21 @@ class PermissionsModel(kit.TagModelBase[dom.Permissions]):
         return dom.Permissions(license.out, copyright)
 
 
-class AbstractModel(kit.TagModelBase[bp.Abstract]):
+class AbstractModel(kit.TagModelBase[Abstract]):
     def __init__(self, p_level: Model[Element]):
         super().__init__('abstract')
         self._p_level = p_level
 
-    def load(self, log: Log, e: XmlElement) -> bp.Abstract | None:
+    def load(self, log: Log, e: XmlElement) -> Abstract | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         blocks = sess.every(self._p_level)
         sess.parse_content(e)
-        return bp.Abstract(list(blocks)) if blocks else None
+        return Abstract(list(blocks)) if blocks else None
 
 
 class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
-    def __init__(self, abstract_model: Model[bp.Abstract]):
+    def __init__(self, abstract_model: Model[Abstract]):
         super().__init__('article-meta')
         self._abstract_model = abstract_model
 
@@ -191,7 +192,7 @@ class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
 
 
 class ArticleFrontBinder(kit.TagBinderBase[dom.Article]):
-    def __init__(self, abstract_model: Model[bp.Abstract]):
+    def __init__(self, abstract_model: Model[Abstract]):
         super().__init__('front')
         self._meta_model = ArticleMetaBinder(abstract_model)
 

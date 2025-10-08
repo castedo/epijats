@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import baseprint as bp
 from .. import condition as fc
 from .. import dom
+from .. import metadata as bp
 from ..tree import StartTag
 
 from .content import (

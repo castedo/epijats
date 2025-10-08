@@ -1,6 +1,7 @@
 __all__ = [
     'ArrayContent',
     'Article',
+    'Author',
     'BiblioRefList',
     'BlockQuote',
     'CcLicenseType',
@@ -17,8 +18,11 @@ __all__ = [
     'MarkupBlock',
     'MarkupElement',
     'MixedContent',
+    'Orcid',
     'Paragraph',
     'Permissions',
+    'PersonGroup',
+    'PersonName',
     'PreElement',
     'ProtoSection',
     'Section',
@@ -32,14 +36,9 @@ from .tree import (
     MixedContent,
 )
 
-from .article import (
+from .document import (
     Article,
-    BiblioRefList,
-    CcLicenseType,
-    Copyright,
     Document,
-    License,
-    Permissions,
     ProtoSection,
     Section,
 )
@@ -54,4 +53,16 @@ from .elements import (
     ItemElement,
     Paragraph,
     PreElement,
+)
+
+from .metadata import (
+    Author,
+    BiblioRefList,
+    CcLicenseType,
+    Copyright,
+    License,
+    Orcid,
+    Permissions,
+    PersonGroup,
+    PersonName,
 )

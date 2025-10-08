@@ -7,11 +7,8 @@ import xml.etree.ElementTree
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .. import dom
 from .. import condition as fc
-from ..article import (
-    Article,
-    BiblioRefList,
-)
 from ..biblio import BiblioRefPool
 
 from . import kit
@@ -54,7 +51,7 @@ def get_ET(*, use_lxml: bool) -> ModuleType:
     return ret
 
 
-def pop_load_sub_back(log: Log, xe: XmlElement) -> BiblioRefList | None:
+def pop_load_sub_back(log: Log, xe: XmlElement) -> dom.BiblioRefList | None:
     back = xe.find("back")
     if back is None:
         return None
@@ -66,7 +63,7 @@ def pop_load_sub_back(log: Log, xe: XmlElement) -> BiblioRefList | None:
     return result.out
 
 
-def load_article(log: Log, e: XmlElement) -> Article | None:
+def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     """Loader function for <article>
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/article.html
@@ -74,7 +71,7 @@ def load_article(log: Log, e: XmlElement) -> Article | None:
     lang = '{http://www.w3.org/XML/1998/namespace}lang'
     kit.confirm_attrib_value(log, e, lang, ['en', None])
     kit.check_no_attrib(log, e, [lang])
-    ret = Article()
+    ret = dom.Article()
     back_log = list[fc.FormatIssue]()
     ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
@@ -97,7 +94,7 @@ def load_article(log: Log, e: XmlElement) -> Article | None:
     return ret
 
 
-def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> Article | None:
+def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> dom.Article | None:
     if root.tag != 'article':
         log(fc.UnsupportedElement.issue(root))
         return None
@@ -106,7 +103,7 @@ def parse_baseprint_root(root: XmlElement, log: Log = nolog) -> Article | None:
 
 def parse_baseprint(
     src: Path, log: Log = nolog, *, use_lxml: bool = True
-) -> Article | None:
+) -> dom.Article | None:
     path = Path(src)
     if path.is_dir():
         xml_path = path / "article.xml"
@@ -133,7 +130,7 @@ def parse_baseprint(
     return parse_baseprint_root(et.getroot(), log)
 
 
-def baseprint_from_edition(ed: hidos.Edition) -> Article | None:
+def baseprint_from_edition(ed: hidos.Edition) -> dom.Article | None:
     if not ed.snapshot:
         raise ValueError(f"Edition {ed} is not a snapshot edition")
     with tempfile.TemporaryDirectory() as tempdir:

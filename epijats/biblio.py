@@ -8,23 +8,23 @@ from html import escape, unescape
 from typing import TYPE_CHECKING, TypeAlias, assert_type
 from warnings import warn
 
-from . import baseprint as bp
-from .article import BiblioRefList
+from . import dom
+from . import metadata as bp
 from .elements import Citation
+from .metadata import BiblioRefItem
 
 if TYPE_CHECKING:
     from .typeshed import JsonData
     import citeproc
-    from .article import Article
     from .typeshed import XmlElement
 
     CslJson: TypeAlias = dict[str, JsonData]
 
 
 class BiblioRefPool:
-    def __init__(self, orig: Iterable[bp.BiblioRefItem]):
+    def __init__(self, orig: Iterable[BiblioRefItem]):
         self._orig = list(orig)
-        self.used: list[bp.BiblioRefItem] = []
+        self.used: list[BiblioRefItem] = []
         self._orig_order = True
 
     def is_bibr_rid(self, rid: str | None) -> bool:
@@ -46,7 +46,7 @@ class BiblioRefPool:
                 return Citation(rid, len(self.used))
         return None
 
-    def get_by_rord(self, rord: int) -> bp.BiblioRefItem:
+    def get_by_rord(self, rord: int) -> BiblioRefItem:
         """Get using one-based index of 'rord' value"""
 
         return self.used[rord - 1]
@@ -93,7 +93,7 @@ def get_str_or_none(cj: CslJson, key: str) -> str | None:
     return unescape(val) if isinstance(val, str) else None
 
 
-def set_csljson_titles(dest: CslJson, src: bp.BiblioRefItem) -> None:
+def set_csljson_titles(dest: CslJson, src: BiblioRefItem) -> None:
     if src.article_title:
         # add json null even if source title is missing
         # this way solitary article title will roundtrip through CSLJSON
@@ -103,7 +103,7 @@ def set_csljson_titles(dest: CslJson, src: bp.BiblioRefItem) -> None:
         set_str(dest, 'title', src.source_title)
 
 
-def set_ref_item_titles(dest: bp.BiblioRefItem, src: CslJson) -> None:
+def set_ref_item_titles(dest: BiblioRefItem, src: CslJson) -> None:
     if 'container-title' in src:
         container_title = src['container-title']
         if container_title is None:
@@ -155,14 +155,14 @@ def date_from_csljson(src: JsonData) -> bp.Date | None:
     return ret
 
 
-def set_csljson_dates(dest: CslJson, src: bp.BiblioRefItem) -> None:
+def set_csljson_dates(dest: CslJson, src: BiblioRefItem) -> None:
     if src.date:
         dest['issued'] = csljson_from_date(src.date)
     if src.access_date:
         dest['accessed'] = csljson_from_date(src.access_date)
 
 
-def set_ref_item_dates(dest: bp.BiblioRefItem, src: CslJson) -> None:
+def set_ref_item_dates(dest: BiblioRefItem, src: CslJson) -> None:
     if issued := date_from_csljson(src.get('issued')):
         dest.date = issued
     if accessed := date_from_csljson(src.get('accessed')):
@@ -210,21 +210,21 @@ def person_group_from_csljson(src: JsonData) -> bp.PersonGroup | None:
     return ret
 
 
-def set_csjson_persons(dest: CslJson, src: bp.BiblioRefItem) -> None:
+def set_csjson_persons(dest: CslJson, src: BiblioRefItem) -> None:
     if src.authors:
         dest['author'] = csljson_from_person_group(src.authors)
     if src.editors:
         dest['editor'] = csljson_from_person_group(src.editors)
 
 
-def set_ref_item_persons(dest: bp.BiblioRefItem, src: CslJson) -> None:
+def set_ref_item_persons(dest: BiblioRefItem, src: CslJson) -> None:
     if group := person_group_from_csljson(src.get('author')):
         dest.authors = group
     if group := person_group_from_csljson(src.get('editor')):
         dest.editors = group
 
 
-def set_csljson_pages(dest: CslJson, src: bp.BiblioRefItem) -> None:
+def set_csljson_pages(dest: CslJson, src: BiblioRefItem) -> None:
     if fpage := src.biblio_fields.get('fpage'):
         page = fpage
         if lpage := src.biblio_fields.get('lpage'):
@@ -232,7 +232,7 @@ def set_csljson_pages(dest: CslJson, src: bp.BiblioRefItem) -> None:
         set_str(dest, 'page', page)
 
 
-def set_ref_item_pages(dest: bp.BiblioRefItem, src: CslJson) -> None:
+def set_ref_item_pages(dest: BiblioRefItem, src: CslJson) -> None:
     if page := get_str_or_none(src, 'page'):
         pages = page.split('-')
         dest.biblio_fields['fpage'] = pages[0]
@@ -240,7 +240,7 @@ def set_ref_item_pages(dest: bp.BiblioRefItem, src: CslJson) -> None:
             dest.biblio_fields['lpage'] = pages[1]
 
 
-def csljson_from_ref_item(src: bp.BiblioRefItem) -> CslJson:
+def csljson_from_ref_item(src: BiblioRefItem) -> CslJson:
     ret = dict[str, 'JsonData']()
     ret['type'] = ''
     set_str(ret, 'id', src.id)
@@ -257,16 +257,16 @@ def csljson_from_ref_item(src: bp.BiblioRefItem) -> CslJson:
     return ret
 
 
-def csljson_refs_from_baseprint(src: Article) -> list[CslJson] | None:
+def csljson_refs_from_baseprint(src: dom.Article) -> list[CslJson] | None:
     if not src.ref_list:
         return None
     return [csljson_from_ref_item(r) for r in src.ref_list.references]
 
 
-def ref_item_from_csljson(csljson: JsonData) -> bp.BiblioRefItem | None:
+def ref_item_from_csljson(csljson: JsonData) -> BiblioRefItem | None:
     if not isinstance(csljson, dict):
         return None
-    ret = bp.BiblioRefItem()
+    ret = BiblioRefItem()
     ret.id = get_str(csljson, 'id')
     for jats_key, csl_key in JATS_TO_CSL_VAR.items():
         value = csljson.get(csl_key)
@@ -287,10 +287,10 @@ def ref_item_from_csljson(csljson: JsonData) -> bp.BiblioRefItem | None:
     return ret
 
 
-def ref_list_from_csljson(csljson: JsonData) -> BiblioRefList | None:
+def ref_list_from_csljson(csljson: JsonData) -> dom.BiblioRefList | None:
     if not isinstance(csljson, list):
         return None
-    ret = BiblioRefList()
+    ret = dom.BiblioRefList()
     for j_item in csljson:
         if r_item := ref_item_from_csljson(j_item):
             ret.references.append(r_item)
@@ -299,7 +299,7 @@ def ref_list_from_csljson(csljson: JsonData) -> BiblioRefList | None:
 
 class BiblioFormatter(ABC):
     @abstractmethod
-    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement: ...
+    def to_element(self, refs: Sequence[BiblioRefItem]) -> XmlElement: ...
 
 
 def prep_citeproc_csljson(jd: CslJson) -> CslJson:
@@ -352,7 +352,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             ret.append(div)
         return ret
 
-    def to_element(self, refs: Sequence[bp.BiblioRefItem]) -> XmlElement:
+    def to_element(self, refs: Sequence[BiblioRefItem]) -> XmlElement:
         import citeproc
 
         csljson = [prep_citeproc_csljson(csljson_from_ref_item(r)) for r in refs]
@@ -383,7 +383,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
             ret.append(li)
         return ret
 
-    def to_str(self, refs: Sequence[bp.BiblioRefItem]) -> str:
+    def to_str(self, refs: Sequence[BiblioRefItem]) -> str:
         e = self.to_element(refs)
         ret = self._ET.tostring(e, encoding='unicode', method='html')
         return ret  # type: ignore[no-any-return]

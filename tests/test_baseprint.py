@@ -8,10 +8,12 @@ from typing import TYPE_CHECKING
 import lxml.etree
 
 import epijats.parse.body as _
-from epijats import baseprint as bp
+from epijats import dom as bp
 from epijats import dom
 from epijats import condition as fc
 from epijats.xml import baseprint as restyle
+from epijats.document import Abstract
+from epijats.metadata import BiblioRefItem
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.parse.front import AbstractModel, load_author_group
 from epijats.tree import Element, MarkupElement
@@ -78,7 +80,7 @@ def test_minimalish():
     got = parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
     assert got.authors == [bp.Author(bp.PersonName("Wang"))]
-    expect = bp.Abstract([MarkupElement('p', 'A simple test.')])
+    expect = Abstract([MarkupElement('p', 'A simple test.')])
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
 
@@ -160,9 +162,9 @@ def test_nested_ext_link_xml_parse():
 
 
 def mock_biblio_pool() -> _.BiblioRefPool:
-    r1 = bp.BiblioRefItem()
+    r1 = BiblioRefItem()
     r1.id = "R1"
-    r2 = bp.BiblioRefItem()
+    r2 = BiblioRefItem()
     r2.id = "R2"
     return _.BiblioRefPool([r1, r2])
 

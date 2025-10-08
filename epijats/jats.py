@@ -9,14 +9,13 @@ from .condition import FormatIssue
 from .xml.html import HtmlGenerator
 from .parse import parse_baseprint
 from .webstract import Webstract
-from . import baseprint
 from . import dom
 
 if TYPE_CHECKING:
     from .typeshed import JsonData
 
 
-def author_as_pod(self: baseprint.Author) -> JsonData:
+def author_as_pod(self: dom.Author) -> JsonData:
     ret: dict[str, JsonData] = {'type': 'author'}
     if self.name.surname:
         ret['surname'] = self.name.surname

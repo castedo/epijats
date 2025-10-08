@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from warnings import warn
 
-from .. import baseprint
-from .. import baseprint as bp
 from .. import dom
+from ..document import Abstract
+from ..metadata import BiblioRefItem, Date
 from ..parse import parse_baseprint
 from ..parse.kit import Log, nolog
 from ..tree import (
@@ -34,7 +34,7 @@ def title_group(src: MixedContent | None) -> DataElement:
     return DataElement('title-group', [title])
 
 
-def person_name(src: baseprint.PersonName) -> DataElement:
+def person_name(src: dom.PersonName) -> DataElement:
     ret = DataElement('name')
     if src.surname:
         ret.content.append(MarkupElement('surname', src.surname))
@@ -45,7 +45,7 @@ def person_name(src: baseprint.PersonName) -> DataElement:
     return ret
 
 
-def contrib(src: baseprint.Author) -> DataElement:
+def contrib(src: dom.Author) -> DataElement:
     ret = DataElement(StartTag('contrib', {'contrib-type': 'author'}))
     if src.orcid:
         url = str(src.orcid)
@@ -57,7 +57,7 @@ def contrib(src: baseprint.Author) -> DataElement:
     return ret
 
 
-def contrib_group(src: list[baseprint.Author]) -> DataElement:
+def contrib_group(src: list[dom.Author]) -> DataElement:
     ret = DataElement('contrib-group')
     for a in src:
         ret.content.append(contrib(a))
@@ -105,11 +105,11 @@ def proto_section(
     return ret
 
 
-def abstract(src: baseprint.Abstract) -> DataElement:
+def abstract(src: Abstract) -> DataElement:
     return DataElement('abstract', src.blocks)
 
 
-def append_date_parts(src: baseprint.Date | None, dest: ArrayContent) -> None:
+def append_date_parts(src: Date | None, dest: ArrayContent) -> None:
     if src is not None:
         y = str(src.year)
         dest.append(MarkupElement('year', y))
@@ -121,10 +121,10 @@ def append_date_parts(src: baseprint.Date | None, dest: ArrayContent) -> None:
                 dest.append(MarkupElement('day', f"{src.day:02}"))
 
 
-def biblio_person_group(group_type: str, src: bp.PersonGroup) -> DataElement:
+def biblio_person_group(group_type: str, src: dom.PersonGroup) -> DataElement:
     ret = DataElement(StartTag('person-group', {'person-group-type': group_type}))
     for person in src.persons:
-        if isinstance(person, bp.PersonName):
+        if isinstance(person, dom.PersonName):
             ret.content.append(person_name(person))
         else:
             ret.content.append(MarkupElement('string-name', person))
@@ -137,7 +137,7 @@ def biblio_person_group(group_type: str, src: bp.PersonGroup) -> DataElement:
     return ret
 
 
-def biblio_ref_item(src: bp.BiblioRefItem) -> DataElement:
+def biblio_ref_item(src: BiblioRefItem) -> DataElement:
     stag = StartTag('element-citation')
     ec = DataElement(stag)
     if src.authors:
