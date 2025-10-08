@@ -101,18 +101,7 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
     return bp.Author(name.out, email.out, orcid.out)
 
 
-CC_URLS = {
-    'https://creativecommons.org/publicdomain/zero/': bp.CcLicenseType.CC0,
-    'https://creativecommons.org/licenses/by/': bp.CcLicenseType.BY,
-    'https://creativecommons.org/licenses/by-sa/': bp.CcLicenseType.BYSA,
-    'https://creativecommons.org/licenses/by-nc/': bp.CcLicenseType.BYNC,
-    'https://creativecommons.org/licenses/by-nc-sa/': bp.CcLicenseType.BYNCSA,
-    'https://creativecommons.org/licenses/by-nd/': bp.CcLicenseType.BYND,
-    'https://creativecommons.org/licenses/by-nc-nd/': bp.CcLicenseType.BYNCND,
-}
-
-
-class LicenseRefBinder(kit.BinderBase[bp.License]):
+class LicenseRefBinder(kit.BinderBase[dom.License]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in [
             "license-ref",
@@ -120,25 +109,24 @@ class LicenseRefBinder(kit.BinderBase[bp.License]):
             "{http://www.niso.org/schemas/ali/1.0/}license_ref",
         ]
 
-    def read(self, log: Log, xe: XmlElement, dest: bp.License) -> None:
+    def read(self, log: Log, xe: XmlElement, dest: dom.License) -> None:
         kit.check_no_attrib(log, xe, ['content-type'])
         dest.license_ref = kit.load_string_content(log, xe)
-        got_license_type = kit.get_enum_value(log, xe, 'content-type', bp.CcLicenseType)
-        for prefix, matching_type in CC_URLS.items():
-            if dest.license_ref.startswith(prefix):
-                if got_license_type and got_license_type != matching_type:
-                    issue = fc.InvalidAttributeValue.issue
-                    log(issue(xe, 'content-type', got_license_type))
-                dest.cc_license_type = matching_type
-                return
-        dest.cc_license_type = got_license_type
+        from_attribute = kit.get_enum_value(log, xe, 'content-type', dom.CcLicenseType)
+        if from_url := dom.CcLicenseType.from_url(dest.license_ref):
+            if from_attribute and from_attribute != from_url:
+                issue = fc.InvalidAttributeValue.issue
+                log(issue(xe, 'content-type', from_attribute))
+            dest.cc_license_type = from_url
+        else:
+            dest.cc_license_type = from_attribute
 
 
-class LicenseModel(kit.TagModelBase[bp.License]):
+class LicenseModel(kit.TagModelBase[dom.License]):
     TAG = 'license'
 
-    def load(self, log: Log, e: XmlElement) -> bp.License | None:
-        ret = bp.License(MixedContent(), "", None)
+    def load(self, log: Log, e: XmlElement) -> dom.License | None:
+        ret = dom.License()
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         sess.bind_mono(copytext_element_model('license-p'), ret.license_p)
@@ -147,10 +135,10 @@ class LicenseModel(kit.TagModelBase[bp.License]):
         return None if ret.blank() else ret
 
 
-class PermissionsModel(kit.TagModelBase[bp.Permissions]):
+class PermissionsModel(kit.TagModelBase[dom.Permissions]):
     TAG = 'permissions'
 
-    def load(self, log: Log, e: XmlElement) -> bp.Permissions | None:
+    def load(self, log: Log, e: XmlElement) -> dom.Permissions | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         statement = sess.one(copytext_element_model('copyright-statement'))
@@ -159,10 +147,10 @@ class PermissionsModel(kit.TagModelBase[bp.Permissions]):
         if license.out is None:
             return None
         if statement.out and not statement.out.blank():
-            copyright = bp.Copyright(statement.out)
+            copyright = dom.Copyright(statement.out)
         else:
             copyright = None
-        return bp.Permissions(license.out, copyright)
+        return dom.Permissions(license.out, copyright)
 
 
 class AbstractModel(kit.TagModelBase[bp.Abstract]):

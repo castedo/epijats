@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar
 
-from .tree import Element, MixedContent
+from .tree import Element
 
 
 @dataclass(frozen=True)
@@ -53,41 +53,6 @@ class Author:
     name: PersonName
     email: str | None = None
     orcid: Orcid | None = None
-
-
-@dataclass
-class Copyright:
-    statement: MixedContent
-
-
-class CcLicenseType(StrEnum):
-    CC0 = 'cc0license'
-    BY = 'ccbylicense'
-    BYSA = 'ccbysalicense'
-    BYNC = 'ccbynclicense'
-    BYNCSA = 'ccbyncsalicense'
-    BYND = 'ccbyndlicense'
-    BYNCND = 'ccbyncndlicense'
-
-
-@dataclass
-class License:
-    license_p: MixedContent
-    license_ref: str
-    cc_license_type: CcLicenseType | None
-
-    def blank(self) -> bool:
-        return (
-            self.license_p.blank()
-            and not self.license_ref
-            and self.cc_license_type is None
-        )
-
-
-@dataclass
-class Permissions:
-    license: License
-    copyright: Copyright | None = None
 
 
 @dataclass

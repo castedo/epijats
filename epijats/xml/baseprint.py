@@ -64,7 +64,7 @@ def contrib_group(src: list[baseprint.Author]) -> DataElement:
     return ret
 
 
-def license(src: baseprint.License) -> DataElement:
+def license(src: dom.License) -> DataElement:
     ret = DataElement('license')
     license_ref = MarkupElement("license-ref")
     license_ref.content.text = src.license_ref
@@ -75,7 +75,7 @@ def license(src: baseprint.License) -> DataElement:
     return ret
 
 
-def permissions(src: baseprint.Permissions) -> DataElement:
+def permissions(src: dom.Permissions) -> DataElement:
     ret = DataElement('permissions')
     if src.copyright is not None:
         ret.content.append(MarkupElement('copyright-statement', src.copyright.statement))
