@@ -1,4 +1,5 @@
 __all__ = [
+    'Abstract',
     'ArrayContent',
     'Article',
     'Author',
@@ -37,6 +38,7 @@ from .tree import (
 )
 
 from .document import (
+    Abstract,
     Article,
     Document,
     ProtoSection,

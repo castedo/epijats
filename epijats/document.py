@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from .metadata import Author, BiblioRefList, Permissions
@@ -9,6 +10,9 @@ from .tree import Element, MixedContent
 @dataclass
 class Abstract:
     blocks: list[Element]
+
+    def __init__(self, blocks: Iterable[Element] = ()) -> None:
+        self.blocks = list(blocks)
 
 
 @dataclass
