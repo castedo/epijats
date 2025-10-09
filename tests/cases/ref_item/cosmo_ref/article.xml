@@ -1,0 +1,34 @@
+<ref id="cosmo_referencing_2020">
+  <element-citation>
+    <person-group person-group-type="author">
+      <name>
+        <surname>Cosmo</surname>
+        <given-names>Roberto Di</given-names>
+      </name>
+      <name>
+        <surname>Gruenpeter</surname>
+        <given-names>Morane</given-names>
+      </name>
+      <name>
+        <surname>Zacchiroli</surname>
+        <given-names>Stefano</given-names>
+      </name>
+    </person-group>
+    <article-title>Referencing Source Code Artifacts: A Separate Concern in Software Citation</article-title>
+    <source-title>Computing in Science &amp; Engineering</source-title>
+    <year>2020</year>
+    <month>03</month>
+    <date-in-citation content-type="access-date">
+      <year>2022</year>
+      <month>09</month>
+      <day>05</day>
+    </date-in-citation>
+    <volume>22</volume>
+    <issue>2</issue>
+    <fpage>33</fpage>
+    <lpage>43</lpage>
+    <issn>1521-9615, 1558-366X</issn>
+    <uri>https://ieeexplore.ieee.org/document/8946737/</uri>
+    <pub-id pub-id-type="doi">10.1109/MCSE.2019.2963148</pub-id>
+  </element-citation>
+</ref>

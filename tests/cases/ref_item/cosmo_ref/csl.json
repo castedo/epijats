@@ -1,0 +1,45 @@
+[
+  {
+    "DOI": "10.1109/MCSE.2019.2963148",
+    "ISSN": "1521-9615, 1558-366X",
+    "URL": "https://ieeexplore.ieee.org/document/8946737/",
+    "accessed": {
+      "date-parts": [
+        [
+          2022,
+          9,
+          5
+        ]
+      ]
+    },
+    "author": [
+      {
+        "family": "Cosmo",
+        "given": "Roberto Di"
+      },
+      {
+        "family": "Gruenpeter",
+        "given": "Morane"
+      },
+      {
+        "family": "Zacchiroli",
+        "given": "Stefano"
+      }
+    ],
+    "container-title": "Computing in Science & Engineering",
+    "id": "cosmo_referencing_2020",
+    "issue": "2",
+    "issued": {
+      "date-parts": [
+        [
+          2020,
+          3
+        ]
+      ]
+    },
+    "page": "33-43",
+    "title": "Referencing Source Code Artifacts: A Separate Concern in Software Citation",
+    "type": "",
+    "volume": "22"
+  }
+]

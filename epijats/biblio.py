@@ -4,7 +4,7 @@ import xml.etree.ElementTree
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from importlib import resources
-from html import escape, unescape
+from html import escape
 from typing import TYPE_CHECKING, TypeAlias, assert_type
 from warnings import warn
 
@@ -64,33 +64,28 @@ JATS_TO_CSL_VAR = {
 }
 
 
-def hyperlink(xhtml_content: str, prepend: str | None = None) -> str:
-    ele = xml.etree.ElementTree.fromstring(f"<root>{xhtml_content}</root>")
-    if not ele.text or not ele.text.strip():
-        return xhtml_content
-    url = ele.text
-    if prepend:
-        url = prepend + url
-    element = xml.etree.ElementTree.Element('a', {'href': url})
-    element.text = url
-    return xml.etree.ElementTree.tostring(element, encoding='unicode', method='html')
-
-
-def set_str(cj: CslJson, key: str, val: str | int | None) -> None:
-    if val is not None:
-        if isinstance(val, int):
-            val = str(val)
-        cj[key] = escape(val, quote=False)
-
-
-def get_str(cj: CslJson, key: str) -> str:
-    val = cj.get(key)
-    return unescape(val) if isinstance(val, str) else ''
+CSLJSON_NOT_SUPPORTED = {
+    '<i>',
+    '</i>',
+    '<b>',
+    '</b>',
+    '<sub>',
+    '</sub>',
+    '<sup>',
+    '</sup>',
+    '<span style="font-variant: small-caps;">',
+    '<span class="nocase">',
+    '</span>',
+}
 
 
 def get_str_or_none(cj: CslJson, key: str) -> str | None:
     val = cj.get(key)
-    return unescape(val) if isinstance(val, str) else None
+    if not isinstance(val, str):
+        return None
+    if any(bad in val for bad in CSLJSON_NOT_SUPPORTED):
+        warn("HTML-like CSLJSON formatting not supported")
+    return val
 
 
 def set_csljson_titles(dest: CslJson, src: BiblioRefItem) -> None:
@@ -98,9 +93,9 @@ def set_csljson_titles(dest: CslJson, src: BiblioRefItem) -> None:
         # add json null even if source title is missing
         # this way solitary article title will roundtrip through CSLJSON
         dest['container-title'] = src.source_title
-        set_str(dest, 'title', src.article_title)
-    else:
-        set_str(dest, 'title', src.source_title)
+        dest['title'] = src.article_title
+    elif src.source_title:
+        dest['title'] = src.source_title
 
 
 def set_ref_item_titles(dest: BiblioRefItem, src: CslJson) -> None:
@@ -110,7 +105,7 @@ def set_ref_item_titles(dest: BiblioRefItem, src: CslJson) -> None:
             # literally null is the JSON value for 'container-title' key
             dest.article_title = get_str_or_none(src, 'title')
         elif isinstance(container_title, str):
-            dest.source_title = unescape(container_title)
+            dest.source_title = container_title
             dest.article_title = get_str_or_none(src, 'title')
         else:
             warn("CSLJSON container-title is not of string type")
@@ -175,12 +170,12 @@ def csljson_from_person_group(src: bp.PersonGroup) -> JsonData:
         a: dict[str, JsonData] = {}
         if isinstance(person, bp.PersonName):
             if person.surname:
-                a['family'] = escape(person.surname, quote=False)
+                a['family'] = person.surname
             if person.given_names:
-                a['given'] = escape(person.given_names, quote=False)
+                a['given'] = person.given_names
         else:
             assert_type(person, str)
-            a['literal'] = escape(str(person), quote=False)
+            a['literal'] = person
         ret.append(a)
     if src.etal:
         ret.append({'literal': 'others'})
@@ -203,7 +198,8 @@ def person_group_from_csljson(src: JsonData) -> bp.PersonGroup | None:
                 family = get_str_or_none(person, 'family')
                 given = get_str_or_none(person, 'given')
                 if family is None and given is None:
-                    ValueError(f"CSLJSON missing literal, family, or given value: {person}")
+                    msg = f"CSLJSON missing literal, family, or given value: {person}"
+                    ValueError(msg)
                 ret.persons.append(bp.PersonName(family, given))
         else:
             ValueError(f"Unrecognized CSLJSON: {person}")
@@ -229,7 +225,7 @@ def set_csljson_pages(dest: CslJson, src: BiblioRefItem) -> None:
         page = fpage
         if lpage := src.biblio_fields.get('lpage'):
             page += f"-{lpage}"
-        set_str(dest, 'page', page)
+        dest['page'] = page
 
 
 def set_ref_item_pages(dest: BiblioRefItem, src: CslJson) -> None:
@@ -243,17 +239,18 @@ def set_ref_item_pages(dest: BiblioRefItem, src: CslJson) -> None:
 def csljson_from_ref_item(src: BiblioRefItem) -> CslJson:
     ret = dict[str, 'JsonData']()
     ret['type'] = ''
-    set_str(ret, 'id', src.id)
+    ret['id'] = src.id
     for jats_key, value in src.biblio_fields.items():
         if csl_key := JATS_TO_CSL_VAR.get(jats_key):
-            set_str(ret, csl_key, value)
+            ret[csl_key] = value
     set_csljson_titles(ret, src)
     set_csljson_dates(ret, src)
     set_csjson_persons(ret, src)
     set_csljson_pages(ret, src)
-    set_str(ret, 'edition', src.edition)
+    if src.edition is not None:
+        ret['edition'] = str(src.edition)
     for pub_id_type, value in src.pub_ids.items():
-        set_str(ret, pub_id_type.upper(), value)
+        ret[pub_id_type.upper()] = value
     return ret
 
 
@@ -267,7 +264,7 @@ def ref_item_from_csljson(csljson: JsonData) -> BiblioRefItem | None:
     if not isinstance(csljson, dict):
         return None
     ret = BiblioRefItem()
-    ret.id = get_str(csljson, 'id')
+    ret.id = str(csljson.get('id', ''))
     for jats_key, csl_key in JATS_TO_CSL_VAR.items():
         value = csljson.get(csl_key)
         if isinstance(value, str):
@@ -302,13 +299,28 @@ class BiblioFormatter(ABC):
     def to_element(self, refs: Sequence[BiblioRefItem]) -> XmlElement: ...
 
 
-def prep_citeproc_csljson(jd: CslJson) -> CslJson:
+def hyperlink(xhtml_content: str, prepend: str | None = None) -> str:
+    ele = xml.etree.ElementTree.fromstring(f"<root>{xhtml_content}</root>")
+    if not ele.text or not ele.text.strip():
+        return xhtml_content
+    url = ele.text
+    if prepend:
+        url = prepend + url
+    element = xml.etree.ElementTree.Element('a', {'href': url})
+    element.text = url
+    return xml.etree.ElementTree.tostring(element, encoding='unicode', method='html')
+
+
+def htmlize_csljson(jd: CslJson) -> CslJson:
     for key, value in jd.items():
-        match key:
-            case 'URL':
-                jd[key] = hyperlink(str(value))
-            case 'DOI':
-                jd[key] = hyperlink(str(value), "https://doi.org/")
+        if isinstance(value, str):
+            value = escape(value, quote=False)
+            match key:
+                case 'URL':
+                    value = hyperlink(value)
+                case 'DOI':
+                    value = hyperlink(value, "https://doi.org/")
+            jd[key] = value
     return {k: v for k, v in jd.items() if v is not None}
 
 
@@ -355,7 +367,7 @@ class CiteprocBiblioFormatter(BiblioFormatter):
     def to_element(self, refs: Sequence[BiblioRefItem]) -> XmlElement:
         import citeproc
 
-        csljson = [prep_citeproc_csljson(csljson_from_ref_item(r)) for r in refs]
+        csljson = [htmlize_csljson(csljson_from_ref_item(r)) for r in refs]
         bib_source = citeproc.source.json.CiteProcJSON(csljson)
         biblio = citeproc.CitationStylesBibliography(
             self._style, bib_source, citeproc.formatter.html
