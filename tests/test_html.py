@@ -50,9 +50,9 @@ def parse_element(src: str | Path, model: kit.Model[kit.Inline]):
 def test_roll_content_html(case):
     case_dir = BLOCK_CASE / case
     core = CoreModels(None)
-    jats_xml = case_dir / "jats.xml"
-    if jats_xml.exists():
-        block = parse_element(jats_xml.read_text(), core.p_level)
+    input_xml = case_dir / "input.xml"
+    if input_xml.exists():
+        block = parse_element(input_xml.read_text(), core.p_level)
         with open(case_dir / "expect.xml", "r") as f:
             expected_xml_str = f.read().strip()
     else:
@@ -63,12 +63,15 @@ def test_roll_content_html(case):
     assert XML.to_str(block) == expected_xml_str
 
     expect_html = case_dir / "expect.html"
-    with open(expect_html, "r") as f:
-        expect = f.read().strip()
+    if expect_html.exists():
+        with open(expect_html, "r") as f:
+            expect_html_str = f.read().strip()
+    else:
+        expect_html_str = expected_xml_str
     html = HtmlGenerator()
     got = html.content_to_str(MixedContent([block]))
     assert html.bare_tex == case.startswith("math")
-    assert got == expect
+    assert got == expect_html_str
 
 
 @pytest.mark.parametrize("case", os.listdir(P_CHILD_CASE))

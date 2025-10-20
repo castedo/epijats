@@ -31,6 +31,7 @@ from .htmlish import (
 )
 from .tree import (
     MixedContentModelBase,
+    RollContentMold,
     parse_mixed_content,
 )
 from .math import disp_formula_model, inline_formula_model
@@ -61,13 +62,14 @@ class CoreModels:
         self.hypertext = hypertext_model(biblio)
         self.heading_text = self.hypertext | break_model()
         block = kit.UnionModel[Element]()
+        roll_content = RollContentMold(block, self.hypertext)
         block |= HtmlParagraphModel(self.hypertext, block)
         block |= disp_formula_model()
         block |= code_model(self.hypertext)
         block |= preformat_model(self.hypertext)
-        block |= ListModel(block, self.hypertext)
-        block |= def_list_model(self.hypertext, block)
-        block |= blockquote_model(block)
+        block |= ListModel(roll_content)
+        block |= def_list_model(self.hypertext, roll_content)
+        block |= blockquote_model(roll_content)
         block |= table_wrap_model(self.hypertext)
         self.p_level = block
 

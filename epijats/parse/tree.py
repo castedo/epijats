@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Generic, Protocol, TYPE_CHECKING
+from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias
 
 from .. import condition as fc
 from ..tree import (
@@ -114,7 +114,10 @@ class MixedContentMold(ContentMold[MixedContent]):
         parse_mixed_content(log, xe, self.child_model, dest)
 
 
-class ArrayContentMold(ContentMold[ArrayContent]):
+ArrayContentMold: TypeAlias = ContentMold[ArrayContent]
+
+
+class DataContentMold(ArrayContentMold):
     def __init__(self, child_model: Model[Element]):
         self.content_type = ArrayContent
         self.child_model = child_model
@@ -143,7 +146,7 @@ class PendingMarkupItem:
         return self._pending.content
 
 
-class RollContentMold(ArrayContentMold):
+class RollContentMold(DataContentMold):
     def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
         super().__init__(block_model | MarkupBlockModel(inline_model))
         self.inline_model = inline_model

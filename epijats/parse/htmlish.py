@@ -18,8 +18,8 @@ from . import kit
 from .content import parse_array_content
 from .tree import (
     ArrayContentMold,
+    DataContentMold,
     EmptyElementModel,
-    RollContentMold,
     InlineModel,
     ItemModel,
     MixedContentMold,
@@ -54,14 +54,14 @@ def preformat_model(hypertext: Model[Inline]) -> Model[Element]:
     return ItemModel(tm, MixedContentMold(hypertext))
 
 
-def blockquote_model(block_model: Model[Element]) -> Model[Element]:
+def blockquote_model(roll_content_mold: ArrayContentMold) -> Model[Element]:
     """<disp-quote> Quote, Displayed
     Like HTML <blockquote>.
 
     https://jats.nlm.nih.gov/archiving/tag-library/1.4/element/disp-quote.html
     """
     tm = TagMold('blockquote', jats_tag='disp-quote')
-    return ItemModel(tm, ArrayContentMold(block_model))
+    return ItemModel(tm, roll_content_mold)
 
 
 class BreakModel(kit.LoadModel[Inline]):
@@ -188,9 +188,8 @@ class HtmlParagraphModel(Model[Element]):
 
 
 class ListModel(kit.LoadModel[Element]):
-    def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
+    def __init__(self, item_content_mold: ArrayContentMold):
         tm = TagMold('li', jats_tag='list-item')
-        item_content_mold = RollContentMold(block_model, inline_model)
         self._list_content = ItemModel(tm, item_content_mold)
 
     def match(self, xe: XmlElement) -> bool:
@@ -236,16 +235,15 @@ def def_item_model(
     """
     tm = TagMold('div', jats_tag='def-item')
     child_model = def_term_model(term_text) | def_def_model(def_content)
-    return ItemModel(tm, ArrayContentMold(child_model))
+    return ItemModel(tm, DataContentMold(child_model))
 
 
 def def_list_model(
-    hypertext_model: Model[Inline], block_model: Model[Element]
+    hypertext_model: Model[Inline], roll_content: ArrayContentMold
 ) -> Model[Element]:
     tm = TagMold('dl', jats_tag='def-list')
-    def_content_mold = RollContentMold(block_model, hypertext_model)
-    child_model = def_item_model(hypertext_model, def_content_mold)
-    return ItemModel(tm, ArrayContentMold(child_model))
+    child_model = def_item_model(hypertext_model, roll_content)
+    return ItemModel(tm, DataContentMold(child_model))
 
 
 class TableCellModel(kit.TagModelBase[Element]):
@@ -266,13 +264,13 @@ class TableCellModel(kit.TagModelBase[Element]):
 
 
 def data_element_model(tag: str, child_model: Model[Element]) -> Model[Element]:
-    return ItemModel(TagMold(tag), ArrayContentMold(child_model))
+    return ItemModel(TagMold(tag), DataContentMold(child_model))
 
 
 def col_group_model() -> Model[Element]:
     col = EmptyElementModel('col', attrib={'span', 'width'}, is_html_tag=True)
     tm = TagMold('colgroup', optional_attrib={'span', 'width'})
-    return ItemModel(tm, ArrayContentMold(col))
+    return ItemModel(tm, DataContentMold(col))
 
 
 def table_wrap_model(text: Model[Inline]) -> Model[Element]:
@@ -283,6 +281,6 @@ def table_wrap_model(text: Model[Inline]) -> Model[Element]:
     thead = data_element_model('thead', tr)
     tbody = data_element_model('tbody', tr)
     table_mold = TagMold('table', optional_attrib={'frame', 'rules'})
-    content_parser = ArrayContentMold(col_group_model() | thead | tbody)
+    content_parser = DataContentMold(col_group_model() | thead | tbody)
     table = ItemModel(table_mold, content_parser)
     return data_element_model('table-wrap', table)
