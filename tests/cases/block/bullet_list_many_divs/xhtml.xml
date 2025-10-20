@@ -1,0 +1,19 @@
+<ul>
+  <li>
+    <div>Just <b>inline</b> text
+        </div>
+    <pre>and</pre>
+    <blockquote>
+      <p>content</p>
+    </blockquote>
+    <ul>
+      <li>and lists that</li>
+    </ul>
+    <dl>
+      <div>
+        <dt>do not</dt>
+        <dd>need to be wrapped in p</dd>
+      </div>
+    </dl>
+  </li>
+</ul>

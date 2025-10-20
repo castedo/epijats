@@ -65,7 +65,7 @@ class CoreModels:
         block |= disp_formula_model()
         block |= code_model(self.hypertext)
         block |= preformat_model(self.hypertext)
-        block |= ListModel(block)
+        block |= ListModel(block, self.hypertext)
         block |= def_list_model(self.hypertext, block)
         block |= blockquote_model(block)
         block |= table_wrap_model(self.hypertext)
@@ -294,7 +294,7 @@ class SectionModel(kit.LoadModel[dom.Section]):
 
 class BodyModel(ContentInElementModelBase[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
-        self.content = ProtoSectionBinder(models)
+        super().__init__(ProtoSectionBinder(models))
 
     def match(self, xe: XmlElement) -> bool:
         # JATS and HTML conflict in use of <body> tag

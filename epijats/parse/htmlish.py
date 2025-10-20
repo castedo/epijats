@@ -4,24 +4,26 @@ from typing import TYPE_CHECKING
 
 from .. import dom
 from .. import condition as fc
+from ..elements import Paragraph
 from ..tree import (
     DataElement,
     Element,
     HtmlVoidElement,
     Inline,
     MarkupElement,
-    MixedContent,
     StartTag,
 )
 
 from . import kit
-from .content import ArrayContentSession
+from .content import parse_array_content
 from .tree import (
     ArrayContentMold,
     EmptyElementModel,
+    RollContentMold,
     InlineModel,
     ItemModel,
     MixedContentMold,
+    PendingMarkupItem,
     TagMold,
     parse_mixed_content,
 )
@@ -145,23 +147,6 @@ def ext_link_model(content_model: Model[Inline]) -> Model[Inline]:
     return JatsExtLinkModel(content_model) | HtmlExtLinkModel(content_model)
 
 
-class PendingParagraph:
-    def __init__(self, dest: Sink[Element]):
-        self.dest = dest
-        self._pending: MarkupElement | None = None
-
-    def close(self) -> None:
-        if self._pending is not None and not self._pending.content.blank():
-            self.dest(self._pending)
-            self._pending = None
-
-    @property
-    def content(self) -> MixedContent:
-        if self._pending is None:
-            self._pending = MarkupElement('p')
-        return self._pending.content
-
-
 class HtmlParagraphModel(Model[Element]):
     def __init__(
         self,
@@ -179,7 +164,7 @@ class HtmlParagraphModel(Model[Element]):
             return False
         # ignore JATS <p specific-use> attribute from BpDF ed.1
         kit.check_no_attrib(log, xe, ['specific-use'])
-        paragraph_dest = PendingParagraph(dest)
+        paragraph_dest = PendingMarkupItem(Paragraph, dest)
         if xe.text:
             paragraph_dest.content.append_text(xe.text)
         for s in xe:
@@ -203,9 +188,10 @@ class HtmlParagraphModel(Model[Element]):
 
 
 class ListModel(kit.LoadModel[Element]):
-    def __init__(self, block_model: Model[Element]):
+    def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
         tm = TagMold('li', jats_tag='list-item')
-        self._list_content = ItemModel(tm, ArrayContentMold(block_model))
+        item_content_mold = RollContentMold(block_model, inline_model)
+        self._list_content = ItemModel(tm, item_content_mold)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['ul', 'ol', 'list']
@@ -219,9 +205,7 @@ class ListModel(kit.LoadModel[Element]):
             kit.check_no_attrib(log, xe)
             tag = str(xe.tag)
         ret = DataElement(tag)
-        sess = ArrayContentSession(log)
-        sess.bind(self._list_content, ret.content.append)
-        sess.parse_content(xe)
+        parse_array_content(log, xe, self._list_content, ret.content.append)
         return ret
 
 
@@ -234,24 +218,24 @@ def def_term_model(term_text: Model[Inline]) -> Model[Element]:
     return ItemModel(tm, MixedContentMold(term_text))
 
 
-def def_def_model(def_child: Model[Element]) -> Model[Element]:
+def def_def_model(def_content: ArrayContentMold) -> Model[Element]:
     """<def> Definition List: Definition
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
     tm = TagMold('dd', jats_tag='def')
-    return ItemModel(tm, ArrayContentMold(def_child))
+    return ItemModel(tm, def_content)
 
 
 def def_item_model(
-    term_text: Model[Inline], def_child: Model[Element]
+    term_text: Model[Inline], def_content: ArrayContentMold
 ) -> Model[Element]:
     """<def-item> Definition List: Definition Item
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
     """
     tm = TagMold('div', jats_tag='def-item')
-    child_model = def_term_model(term_text) | def_def_model(def_child)
+    child_model = def_term_model(term_text) | def_def_model(def_content)
     return ItemModel(tm, ArrayContentMold(child_model))
 
 
@@ -259,7 +243,8 @@ def def_list_model(
     hypertext_model: Model[Inline], block_model: Model[Element]
 ) -> Model[Element]:
     tm = TagMold('dl', jats_tag='def-list')
-    child_model = def_item_model(hypertext_model, block_model)
+    def_content_mold = RollContentMold(block_model, hypertext_model)
+    child_model = def_item_model(hypertext_model, def_content_mold)
     return ItemModel(tm, ArrayContentMold(child_model))
 
 

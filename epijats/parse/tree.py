@@ -13,6 +13,7 @@ from ..tree import (
     ElementT,
     HtmlVoidElement,
     Inline,
+    MarkupBlock,
     MixedContent,
     Parent,
     ParentInline,
@@ -23,8 +24,8 @@ from ..tree import (
 )
 
 from . import kit
-from .content import ArrayContentSession
-from .kit import Log, Model
+from .content import parse_array_content
+from .kit import Log, Model, Sink
 
 
 if TYPE_CHECKING:
@@ -62,6 +63,20 @@ class EmptyElementModel(kit.TagModelBase[Element]):
         return ret
 
 
+class MarkupBlockModel(kit.LoadModel[Element]):
+    def __init__(self, inline_model: Model[Inline]):
+        self.inline_model = inline_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'div'
+
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
+        kit.check_no_attrib(log, xe)
+        ret = MarkupBlock()
+        parse_mixed_content(log, xe, self.inline_model, ret.content)
+        return ret
+
+
 class TagMold:
     def __init__(
         self,
@@ -82,8 +97,6 @@ class TagMold:
     def copy_attributes(self, log: Log, xe: XmlElement, dest: PureElement) -> None:
         kit.check_no_attrib(log, xe, self._ok_attrib_keys)
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
-
-
 
 
 class ContentMold(Protocol, Generic[ContentT]):
@@ -107,9 +120,53 @@ class ArrayContentMold(ContentMold[ArrayContent]):
         self.child_model = child_model
 
     def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
-        sess = ArrayContentSession(log)
-        sess.bind(self.child_model, dest.append)
-        sess.parse_content(xe)
+        parse_array_content(log, xe, self.child_model, dest.append)
+
+
+class PendingMarkupItem:
+    def __init__(
+        self, item_type: type[Parent[Element, MixedContent]], dest: Sink[Element]
+    ):
+        self.item_type = item_type
+        self.dest = dest
+        self._pending: Parent[Element, MixedContent] | None = None
+
+    def close(self) -> None:
+        if self._pending is not None and not self._pending.content.blank():
+            self.dest(self._pending.this)
+            self._pending = None
+
+    @property
+    def content(self) -> MixedContent:
+        if self._pending is None:
+            self._pending = self.item_type()
+        return self._pending.content
+
+
+class RollContentMold(ArrayContentMold):
+    def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
+        super().__init__(block_model | MarkupBlockModel(inline_model))
+        self.inline_model = inline_model
+
+    def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
+        pending = PendingMarkupItem(MarkupBlock, dest.append)
+        if xe.text and xe.text.strip():
+            pending.content.append_text(xe.text)
+        for s in xe:
+            tail = s.tail
+            s.tail = None
+            if self.child_model.match(s):
+                pending.close()
+                self.child_model.parse(log, s, dest.append)
+            else:
+                if self.inline_model.match(s):
+                    self.inline_model.parse(log, s, pending.content.append)
+                else:
+                    log(fc.UnsupportedElement.issue(s))
+            if tail and tail.strip():
+                pending.content.append_text(tail)
+        pending.close()
+        return None
 
 
 class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
@@ -130,15 +187,22 @@ class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
         return None
 
     @abstractmethod
-    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[ElementT, ContentT] | None: ...
+    def start(
+        self, stag: StartTag, content: type[ContentT]
+    ) -> Parent[ElementT, ContentT] | None: ...
 
 
 class InlineModel(ElementModelBase[Inline, ContentT]):
-    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Inline, ContentT] | None:
+    def start(
+        self, stag: StartTag, content: type[ContentT]
+    ) -> Parent[Inline, ContentT] | None:
         return ParentInline(stag, content())
 
+
 class ItemModel(ElementModelBase[Element, ContentT]):
-    def start(self, stag: StartTag, content: type[ContentT]) -> Parent[Element, ContentT] | None:
+    def start(
+        self, stag: StartTag, content: type[ContentT]
+    ) -> Parent[Element, ContentT] | None:
         return ParentItem(stag, content())
 
 

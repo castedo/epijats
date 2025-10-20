@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Generic, TYPE_CHECKING
 
 from .. import condition as fc
+from ..tree import Element
 from . import kit
 from .kit import (
     Binder,
@@ -16,19 +17,30 @@ from .kit import (
     Model,
     ParsedT,
     Parser,
+    Sink,
 )
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-def prep_array_elements(log: Log, e: XmlElement) -> None:
+def _parse_array_content(log: Log, e: XmlElement, parsers: Iterable[Parser]) -> None:
     if e.text and e.text.strip():
         log(fc.IgnoredText.issue(e))
     for s in e:
-        if s.tail and s.tail.strip():
-            log(fc.IgnoredTail.issue(s))
+        tail = s.tail
         s.tail = None
+        if not any(p.parse_element(s) for p in parsers):
+            log(fc.UnsupportedElement.issue(s))
+        if tail and tail.strip():
+            log(fc.IgnoredTail.issue(s))
+
+
+def parse_array_content(
+    log: Log, xe: XmlElement, model: Model[Element], sink: Sink[Element]
+) -> None:
+    parser = model.bound_parser(log, sink)
+    _parse_array_content(log, xe, [parser])
 
 
 class ArrayContentSession:
@@ -61,10 +73,7 @@ class ArrayContentSession:
         return ret
 
     def parse_content(self, e: XmlElement) -> None:
-        prep_array_elements(self.log, e)
-        for s in e:
-            if not any(p.parse_element(s) for p in self._parsers):
-                self.log(fc.UnsupportedElement.issue(s))
+        _parse_array_content(self.log, e, self._parsers)
 
 
 class ContentBinder(ABC, Generic[DestT]):

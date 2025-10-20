@@ -13,10 +13,11 @@ from epijats import dom
 from epijats import condition as fc
 from epijats.xml import baseprint as restyle
 from epijats.document import Abstract
+from epijats.elements import Paragraph
 from epijats.metadata import BiblioRefItem
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.parse.front import AbstractModel, load_author_group
-from epijats.tree import Element, MarkupElement
+from epijats.tree import Element
 from epijats.xml import html
 from epijats.xml.format import XmlFormatter
 
@@ -80,7 +81,7 @@ def test_minimalish():
     got = parse_baseprint(SNAPSHOT_CASE / "baseprint", issues.append)
     assert not issues
     assert got.authors == [bp.Author(bp.PersonName("Wang"))]
-    expect = Abstract([MarkupElement('p', 'A simple test.')])
+    expect = Abstract([Paragraph('A simple test.')])
     assert got.abstract == expect
     assert_bdom_roundtrip(got)
 
