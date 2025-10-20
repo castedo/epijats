@@ -7,14 +7,10 @@ from .. import dom
 from .. import condition as fc
 from ..biblio import BiblioRefPool
 from ..elements import Citation, CitationTuple
-from ..tree import Element, Inline
+from ..tree import Element, Inline, MixedContent
 
 from . import kit
-from .content import (
-    ArrayContentSession,
-    ContentBinder,
-    ContentInElementModelBase,
-)
+from .content import ArrayContentSession
 from .kit import Log, Model
 from .htmlish import (
     HtmlParagraphModel,
@@ -30,7 +26,9 @@ from .htmlish import (
     table_wrap_model,
 )
 from .tree import (
+    ContentMold,
     MixedContentModelBase,
+    MixedContentMold,
     RollContentMold,
     parse_mixed_content,
 )
@@ -60,7 +58,7 @@ def hypertext_model(biblio: BiblioRefPool | None) -> Model[Inline]:
 class CoreModels:
     def __init__(self, biblio: BiblioRefPool | None) -> None:
         self.hypertext = hypertext_model(biblio)
-        self.heading_text = self.hypertext | break_model()
+        self.heading = MixedContentMold(self.hypertext | break_model())
         block = kit.UnionModel[Element]()
         roll_content = RollContentMold(block, self.hypertext)
         block |= HtmlParagraphModel(self.hypertext, block)
@@ -253,16 +251,15 @@ def cross_reference_model(
 
 
 class SectionTitleMonoModel(MixedContentModelBase):
-    def __init__(self, child_model: Model[Inline]):
-        super().__init__(child_model)
+    def __init__(self, content_mold: ContentMold[MixedContent]):
+        super().__init__(content_mold)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']
 
 
-class ProtoSectionBinder(ContentBinder[dom.ProtoSection]):
+class ProtoSectionBinder:
     def __init__(self, models: CoreModels):
-        super().__init__(dom.ProtoSection)
         self._models = models
 
     def binds(self, sess: ArrayContentSession, target: dom.ProtoSection) -> None:
@@ -276,7 +273,7 @@ class SectionModel(kit.LoadModel[dom.Section]):
     """
 
     def __init__(self, models: CoreModels):
-        self._title_model = SectionTitleMonoModel(models.heading_text)
+        self._title_model = SectionTitleMonoModel(models.heading)
         self._proto = ProtoSectionBinder(models)
 
     def match(self, xe: XmlElement) -> bool:
@@ -294,9 +291,22 @@ class SectionModel(kit.LoadModel[dom.Section]):
         return ret
 
 
-class BodyModel(ContentInElementModelBase[dom.ProtoSection]):
+class BodyModel(kit.MonoModel[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
-        super().__init__(ProtoSectionBinder(models))
+        self._proto = ProtoSectionBinder(models)
+
+    @property
+    def parsed_type(self) -> type[dom.ProtoSection]:
+        return dom.ProtoSection
+
+    def check(self, log: Log, e: XmlElement) -> None:
+        kit.check_no_attrib(log, e)
+
+    def read(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> None:
+        self.check(log, xe)
+        sess = ArrayContentSession(log)
+        self._proto.binds(sess, target)
+        sess.parse_content(xe)
 
     def match(self, xe: XmlElement) -> bool:
         # JATS and HTML conflict in use of <body> tag

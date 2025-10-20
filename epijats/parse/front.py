@@ -11,11 +11,7 @@ from ..tree import Element, Inline, MixedContent
 from . import kit
 from .kit import Log, Model, LoaderTagModel as tag_model
 
-from .content import (
-    ArrayContentSession,
-    ContentInElementModel,
-    MergedElementsContentBinder,
-)
+from .content import ArrayContentSession
 from .htmlish import (
     ext_link_model,
     formatted_text_model,
@@ -23,7 +19,7 @@ from .htmlish import (
     minimally_formatted_text_model,
 )
 from .back import load_person_name
-from .tree import MixedContentModel
+from .tree import MixedContentModel, MixedContentMold, SubElementMixedContentMold
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
@@ -38,7 +34,8 @@ def copytext_model() -> Model[Inline]:
 
 
 def copytext_element_model(tag: str) -> kit.MonoModel[MixedContent]:
-    return MixedContentModel(tag, copytext_model())
+    copytext_content = MixedContentMold(copytext_model())
+    return MixedContentModel(tag, copytext_content)
 
 
 def article_title_model() -> kit.MonoModel[MixedContent]:
@@ -46,12 +43,13 @@ def article_title_model() -> kit.MonoModel[MixedContent]:
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
     minitext_model = kit.UnionModel[Inline]()
     minitext_model |= minimally_formatted_text_model(minitext_model)
-    return MixedContentModel('article-title', minitext_model)
+    minitext_content = MixedContentMold(minitext_model)
+    return MixedContentModel('article-title', minitext_content)
 
 
 def title_group_model() -> Model[MixedContent]:
-    content = MergedElementsContentBinder(article_title_model())
-    return ContentInElementModel('title-group', content)
+    content = SubElementMixedContentMold(article_title_model())
+    return MixedContentModel('title-group', content)
 
 
 def orcid_model() -> Model[bp.Orcid]:

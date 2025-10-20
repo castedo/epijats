@@ -204,7 +204,8 @@ class ListModel(kit.LoadModel[Element]):
             kit.check_no_attrib(log, xe)
             tag = str(xe.tag)
         ret = DataElement(tag)
-        parse_array_content(log, xe, self._list_content, ret.content.append)
+        parser = self._list_content.bound_parser(log, ret.content.append)
+        parse_array_content(log, xe, parser)
         return ret
 
 

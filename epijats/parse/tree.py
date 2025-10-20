@@ -114,6 +114,16 @@ class MixedContentMold(ContentMold[MixedContent]):
         parse_mixed_content(log, xe, self.child_model, dest)
 
 
+class SubElementMixedContentMold(ContentMold[MixedContent]):
+    def __init__(self, child_model: kit.MonoModel[MixedContent]):
+        self.content_type = MixedContent
+        self.child_model = child_model
+
+    def read(self, log: Log, xe: XmlElement, dest: MixedContent) -> None:
+        parser = self.child_model.mono_parser(log, dest)
+        parse_array_content(log, xe, parser)
+
+
 ArrayContentMold: TypeAlias = ContentMold[ArrayContent]
 
 
@@ -123,7 +133,8 @@ class DataContentMold(ArrayContentMold):
         self.child_model = child_model
 
     def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
-        parse_array_content(log, xe, self.child_model, dest.append)
+        parser = self.child_model.bound_parser(log, dest.append)
+        parse_array_content(log, xe, parser)
 
 
 class PendingMarkupItem:
@@ -210,24 +221,24 @@ class ItemModel(ElementModelBase[Element, ContentT]):
 
 
 class MixedContentModelBase(kit.MonoModel[MixedContent]):
-    def __init__(self, child_model: Model[Inline]):
-        self.child_model = child_model
+    def __init__(self, content_mold: ContentMold[MixedContent]):
+        self.content_mold = content_mold
 
     @property
     def parsed_type(self) -> type[MixedContent]:
-        return MixedContent
+        return self.content_mold.content_type
 
     def read(self, log: Log, xe: XmlElement, target: MixedContent) -> None:
         kit.check_no_attrib(log, xe)
         if target.blank():
-            parse_mixed_content(log, xe, self.child_model, target)
+            self.content_mold.read(log, xe, target)
         else:
             log(fc.ExcessElement.issue(xe))
 
 
 class MixedContentModel(MixedContentModelBase):
-    def __init__(self, tag: str, child_model: Model[Inline]):
-        super().__init__(child_model)
+    def __init__(self, tag: str, content_mold: ContentMold[MixedContent]):
+        super().__init__(content_mold)
         self.tag = tag
 
     def match(self, xe: XmlElement) -> bool:

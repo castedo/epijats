@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import Generic, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from .. import condition as fc
-from ..tree import Element
 from . import kit
 from .kit import (
     Binder,
@@ -17,14 +15,17 @@ from .kit import (
     Model,
     ParsedT,
     Parser,
-    Sink,
 )
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-def _parse_array_content(log: Log, e: XmlElement, parsers: Iterable[Parser]) -> None:
+def parse_array_content(
+    log: Log, e: XmlElement, parsers: Iterable[Parser] | Parser
+) -> None:
+    if isinstance(parsers, Parser):
+        parsers = [parsers]
     if e.text and e.text.strip():
         log(fc.IgnoredText.issue(e))
     for s in e:
@@ -34,13 +35,6 @@ def _parse_array_content(log: Log, e: XmlElement, parsers: Iterable[Parser]) -> 
             log(fc.UnsupportedElement.issue(s))
         if tail and tail.strip():
             log(fc.IgnoredTail.issue(s))
-
-
-def parse_array_content(
-    log: Log, xe: XmlElement, model: Model[Element], sink: Sink[Element]
-) -> None:
-    parser = model.bound_parser(log, sink)
-    _parse_array_content(log, xe, [parser])
 
 
 class ArrayContentSession:
@@ -73,55 +67,4 @@ class ArrayContentSession:
         return ret
 
     def parse_content(self, e: XmlElement) -> None:
-        _parse_array_content(self.log, e, self._parsers)
-
-
-class ContentBinder(ABC, Generic[DestT]):
-    def __init__(self, dest_type: type[DestT]):
-        self.dest_type = dest_type
-
-    @abstractmethod
-    def binds(self, sess: ArrayContentSession, dest: DestT) -> None: ...
-
-
-class MergedElementsContentBinder(ContentBinder[DestT]):
-    def __init__(self, child_model: MonoModel[DestT]) -> None:
-        super().__init__(child_model.parsed_type)
-        self.child_model = child_model
-
-    def binds(self, sess: ArrayContentSession, dest: DestT) -> None:
-        sess.bind_mono(self.child_model, dest)
-
-
-class ContentInElementModelBase(kit.MonoModel[ParsedT]):
-    def __init__(self, content: ContentBinder[ParsedT]):
-        self.content = content
-
-    @property
-    def parsed_type(self) -> type[ParsedT]:
-        return self.content.dest_type
-
-    def check(self, log: Log, e: XmlElement) -> None:
-        kit.check_no_attrib(log, e)
-
-    def read(self, log: Log, xe: XmlElement, target: ParsedT) -> None:
-        self.check(log, xe)
-        sess = ArrayContentSession(log)
-        self.content.binds(sess, target)
-        sess.parse_content(xe)
-
-
-class ContentInElementModel(kit.TagMonoModelBase[ParsedT]):
-    def __init__(self, tag: str, content: ContentBinder[ParsedT]):
-        super().__init__(tag)
-        self.content = content
-
-    @property
-    def parsed_type(self) -> type[ParsedT]:
-        return self.content.dest_type
-
-    def read(self, log: Log, xe: XmlElement, target: ParsedT) -> None:
-        kit.check_no_attrib(log, xe, self.stag.attrib.keys())
-        sess = ArrayContentSession(log)
-        self.content.binds(sess, target)
-        sess.parse_content(xe)
+        parse_array_content(self.log, e, self._parsers)
