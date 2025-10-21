@@ -83,9 +83,8 @@ def break_model() -> Model[Inline]:
     return BreakModel()
 
 
-def code_model(hypertext: Model[Inline]) -> Model[Element]:
-    # TODO: flip to Model[Inline]
-    return ItemModel(TagMold('code'), MixedContentMold(hypertext))
+def code_model(hypertext: Model[Inline]) -> Model[Inline]:
+    return InlineModel(TagMold('code'), MixedContentMold(hypertext))
 
 
 def formatted_text_model(content: Model[Inline]) -> Model[Inline]:
@@ -151,7 +150,7 @@ def ext_link_model(content_model: Model[Inline]) -> Model[Inline]:
 
 class HtmlParagraphModel(Model[Element]):
     def __init__(self, hypertext: Model[Inline], block: Model[Element]):
-        self.hypertext_model = hypertext
+        self.inline_model = hypertext
         self.block_model = block
 
     def match(self, xe: XmlElement) -> bool:
@@ -160,24 +159,22 @@ class HtmlParagraphModel(Model[Element]):
     def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
         # ignore JATS <p specific-use> attribute from BpDF ed.1
         kit.check_no_attrib(log, xe, ['specific-use'])
-        block_dest = PendingMarkupBlock(dest, Paragraph())
+        pending = PendingMarkupBlock(dest, Paragraph())
         if xe.text:
-            block_dest.content.append_text(xe.text)
+            pending.content.append_text(xe.text)
         for s in xe:
-            if self.block_model and self.block_model.match(s):
-                block_dest.close()
+            if self.inline_model.match(s):
+                self.inline_model.parse(log, s, pending.content.append)
+            elif self.block_model.match(s):
+                pending.close()
                 self.block_model.parse(log, s, dest)
                 if s.tail and s.tail.strip():
-                    block_dest.content.append_text(s.tail)
+                    pending.content.append_text(s.tail)
             else:
-                content_dest = block_dest.content
-                if self.hypertext_model.match(s):
-                    self.hypertext_model.parse(log, s, content_dest.append)
-                else:
-                    log(fc.UnsupportedElement.issue(s))
-                    parse_mixed_content(log, s, self.hypertext_model, content_dest)
-                    content_dest.append_text(s.tail)
-        block_dest.close()
+                log(fc.UnsupportedElement.issue(s))
+                parse_mixed_content(log, s, self.inline_model, pending.content)
+                pending.content.append_text(s.tail)
+        pending.close()
         if xe.tail:
             log(fc.IgnoredTail.issue(xe))
         return True

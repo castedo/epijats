@@ -51,6 +51,7 @@ def hypertext_model(biblio: BiblioRefPool | None) -> Model[Inline]:
     hypertext |= formatted_text_model(hypertext)
     hypertext |= ext_link_model(hypotext)
     hypertext |= cross_reference_model(hypotext, biblio)
+    hypertext |= code_model(hypertext)
     hypertext |= inline_formula_model()
     return hypertext
 
@@ -64,7 +65,6 @@ class CoreModels:
         block |= HtmlParagraphModel(self.hypertext, block)
         block |= MarkupBlockModel(self.hypertext)
         block |= disp_formula_model()
-        block |= code_model(self.hypertext)
         block |= preformat_model(self.hypertext)
         block |= ListModel(roll_content)
         block |= def_list_model(self.hypertext, roll_content)

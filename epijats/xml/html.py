@@ -55,10 +55,9 @@ class UnionHtmlizer(BaseHtmlizer):
 HTML_FROM_XML = {
     'b': 'strong',
     'br': 'br',
-    'code': 'pre',
+    'code': 'code',
     'dd': 'dd',
     'blockquote': 'blockquote',
-    'def-item': 'div',
     'div': 'div',
     'dl': 'dl',
     'dt': 'dt',

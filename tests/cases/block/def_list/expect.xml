@@ -11,7 +11,8 @@
       <p>Just <b>inline</b> text
         </p>
       <pre>and</pre>
-      <code>block</code>
+      <div><code>block</code>
+        </div>
       <blockquote>
         <p>content</p>
       </blockquote>

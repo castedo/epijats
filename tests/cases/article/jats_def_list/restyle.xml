@@ -20,7 +20,9 @@
           <p>Just <b>inline</b> text
             </p>
           <pre>and</pre>
-          <code>block</code>
+          <p>
+            <code>block</code>
+          </p>
           <blockquote>
             <p>content</p>
           </blockquote>
