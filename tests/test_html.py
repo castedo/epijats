@@ -52,13 +52,13 @@ def test_roll_content_html(case):
     core = CoreModels(None)
     input_xml = case_dir / "input.xml"
     if input_xml.exists():
-        block = parse_element(input_xml.read_text(), core.p_level)
+        block = parse_element(input_xml.read_text(), core.block)
         with open(case_dir / "expect.xml", "r") as f:
             expected_xml_str = f.read().strip()
     else:
         with open(case_dir / "xhtml.xml", "r") as f:
             expected_xml_str = f.read().strip()
-        block = parse_element(expected_xml_str, core.p_level)
+        block = parse_element(expected_xml_str, core.block)
 
     assert XML.to_str(block) == expected_xml_str
 

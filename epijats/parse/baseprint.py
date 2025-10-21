@@ -76,7 +76,7 @@ def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
     models = CoreModels(biblio)
-    abstract_model = AbstractModel(models.p_level)
+    abstract_model = AbstractModel(models.block)
     kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession(log)
     sess.bind_once(ArticleFrontBinder(abstract_model), ret)

@@ -7,10 +7,9 @@ from .. import dom
 from .. import condition as fc
 from ..biblio import BiblioRefPool
 from ..elements import Citation, CitationTuple
-from ..tree import Element, Inline, MixedContent
+from ..tree import Element, Inline, MarkupBlock, MixedContent
 
 from . import kit
-from .content import ArrayContentSession
 from .kit import Log, Model
 from .htmlish import (
     HtmlParagraphModel,
@@ -27,8 +26,10 @@ from .htmlish import (
 )
 from .tree import (
     ContentMold,
+    MarkupBlockModel,
     MixedContentModelBase,
     MixedContentMold,
+    PendingMarkupItem,
     RollContentMold,
     parse_mixed_content,
 )
@@ -62,6 +63,7 @@ class CoreModels:
         block = kit.UnionModel[Element]()
         roll_content = RollContentMold(block, self.hypertext)
         block |= HtmlParagraphModel(self.hypertext, block)
+        block |= MarkupBlockModel(self.hypertext)
         block |= disp_formula_model()
         block |= code_model(self.hypertext)
         block |= preformat_model(self.hypertext)
@@ -69,7 +71,7 @@ class CoreModels:
         block |= def_list_model(self.hypertext, roll_content)
         block |= blockquote_model(roll_content)
         block |= table_wrap_model(self.hypertext)
-        self.p_level = block
+        self.block = block
 
 
 class CitationModel(kit.LoadModel[Citation]):
@@ -258,13 +260,44 @@ class SectionTitleMonoModel(MixedContentModelBase):
         return xe.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']
 
 
-class ProtoSectionBinder:
-    def __init__(self, models: CoreModels):
-        self._models = models
+class ProtoSectionParser:
+    def __init__(self, models: CoreModels, section_model: SectionModel):
+        self.inline_model = models.hypertext
+        self.block_model = models.block
+        self.section_model = section_model
+        self._title_model = SectionTitleMonoModel(models.heading)
 
-    def binds(self, sess: ArrayContentSession, target: dom.ProtoSection) -> None:
-        sess.bind(self._models.p_level, target.presection.append)
-        sess.bind(SectionModel(self._models), target.subsections.append)
+    def parse(
+        self,
+        log: Log,
+        xe: XmlElement,
+        target: dom.ProtoSection,
+        title: MixedContent | None,
+    ) -> None:
+        title_parser = None
+        if title is not None:
+            title_parser = self._title_model.mono_parser(log, title)
+        pending = PendingMarkupItem(MarkupBlock, target.presection.append)
+        if xe.text and xe.text.strip():
+            pending.content.append_text(xe.text)
+        for s in xe:
+            tail = s.tail
+            s.tail = None
+            if title_parser and title_parser.parse_element(s):
+                title_parser = None
+            elif self.block_model.match(s):
+                pending.close()
+                self.block_model.parse(log, s, target.presection.append)
+            elif self.section_model.match(s):
+                pending.close()
+                self.section_model.parse(log, s, target.subsections.append)
+            elif self.inline_model.match(s):
+                self.inline_model.parse(log, s, pending.content.append)
+            else:
+                log(fc.UnsupportedElement.issue(s))
+            if tail and tail.strip():
+                pending.content.append_text(tail)
+        pending.close()
 
 
 class SectionModel(kit.LoadModel[dom.Section]):
@@ -273,8 +306,7 @@ class SectionModel(kit.LoadModel[dom.Section]):
     """
 
     def __init__(self, models: CoreModels):
-        self._title_model = SectionTitleMonoModel(models.heading)
-        self._proto = ProtoSectionBinder(models)
+        self._proto = ProtoSectionParser(models, self)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['section', 'sec']
@@ -282,10 +314,7 @@ class SectionModel(kit.LoadModel[dom.Section]):
     def load(self, log: Log, e: XmlElement) -> dom.Section | None:
         kit.check_no_attrib(log, e, ['id'])
         ret = dom.Section(e.attrib.get('id'))
-        sess = ArrayContentSession(log)
-        self._proto.binds(sess, ret)
-        sess.bind_mono(self._title_model, ret.title)
-        sess.parse_content(e)
+        self._proto.parse(log, e, ret, ret.title)
         if ret.title.blank():
             log(fc.MissingSectionHeading.issue(e))
         return ret
@@ -293,7 +322,7 @@ class SectionModel(kit.LoadModel[dom.Section]):
 
 class BodyModel(kit.MonoModel[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
-        self._proto = ProtoSectionBinder(models)
+        self._proto = ProtoSectionParser(models, SectionModel(models))
 
     @property
     def parsed_type(self) -> type[dom.ProtoSection]:
@@ -304,9 +333,7 @@ class BodyModel(kit.MonoModel[dom.ProtoSection]):
 
     def read(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> None:
         self.check(log, xe)
-        sess = ArrayContentSession(log)
-        self._proto.binds(sess, target)
-        sess.parse_content(xe)
+        self._proto.parse(log, xe, target, None)
 
     def match(self, xe: XmlElement) -> bool:
         # JATS and HTML conflict in use of <body> tag

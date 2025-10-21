@@ -159,7 +159,7 @@ class PendingMarkupItem:
 
 class RollContentMold(DataContentMold):
     def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
-        super().__init__(block_model | MarkupBlockModel(inline_model))
+        super().__init__(block_model)
         self.inline_model = inline_model
 
     def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
@@ -172,11 +172,10 @@ class RollContentMold(DataContentMold):
             if self.child_model.match(s):
                 pending.close()
                 self.child_model.parse(log, s, dest.append)
+            elif self.inline_model.match(s):
+                self.inline_model.parse(log, s, pending.content.append)
             else:
-                if self.inline_model.match(s):
-                    self.inline_model.parse(log, s, pending.content.append)
-                else:
-                    log(fc.UnsupportedElement.issue(s))
+                log(fc.UnsupportedElement.issue(s))
             if tail and tail.strip():
                 pending.content.append_text(tail)
         pending.close()
