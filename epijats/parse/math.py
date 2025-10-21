@@ -13,7 +13,7 @@ from ..tree import Element, Inline, StartTag
 from . import kit
 from .content import ArrayContentSession
 from .kit import Log
-from .tree import parse_mixed_content
+from .content import parse_mixed_content
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
@@ -112,6 +112,7 @@ class FormulaAlternativesModel(kit.TagModelBase[Inline]):
 
 
 InlineOrElement = TypeVar('InlineOrElement', Inline, Element)
+
 
 class FormulaModel(kit.TagModelBase[InlineOrElement]):
     def __init__(self, formula_style: FormulaStyle):

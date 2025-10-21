@@ -19,7 +19,8 @@ from .htmlish import (
     minimally_formatted_text_model,
 )
 from .back import load_person_name
-from .tree import MixedContentModel, MixedContentMold, SubElementMixedContentMold
+from .content import MixedContentMold, SubElementMixedContentMold
+from .tree import MixedContentModel
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement

@@ -7,10 +7,17 @@ from .. import dom
 from .. import condition as fc
 from ..biblio import BiblioRefPool
 from ..elements import Citation, CitationTuple
-from ..tree import Element, Inline, MarkupBlock, MixedContent
+from ..tree import Element, Inline, MixedContent
 
 from . import kit
 from .kit import Log, Model
+from .content import (
+    ContentMold,
+    PendingMarkupBlock,
+    MixedContentMold,
+    RollContentMold,
+    parse_mixed_content,
+)
 from .htmlish import (
     HtmlParagraphModel,
     ListModel,
@@ -24,15 +31,7 @@ from .htmlish import (
     preformat_model,
     table_wrap_model,
 )
-from .tree import (
-    ContentMold,
-    MarkupBlockModel,
-    MixedContentModelBase,
-    MixedContentMold,
-    PendingMarkupItem,
-    RollContentMold,
-    parse_mixed_content,
-)
+from .tree import MarkupBlockModel, MixedContentModelBase
 from .math import disp_formula_model, inline_formula_model
 
 
@@ -277,7 +276,7 @@ class ProtoSectionParser:
         title_parser = None
         if title is not None:
             title_parser = self._title_model.mono_parser(log, title)
-        pending = PendingMarkupItem(MarkupBlock, target.presection.append)
+        pending = PendingMarkupBlock(target.presection.append)
         if xe.text and xe.text.strip():
             pending.content.append_text(xe.text)
         for s in xe:

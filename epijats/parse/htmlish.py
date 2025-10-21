@@ -15,17 +15,19 @@ from ..tree import (
 )
 
 from . import kit
-from .content import parse_array_content
-from .tree import (
+from .content import (
     ArrayContentMold,
     DataContentMold,
+    MixedContentMold,
+    PendingMarkupBlock,
+    parse_array_content,
+    parse_mixed_content,
+)
+from .tree import (
     EmptyElementModel,
     InlineModel,
     ItemModel,
-    MixedContentMold,
-    PendingMarkupItem,
     TagMold,
-    parse_mixed_content,
 )
 from .kit import Log, Model, Sink
 
@@ -148,40 +150,34 @@ def ext_link_model(content_model: Model[Inline]) -> Model[Inline]:
 
 
 class HtmlParagraphModel(Model[Element]):
-    def __init__(
-        self,
-        hypertext_model: Model[Inline],
-        non_p_child_model: Model[Element] | None,
-    ):
-        self.hypertext_model = hypertext_model
-        self.non_p_child_model = non_p_child_model
+    def __init__(self, hypertext: Model[Inline], block: Model[Element]):
+        self.hypertext_model = hypertext
+        self.block_model = block
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'p'
 
     def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
-        if xe.tag != 'p':
-            return False
         # ignore JATS <p specific-use> attribute from BpDF ed.1
         kit.check_no_attrib(log, xe, ['specific-use'])
-        paragraph_dest = PendingMarkupItem(Paragraph, dest)
+        block_dest = PendingMarkupBlock(dest, Paragraph())
         if xe.text:
-            paragraph_dest.content.append_text(xe.text)
+            block_dest.content.append_text(xe.text)
         for s in xe:
-            if self.non_p_child_model and self.non_p_child_model.match(s):
-                paragraph_dest.close()
-                self.non_p_child_model.parse(log, s, dest)
+            if self.block_model and self.block_model.match(s):
+                block_dest.close()
+                self.block_model.parse(log, s, dest)
                 if s.tail and s.tail.strip():
-                    paragraph_dest.content.append_text(s.tail)
+                    block_dest.content.append_text(s.tail)
             else:
-                content_dest = paragraph_dest.content
+                content_dest = block_dest.content
                 if self.hypertext_model.match(s):
                     self.hypertext_model.parse(log, s, content_dest.append)
                 else:
                     log(fc.UnsupportedElement.issue(s))
                     parse_mixed_content(log, s, self.hypertext_model, content_dest)
                     content_dest.append_text(s.tail)
-        paragraph_dest.close()
+        block_dest.close()
         if xe.tail:
             log(fc.IgnoredTail.issue(xe))
         return True
