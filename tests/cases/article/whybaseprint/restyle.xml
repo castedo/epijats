@@ -60,6 +60,7 @@ while also having the option to discover newer versions.</p>
   or a web address URL.
   This document itself is archived as a Baseprint document succession with DSI:</p>
       <pre>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc</pre>
+      <p> </p>
       <p>This is a <i>base DSI</i>, which identifies all snapshots within a Baseprint document succession,
   both current and future.
   Similar to textbooks and preprints,
@@ -73,6 +74,7 @@ while also having the option to discover newer versions.</p>
       <p>An edition number can follow a <i>base DSI</i> to identify a specific static edition.
   For instance:</p>
       <pre>dsi:wk1LzCaCSKkIvLAYObAvaoLNGPc/1.1</pre>
+      <p> </p>
     </section>
     <section id="conclusion">
       <h2>Conclusion</h2>
@@ -102,6 +104,7 @@ while also having the option to discover newer versions.</p>
         terminology.</p>
           </li>
         </ul>
+        <p> </p>
       </section>
     </section>
   </article-body>

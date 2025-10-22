@@ -11,12 +11,14 @@
     <ul>
       <li>
         <pre>{ orange code block }</pre>
+        <p> </p>
         <p>
           <code>{ orange code block }</code>
         </p>
         <blockquote>
           <p>orange block quote</p>
         </blockquote>
+        <p> </p>
       </li>
     </ul>
     <p>Definitions with block elements</p>
@@ -26,12 +28,14 @@
         <dd>
           <p>orange fruit</p>
           <pre>{ orange code block }</pre>
+          <p> </p>
           <p>
             <code>{ orange code block }</code>
           </p>
           <blockquote>
             <p>orange block quote</p>
           </blockquote>
+          <p> </p>
         </dd>
       </div>
       <div>
@@ -43,6 +47,7 @@
               <p>sublist</p>
             </li>
           </ul>
+          <p> </p>
         </dd>
       </div>
     </dl>

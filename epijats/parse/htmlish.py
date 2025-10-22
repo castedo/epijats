@@ -160,6 +160,7 @@ class HtmlParagraphModel(Model[Element]):
         # ignore JATS <p specific-use> attribute from BpDF ed.1
         kit.check_no_attrib(log, xe, ['specific-use'])
         pending = PendingMarkupBlock(dest, Paragraph())
+        autoclosed = False
         if xe.text:
             pending.content.append_text(xe.text)
         for s in xe:
@@ -167,6 +168,8 @@ class HtmlParagraphModel(Model[Element]):
                 self.inline_model.parse(log, s, pending.content.append)
             elif self.block_model.match(s):
                 pending.close()
+                autoclosed = True
+                log(fc.BlockElementInPhrasingContent.issue(s))
                 self.block_model.parse(log, s, dest)
                 if s.tail and s.tail.strip():
                     pending.content.append_text(s.tail)
@@ -174,7 +177,8 @@ class HtmlParagraphModel(Model[Element]):
                 log(fc.UnsupportedElement.issue(s))
                 parse_mixed_content(log, s, self.inline_model, pending.content)
                 pending.content.append_text(s.tail)
-        pending.close()
+        if not pending.close() or autoclosed:
+            dest(Paragraph())
         if xe.tail:
             log(fc.IgnoredTail.issue(xe))
         return True

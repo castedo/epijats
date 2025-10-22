@@ -105,6 +105,11 @@ class ExcessElement(ElementFormatCondition):
 
 
 @dataclass(frozen=True)
+class BlockElementInPhrasingContent(ElementFormatCondition):
+    """Block-level element in phrasing content"""
+
+
+@dataclass(frozen=True)
 class MissingContent(ElementFormatCondition):
     """Missing XML element content"""
 

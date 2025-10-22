@@ -7,6 +7,8 @@ from epijats.tree import MixedContent
 from epijats.xml.format import XmlFormatter
 from epijats.xml.html import HtmlGenerator
 
+from . import util
+
 from .test_baseprint import lxml_element_from_str
 
 
@@ -28,13 +30,13 @@ def html_from_element(src: tree.Inline) -> str:
     return html.content_to_str(content)
 
 
-def parse_element(src: str | Path, model: kit.Model[kit.Inline]):
+def parse_element(src: str | Path, model: kit.Model[kit.Inline], issues):
     if isinstance(src, Path):
         with open(src, "r") as f:
             src = f.read().strip()
 
     result = kit.SinkDestination[tree.Element]()
-    parser = model.bound_parser(assert_not, result)
+    parser = model.bound_parser(issues.append, result)
 
     e = lxml_element_from_str(src)
     assert isinstance(e.tag, str)
@@ -46,21 +48,21 @@ def parse_element(src: str | Path, model: kit.Model[kit.Inline]):
     return result.out
 
 
-@pytest.mark.parametrize("case", os.listdir(BLOCK_CASE))
-def test_roll_content_html(case):
-    case_dir = BLOCK_CASE / case
-    core = CoreModels(None)
+def check_xml_html(case_dir, model, bare_tex):
+    issues = []
     input_xml = case_dir / "input.xml"
     if input_xml.exists():
-        block = parse_element(input_xml.read_text(), core.block)
+        element = parse_element(input_xml.read_text(), model, issues)
         with open(case_dir / "expect.xml", "r") as f:
             expected_xml_str = f.read().strip()
     else:
         with open(case_dir / "xhtml.xml", "r") as f:
             expected_xml_str = f.read().strip()
-        block = parse_element(expected_xml_str, core.block)
+        element = parse_element(expected_xml_str, model, issues)
 
-    assert XML.to_str(block) == expected_xml_str
+    assert XML.to_str(element) == expected_xml_str
+
+    util.check_conditions(case_dir, issues)
 
     expect_html = case_dir / "expect.html"
     if expect_html.exists():
@@ -69,30 +71,20 @@ def test_roll_content_html(case):
     else:
         expect_html_str = expected_xml_str
     html = HtmlGenerator()
-    got = html.content_to_str(MixedContent([block]))
-    assert html.bare_tex == case.startswith("math")
+    got = html.content_to_str(MixedContent([element]))
+    assert html.bare_tex == bare_tex
     assert got == expect_html_str
+
+
+@pytest.mark.parametrize("case", os.listdir(BLOCK_CASE))
+def test_roll_content_html(case):
+    case_dir = BLOCK_CASE / case
+    core = CoreModels(None)
+    check_xml_html(case_dir, core.block, case.startswith("math"))
 
 
 @pytest.mark.parametrize("case", os.listdir(P_CHILD_CASE))
 def test_p_child_html(case):
+    case_dir = P_CHILD_CASE / case
     core = CoreModels(None)
-    jats_xml = P_CHILD_CASE/ case / "jats.xml"
-    if jats_xml.exists():
-        p_child = parse_element(jats_xml.read_text(), core.hypertext)
-        with open(P_CHILD_CASE / case / "expect.xml", "r") as f:
-            expected_xml_str = f.read().strip()
-    else:
-        with open(P_CHILD_CASE / case / "xhtml.xml", "r") as f:
-            expected_xml_str = f.read().strip()
-        p_child = parse_element(expected_xml_str, core.hypertext)
-
-    assert XML.to_str(p_child) == expected_xml_str
-
-    expect_html = P_CHILD_CASE/ case / "expect.html"
-    with open(expect_html, "r") as f:
-        expect = f.read().strip()
-    html = HtmlGenerator()
-    got = html.content_to_str(MixedContent([p_child]))
-    assert html.bare_tex == case.startswith("math")
-    assert got == expect
+    check_xml_html(case_dir, core.hypertext, case.startswith("math"))

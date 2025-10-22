@@ -137,10 +137,12 @@ class PendingMarkupBlock:
         self.dest = dest
         self._pending = init
 
-    def close(self) -> None:
+    def close(self) -> bool:
         if self._pending is not None and not self._pending.content.blank():
             self.dest(self._pending.this)
             self._pending = None
+            return True
+        return False
 
     @property
     def content(self) -> MixedContent:

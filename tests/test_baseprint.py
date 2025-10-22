@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import json, os, pytest
-from collections import Counter
+import os, pytest
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -9,7 +8,7 @@ import lxml.etree
 
 import epijats.parse.body as _
 from epijats import dom as bp
-from epijats import dom
+from epijats import dom, nolog
 from epijats import condition as fc
 from epijats.xml import baseprint as restyle
 from epijats.document import Abstract
@@ -20,6 +19,8 @@ from epijats.parse.front import AbstractModel, load_author_group
 from epijats.tree import Element
 from epijats.xml import html
 from epijats.xml.format import XmlFormatter
+
+from . import util
 
 if TYPE_CHECKING:
     from epijats.typeshed import XmlElement
@@ -101,13 +102,7 @@ def test_article(case):
         expect = f.read().rstrip()
     assert XML.to_str(restyle.article(bp)) == expect
 
-    conditions_path = case_path / "conditions.json"
-    if not conditions_path.exists():
-        assert not issues
-    else:
-        with open(conditions_path, "r") as f:
-            conditions = Counter(i.condition for i in issues)
-            assert [c.as_pod() for c in conditions] == json.load(f)
+    util.check_conditions(case_path, issues)
 
     if bp.title is None:
         assert not os.path.exists(case_path / "title.html")
@@ -257,7 +252,7 @@ def test_abstract_restyle() -> None:
     </ul></p>
                 <p>OK</p>
 </abstract>"""
-    bdom = model.load_if_match(assert_not, lxml_element_from_str(bad_style))
+    bdom = model.load_if_match(nolog, lxml_element_from_str(bad_style))
     assert bdom is not None
     restyled = """\
 <abstract>
@@ -268,6 +263,7 @@ def test_abstract_restyle() -> None:
       <p>Restyle!</p>
     </li>
   </ul>
+  <p> </p>
   <p>OK</p>
 </abstract>"""
     xe = XML.root(restyle.abstract(bdom))
@@ -282,6 +278,7 @@ def test_abstract_restyle() -> None:
     <p>Restyle!</p>
   </li>
 </ul>
+<p> </p>
 <p>OK</p>
 """
     assert HTML.abstract_to_str(bdom) == expect_html

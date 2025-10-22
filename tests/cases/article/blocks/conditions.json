@@ -1,0 +1,7 @@
+[
+  ["BlockElementInPhrasingContent", "preformat", "p"],
+  ["BlockElementInPhrasingContent", "disp-quote", "p"],
+  ["BlockElementInPhrasingContent", "list", "p"],
+  ["BlockElementInPhrasingContent", "def-list", "p"]
+]
+

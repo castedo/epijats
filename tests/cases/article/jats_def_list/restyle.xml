@@ -20,17 +20,20 @@
           <p>Just <b>inline</b> text
             </p>
           <pre>and</pre>
+          <p> </p>
           <p>
             <code>block</code>
           </p>
           <blockquote>
             <p>content</p>
           </blockquote>
+          <p> </p>
           <ul>
             <li>
               <p>and even lists that</p>
             </li>
           </ul>
+          <p> </p>
           <dl>
             <div>
               <dt>oddly</dt>
@@ -39,6 +42,7 @@
               </dd>
             </div>
           </dl>
+          <p> </p>
         </dd>
       </div>
     </dl>
