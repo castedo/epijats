@@ -43,6 +43,7 @@ packages = [
   "epijats.static",
   "epijats.templates",
   "epijats.templates.epijats",
+  "epijats.xml",
 ]
 
 [tool.setuptools_scm]
