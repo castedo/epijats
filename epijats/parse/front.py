@@ -20,7 +20,7 @@ from .htmlish import (
 )
 from .back import load_person_name
 from .content import MixedContentMold, RollContentMold, SubElementMixedContentMold
-from .tree import MixedContentModel
+from .tree import MixedContentBinder
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
@@ -34,23 +34,23 @@ def copytext_model() -> Model[Inline]:
     return ret
 
 
-def copytext_element_model(tag: str) -> kit.MonoModel[MixedContent]:
+def copytext_element_model(tag: str) -> MixedContentBinder:
     copytext_content = MixedContentMold(copytext_model())
-    return MixedContentModel(tag, copytext_content)
+    return MixedContentBinder(tag, copytext_content)
 
 
-def article_title_model() -> kit.MonoModel[MixedContent]:
+def article_title_model() -> MixedContentBinder:
     # Contents corresponds to {MINITEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
     minitext_model = kit.UnionModel[Inline]()
     minitext_model |= minimally_formatted_text_model(minitext_model)
     minitext_content = MixedContentMold(minitext_model)
-    return MixedContentModel('article-title', minitext_content)
+    return MixedContentBinder('article-title', minitext_content)
 
 
-def title_group_model() -> Model[MixedContent]:
+def title_group_model() -> MixedContentBinder:
     content = SubElementMixedContentMold(article_title_model())
-    return MixedContentModel('title-group', content)
+    return MixedContentBinder('title-group', content)
 
 
 def orcid_model() -> Model[bp.Orcid]:
@@ -130,7 +130,7 @@ class LicenseModel(kit.TagModelBase[dom.License]):
         ret = dom.License()
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        sess.bind_mono(copytext_element_model('license-p'), ret.license_p)
+        sess.bind_once(copytext_element_model('license-p'), ret.license_p)
         sess.bind_once(LicenseRefBinder(), ret)
         sess.parse_content(e)
         return None if ret.blank() else ret
@@ -142,15 +142,13 @@ class PermissionsModel(kit.TagModelBase[dom.Permissions]):
     def load(self, log: Log, e: XmlElement) -> dom.Permissions | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        statement = sess.one(copytext_element_model('copyright-statement'))
+        statement = MixedContent()
+        sess.bind_once(copytext_element_model('copyright-statement'), statement)
         license = sess.one(LicenseModel())
         sess.parse_content(e)
         if license.out is None:
             return None
-        if statement.out and not statement.out.blank():
-            copyright = dom.Copyright(statement.out)
-        else:
-            copyright = None
+        copyright = None if statement.blank() else dom.Copyright(statement)
         return dom.Permissions(license.out, copyright)
 
 
@@ -175,13 +173,14 @@ class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'title-group')
         sess = ArrayContentSession(log)
-        title = sess.one(title_group_model())
+        title = MixedContent()
+        sess.bind_once(title_group_model(), title)
         authors = sess.one(tag_model('contrib-group', load_author_group))
         abstract = sess.one(self._abstract_model)
         permissions = sess.one(PermissionsModel())
         sess.parse_content(xe)
-        if title.out and not title.out.blank():
-            dest.title = title.out
+        if not title.blank():
+            dest.title = title
         if authors.out is not None:
             dest.authors = authors.out
         if abstract.out:

@@ -20,7 +20,6 @@ from .kit import (
     Binder,
     DestT,
     Log,
-    MonoModel,
     Model,
     ParsedT,
     Parser,
@@ -56,9 +55,6 @@ class ArrayContentSession:
 
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
         self._parsers.append(binder.bound_parser(self.log, dest))
-
-    def bind_mono(self, model: MonoModel[ParsedT], target: ParsedT) -> None:
-        self._parsers.append(model.mono_parser(self.log, target))
 
     def bind_once(self, binder: Binder[DestT], dest: DestT) -> None:
         once = kit.OnlyOnceBinder(binder)
@@ -102,12 +98,12 @@ class MixedContentMold(ContentMold[MixedContent]):
 
 
 class SubElementMixedContentMold(ContentMold[MixedContent]):
-    def __init__(self, child_model: kit.MonoModel[MixedContent]):
+    def __init__(self, child_model: kit.Binder[MixedContent]):
         self.content_type = MixedContent
         self.child_model = child_model
 
     def read(self, log: Log, xe: XmlElement, dest: MixedContent) -> None:
-        parser = self.child_model.mono_parser(log, dest)
+        parser = self.child_model.bound_parser(log, dest)
         parse_array_content(log, xe, parser)
 
 

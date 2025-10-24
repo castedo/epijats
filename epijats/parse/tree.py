@@ -124,13 +124,9 @@ class BiformModel(ElementModelBase[Element, ArrayContent]):
         return BiformElement(stag)
 
 
-class MixedContentModelBase(kit.MonoModel[MixedContent]):
+class MixedContentBinderBase(kit.BinderBase[MixedContent]):
     def __init__(self, content_mold: ContentMold[MixedContent]):
         self.content_mold = content_mold
-
-    @property
-    def parsed_type(self) -> type[MixedContent]:
-        return self.content_mold.content_type
 
     def read(self, log: Log, xe: XmlElement, target: MixedContent) -> None:
         kit.check_no_attrib(log, xe)
@@ -140,7 +136,7 @@ class MixedContentModelBase(kit.MonoModel[MixedContent]):
             log(fc.ExcessElement.issue(xe))
 
 
-class MixedContentModel(MixedContentModelBase):
+class MixedContentBinder(MixedContentBinderBase):
     def __init__(self, tag: str, content_mold: ContentMold[MixedContent]):
         super().__init__(content_mold)
         self.tag = tag

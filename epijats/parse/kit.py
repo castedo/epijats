@@ -271,27 +271,6 @@ class LoadModel(Model[ParsedT]):
         return parsed is not None
 
 
-class MonoModel(LoadModel[ParsedT]):
-    @property
-    @abstractmethod
-    def parsed_type(self) -> type[ParsedT]: ...
-
-    @abstractmethod
-    def read(self, log: Log, xe: XmlElement, target: ParsedT) -> None: ...
-
-    def load(self, log: Log, xe: XmlElement) -> ParsedT | None:
-        out = self.parsed_type()
-        self.read(log, xe, out)
-        return out
-
-    def mono_parser(self, log: Log, target: ParsedT) -> Parser:
-        def parse_fun(xe: XmlElement) -> bool:
-            self.read(log, xe, target)
-            return True
-
-        return StatelessParser(self.match, parse_fun)
-
-
 class TagModelBase(LoadModel[ParsedT]):
     def __init__(self, tag: str | StartTag | None = None):
         if tag is None:

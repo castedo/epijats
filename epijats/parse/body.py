@@ -31,7 +31,7 @@ from .htmlish import (
     preformat_model,
     table_wrap_model,
 )
-from .tree import MarkupBlockModel, MixedContentModelBase
+from .tree import MarkupBlockModel, MixedContentBinderBase
 from .math import disp_formula_model, inline_formula_model
 
 
@@ -251,7 +251,7 @@ def cross_reference_model(
     return jats_xref | HtmlCrossReferenceModel(content_model)
 
 
-class SectionTitleMonoModel(MixedContentModelBase):
+class SectionTitleBinder(MixedContentBinderBase):
     def __init__(self, content_mold: ContentMold[MixedContent]):
         super().__init__(content_mold)
 
@@ -264,7 +264,7 @@ class ProtoSectionParser:
         self.inline_model = models.hypertext
         self.block_model = models.block
         self.section_model = section_model
-        self._title_model = SectionTitleMonoModel(models.heading)
+        self._title_model = SectionTitleBinder(models.heading)
 
     def parse(
         self,
@@ -273,17 +273,18 @@ class ProtoSectionParser:
         target: dom.ProtoSection,
         title: MixedContent | None,
     ) -> None:
-        title_parser = None
-        if title is not None:
-            title_parser = self._title_model.mono_parser(log, title)
         pending = PendingMarkupBlock(target.presection.append)
         if xe.text and xe.text.strip():
             pending.content.append_text(xe.text)
         for s in xe:
             tail = s.tail
             s.tail = None
-            if title_parser and title_parser.parse_element(s):
-                title_parser = None
+            if self._title_model.match(s):
+                if title is None:
+                    log(fc.ExcessElement.issue(s))
+                else:
+                    self._title_model.read(log, s, title)
+                    title = None
             elif self.block_model.match(s):
                 pending.close()
                 self.block_model.parse(log, s, target.presection.append)
