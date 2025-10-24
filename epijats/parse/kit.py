@@ -306,20 +306,6 @@ class TagModelBase(LoadModel[ParsedT]):
         return match_start_tag(xe, self.stag)
 
 
-class TagMonoModelBase(MonoModel[ParsedT]):
-    def __init__(self, tag: str | StartTag | None = None):
-        if tag is None:
-            tag = getattr(type(self), 'TAG')
-        self.stag = StartTag(tag)
-
-    @property
-    def tag(self) -> str:
-        return self.stag.tag
-
-    def match(self, xe: XmlElement) -> bool:
-        return match_start_tag(xe, self.stag)
-
-
 class LoaderTagModel(TagModelBase[ParsedT]):
     def __init__(self, tag: str, loader: Loader[ParsedT]):
         super().__init__(tag)

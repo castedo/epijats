@@ -98,7 +98,7 @@ class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
         return stag is not None and self.tag_mold.match(stag)
 
     def load(self, log: Log, xe: XmlElement) -> ElementT | None:
-        ret = self.start(self.tag_mold.stag, self.content_mold.content_type)
+        ret = self.start(self.tag_mold.stag)
         if ret is not None:
             self.tag_mold.copy_attributes(log, xe, ret.this)
             self.content_mold.read(log, xe, ret.content)
@@ -106,29 +106,21 @@ class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
         return None
 
     @abstractmethod
-    def start(
-        self, stag: StartTag, content: type[ContentT]
-    ) -> Parent[ElementT, ContentT] | None: ...
+    def start(self, stag: StartTag) -> Parent[ElementT, ContentT] | None: ...
 
 
 class InlineModel(ElementModelBase[Inline, ContentT]):
-    def start(
-        self, stag: StartTag, content: type[ContentT]
-    ) -> Parent[Inline, ContentT] | None:
-        return ParentInline(stag, content())
+    def start(self, stag: StartTag) -> Parent[Inline, ContentT] | None:
+        return ParentInline(stag, self.content_mold.content_type())
 
 
 class ItemModel(ElementModelBase[Element, ContentT]):
-    def start(
-        self, stag: StartTag, content: type[ContentT]
-    ) -> Parent[Element, ContentT] | None:
-        return ParentItem(stag, content())
+    def start(self, stag: StartTag) -> Parent[Element, ContentT] | None:
+        return ParentItem(stag, self.content_mold.content_type())
 
 
 class BiformModel(ElementModelBase[Element, ArrayContent]):
-    def start(
-        self, stag: StartTag, content: type[ArrayContent]
-    ) -> Parent[Element, ArrayContent] | None:
+    def start(self, stag: StartTag) -> Parent[Element, ArrayContent] | None:
         return BiformElement(stag)
 
 

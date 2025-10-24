@@ -239,11 +239,12 @@ class RefListModel(kit.TagModelBase[dom.BiblioRefList]):
         super().__init__('ref-list')
 
     def load(self, log: Log, e: XmlElement) -> dom.BiblioRefList | None:
+        ret = dom.BiblioRefList()
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         title = sess.one(tag_model('title', kit.load_string))
-        references = sess.every(BiblioRefItemModel())
+        sess.bind(BiblioRefItemModel(), ret.references.append)
         sess.parse_content(e)
         if title.out and title.out != "References":
             log(fc.IgnoredText.issue(e, 'ref-list/title ignored'))
-        return dom.BiblioRefList(references)
+        return ret

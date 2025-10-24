@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias
 
 from .. import condition as fc
@@ -68,12 +68,6 @@ class ArrayContentSession:
         ret = kit.SinkDestination[ParsedT]()
         once = kit.OnlyOnceBinder(model)
         self._parsers.append(once.bound_parser(self.log, ret))
-        return ret
-
-    def every(self, model: Model[ParsedT]) -> Sequence[ParsedT]:
-        ret: list[ParsedT] = list()
-        parser = model.bound_parser(self.log, ret.append)
-        self._parsers.append(parser)
         return ret
 
     def parse_content(self, e: XmlElement) -> None:
@@ -151,13 +145,14 @@ class PendingMarkupBlock:
         return self._pending.content
 
 
-class RollContentReader:
+class RollContentMold(ArrayContentMold):
     def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
+        self.content_type = ArrayContent
         self.block_model = block_model
         self.inline_model = inline_model
 
-    def read(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> None:
-        pending = PendingMarkupBlock(dest)
+    def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
+        pending = PendingMarkupBlock(dest.append)
         if xe.text and xe.text.strip():
             pending.content.append_text(xe.text)
         for s in xe:
@@ -165,7 +160,7 @@ class RollContentReader:
             s.tail = None
             if self.block_model.match(s):
                 pending.close()
-                self.block_model.parse(log, s, dest)
+                self.block_model.parse(log, s, dest.append)
             elif self.inline_model.match(s):
                 self.inline_model.parse(log, s, pending.content.append)
             else:
@@ -173,12 +168,3 @@ class RollContentReader:
             if tail and tail.strip():
                 pending.content.append_text(tail)
         pending.close()
-
-
-class RollContentMold(ArrayContentMold):
-    def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
-        self.content_type = ArrayContent
-        self._reader = RollContentReader(block_model, inline_model)
-
-    def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
-        self._reader.read(log, xe, dest.append)

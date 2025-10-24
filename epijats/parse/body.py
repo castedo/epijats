@@ -319,19 +319,12 @@ class SectionModel(kit.LoadModel[dom.Section]):
         return ret
 
 
-class BodyModel(kit.MonoModel[dom.ProtoSection]):
+class BodyModel(kit.BinderBase[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
         self._proto = ProtoSectionParser(models, SectionModel(models))
 
-    @property
-    def parsed_type(self) -> type[dom.ProtoSection]:
-        return dom.ProtoSection
-
-    def check(self, log: Log, e: XmlElement) -> None:
-        kit.check_no_attrib(log, e)
-
     def read(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> None:
-        self.check(log, xe)
+        kit.check_no_attrib(log, xe)
         self._proto.parse(log, xe, target, None)
 
     def match(self, xe: XmlElement) -> bool:

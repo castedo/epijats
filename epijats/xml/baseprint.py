@@ -106,7 +106,7 @@ def proto_section(
 
 
 def abstract(src: Abstract) -> DataElement:
-    return DataElement('abstract', src.blocks)
+    return DataElement('abstract', src.content)
 
 
 def append_date_parts(src: Date | None, dest: ArrayContent) -> None:

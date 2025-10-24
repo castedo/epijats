@@ -19,7 +19,7 @@ from .htmlish import (
     minimally_formatted_text_model,
 )
 from .back import load_person_name
-from .content import MixedContentMold, RollContentReader, SubElementMixedContentMold
+from .content import MixedContentMold, RollContentMold, SubElementMixedContentMold
 from .tree import MixedContentModel
 
 if TYPE_CHECKING:
@@ -72,12 +72,13 @@ def load_orcid(log: Log, e: XmlElement) -> bp.Orcid | None:
 
 
 def load_author_group(log: Log, e: XmlElement) -> list[bp.Author] | None:
+    ret: list[bp.Author] = []
     kit.check_no_attrib(log, e)
     kit.check_required_child(log, e, 'contrib')
     sess = ArrayContentSession(log)
-    ret = sess.every(tag_model('contrib', load_author))
+    sess.bind(tag_model('contrib', load_author), ret.append)
     sess.parse_content(e)
-    return list(ret)
+    return ret
 
 
 def person_name_model() -> Model[bp.PersonName]:
@@ -156,13 +157,13 @@ class PermissionsModel(kit.TagModelBase[dom.Permissions]):
 class AbstractModel(kit.TagModelBase[Abstract]):
     def __init__(self, block: Model[Element], inline: Model[Inline]):
         super().__init__('abstract')
-        self._roll = RollContentReader(block, inline)
+        self._roll = RollContentMold(block, inline)
 
     def load(self, log: Log, xe: XmlElement) -> Abstract | None:
         kit.check_no_attrib(log, xe)
-        blocks: list[Element] = []
-        self._roll.read(log, xe, blocks.append)
-        return Abstract(blocks) if blocks else None
+        a = Abstract()
+        self._roll.read(log, xe, a.content)
+        return a if len(a.content) else None
 
 
 class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):

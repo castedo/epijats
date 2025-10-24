@@ -211,7 +211,7 @@ class HtmlGenerator:
         return self._html_content_to_str(ss)
 
     def abstract_to_str(self, src: Abstract) -> str:
-        return self._html_content_to_str(self._blocks_content(src.blocks))
+        return self._html_content_to_str(self._blocks_content(src.content))
 
     def proto_section_to_str(self, src: dom.ProtoSection) -> str:
         return self._html_content_to_str(self._proto_section_content(src))

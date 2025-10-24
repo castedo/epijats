@@ -80,7 +80,7 @@ def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession(log)
     sess.bind_once(ArticleFrontBinder(abstract_model), ret)
-    sess.bind_mono(BodyModel(models), ret.body)
+    sess.bind(BodyModel(models), ret.body)
     sess.parse_content(e)
     if ret.ref_list:
         assert biblio
