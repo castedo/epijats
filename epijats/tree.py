@@ -95,11 +95,9 @@ class ArrayContent:
     def extend(self, es: Iterable[PureElement]) -> None:
         self._children.extend(es)
 
-    def just_phrasing(self) -> MixedContent | None:
-        solo = self._children[0] if len(self._children) == 1 else None
-        if isinstance(solo, MarkupBlock):
-            return solo.content
-        return None
+    @property
+    def only_child(self) -> PureElement | None:
+        return self._children[0] if len(self._children) == 1 else None
 
 
 @dataclass
@@ -193,6 +191,18 @@ class MarkupElement(ParentInline[MixedContent]):
 class DataElement(ParentItem[ArrayContent]):
     def __init__(self, xml_tag: str | StartTag, array: Iterable[PureElement] = ()):
         super().__init__(xml_tag, ArrayContent(array))
+
+
+class BiformElement(ParentItem[ArrayContent]):
+    def __init__(self, xml_tag: str | StartTag, array: Iterable[PureElement] = ()):
+        super().__init__(xml_tag, ArrayContent(array))
+
+    @property
+    def just_phrasing(self) -> MixedContent | None:
+        solo = self.content.only_child
+        if isinstance(solo, MarkupBlock):
+            return solo.content
+        return None
 
 
 class HtmlVoidElement(Inline):

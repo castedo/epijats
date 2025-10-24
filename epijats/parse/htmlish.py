@@ -24,6 +24,7 @@ from .content import (
     parse_mixed_content,
 )
 from .tree import (
+    BiformModel,
     EmptyElementModel,
     InlineModel,
     ItemModel,
@@ -63,7 +64,7 @@ def blockquote_model(roll_content_mold: ArrayContentMold) -> Model[Element]:
     https://jats.nlm.nih.gov/archiving/tag-library/1.4/element/disp-quote.html
     """
     tm = TagMold('blockquote', jats_tag='disp-quote')
-    return ItemModel(tm, roll_content_mold)
+    return BiformModel(tm, roll_content_mold)
 
 
 class BreakModel(kit.LoadModel[Inline]):
@@ -187,7 +188,7 @@ class HtmlParagraphModel(Model[Element]):
 class ListModel(kit.LoadModel[Element]):
     def __init__(self, item_content_mold: ArrayContentMold):
         tm = TagMold('li', jats_tag='list-item')
-        self._list_content = ItemModel(tm, item_content_mold)
+        self._list_content = BiformModel(tm, item_content_mold)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['ul', 'ol', 'list']
@@ -221,7 +222,7 @@ def def_def_model(def_content: ArrayContentMold) -> Model[Element]:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
     tm = TagMold('dd', jats_tag='def')
-    return ItemModel(tm, def_content)
+    return BiformModel(tm, def_content)
 
 
 def def_item_model(

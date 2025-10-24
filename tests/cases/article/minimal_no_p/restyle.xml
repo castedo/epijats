@@ -4,12 +4,17 @@
       <title-group>
         <article-title>Missing block tags</article-title>
       </title-group>
-      <abstract>inline
+      <abstract>
+        <div>inline
  abstract
-   </abstract>
+   </div>
+      </abstract>
     </article-meta>
   </front>
   <article-body>
+    <div>
    !
+  </div>
   </article-body>
 </article>
+

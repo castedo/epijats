@@ -19,7 +19,7 @@ from .htmlish import (
     minimally_formatted_text_model,
 )
 from .back import load_person_name
-from .content import MixedContentMold, SubElementMixedContentMold
+from .content import MixedContentMold, RollContentReader, SubElementMixedContentMold
 from .tree import MixedContentModel
 
 if TYPE_CHECKING:
@@ -154,16 +154,15 @@ class PermissionsModel(kit.TagModelBase[dom.Permissions]):
 
 
 class AbstractModel(kit.TagModelBase[Abstract]):
-    def __init__(self, p_level: Model[Element]):
+    def __init__(self, block: Model[Element], inline: Model[Inline]):
         super().__init__('abstract')
-        self._p_level = p_level
+        self._roll = RollContentReader(block, inline)
 
-    def load(self, log: Log, e: XmlElement) -> Abstract | None:
-        kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
-        blocks = sess.every(self._p_level)
-        sess.parse_content(e)
-        return Abstract(list(blocks)) if blocks else None
+    def load(self, log: Log, xe: XmlElement) -> Abstract | None:
+        kit.check_no_attrib(log, xe)
+        blocks: list[Element] = []
+        self._roll.read(log, xe, blocks.append)
+        return Abstract(blocks) if blocks else None
 
 
 class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):

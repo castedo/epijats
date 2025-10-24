@@ -7,6 +7,8 @@ from typing import Generic, TYPE_CHECKING
 
 from .. import condition as fc
 from ..tree import (
+    ArrayContent,
+    BiformElement,
     ContentT,
     Element,
     ElementT,
@@ -121,6 +123,13 @@ class ItemModel(ElementModelBase[Element, ContentT]):
         self, stag: StartTag, content: type[ContentT]
     ) -> Parent[Element, ContentT] | None:
         return ParentItem(stag, content())
+
+
+class BiformModel(ElementModelBase[Element, ArrayContent]):
+    def start(
+        self, stag: StartTag, content: type[ArrayContent]
+    ) -> Parent[Element, ArrayContent] | None:
+        return BiformElement(stag)
 
 
 class MixedContentModelBase(kit.MonoModel[MixedContent]):

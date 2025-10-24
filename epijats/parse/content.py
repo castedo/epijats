@@ -151,21 +151,21 @@ class PendingMarkupBlock:
         return self._pending.content
 
 
-class RollContentMold(DataContentMold):
+class RollContentReader:
     def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
-        super().__init__(block_model)
+        self.block_model = block_model
         self.inline_model = inline_model
 
-    def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
-        pending = PendingMarkupBlock(dest.append)
+    def read(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> None:
+        pending = PendingMarkupBlock(dest)
         if xe.text and xe.text.strip():
             pending.content.append_text(xe.text)
         for s in xe:
             tail = s.tail
             s.tail = None
-            if self.child_model.match(s):
+            if self.block_model.match(s):
                 pending.close()
-                self.child_model.parse(log, s, dest.append)
+                self.block_model.parse(log, s, dest)
             elif self.inline_model.match(s):
                 self.inline_model.parse(log, s, pending.content.append)
             else:
@@ -173,4 +173,12 @@ class RollContentMold(DataContentMold):
             if tail and tail.strip():
                 pending.content.append_text(tail)
         pending.close()
-        return None
+
+
+class RollContentMold(ArrayContentMold):
+    def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
+        self.content_type = ArrayContent
+        self._reader = RollContentReader(block_model, inline_model)
+
+    def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
+        self._reader.read(log, xe, dest.append)
