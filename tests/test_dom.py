@@ -28,3 +28,30 @@ def test_simple_title():
   </front>
 </article>
 """
+
+
+def test_mixed_content():
+    mc = dom.MixedContent()
+    mc.append_text("hi")
+    mc.append(dom.MarkupElement('b'))
+    mc.append(dom.IssueElement("serious"))
+    assert len(list(mc)) == 2
+    assert mc.text == "hi"
+
+
+def test_author():
+    me = dom.Orcid.from_url("https://orcid.org/0000-0002-5014-4809")
+    assert me.as_19chars() == "0000-0002-5014-4809"
+    name = dom.PersonName("Pane", "Roy", "Senior")
+    dom.Author(name, "joy@pane.com", me)
+
+
+def test_permissions():
+    license = dom.License()
+    license.license_p.append_text("whatever")
+    license.license_ref = 'https://creativecommons.org/licenses/by-nd/'
+    license.cc_license_type = dom.CcLicenseType.from_url(license.license_ref)
+    copyright = dom.Copyright()
+    copyright.statement.append_text("Mine!")
+    permissions = dom.Permissions(license, copyright)
+    assert not permissions.blank()

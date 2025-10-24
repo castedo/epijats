@@ -1,0 +1,107 @@
+[
+  {
+    "URL": "https://web.archive.org/web/20220920180031/https://rivervalley.io/format-of-record/",
+    "accessed": {
+      "date-parts": [
+        [
+          2022
+        ]
+      ]
+    },
+    "author": [
+      {
+        "family": "Bazargan",
+        "given": "Kaveh"
+      }
+    ],
+    "id": "bazargan_format_of_record",
+    "title": "XML – why it should be the “format of record”",
+    "type": "webpage"
+  },
+  {
+    "author": [
+      {
+        "family": "Smith",
+        "given": "Jane"
+      },
+      {
+        "literal": "others"
+      }
+    ],
+    "id": "stuff",
+    "issued": {
+      "date-parts": [
+        [
+          1999
+        ]
+      ]
+    },
+    "title": "Stuff and more stuff",
+    "type": ""
+  },
+  {
+    "DOI": "10.1371/journal.pcbi.1007128",
+    "ISSN": "1553-7358",
+    "URL": "https://dx.plos.org/10.1371/journal.pcbi.1007128",
+    "accessed": {
+      "date-parts": [
+        [
+          2023,
+          9,
+          17
+        ]
+      ]
+    },
+    "author": [
+      {
+        "family": "Himmelstein",
+        "given": "Daniel S."
+      },
+      {
+        "family": "Rubinetti",
+        "given": "Vincent"
+      },
+      {
+        "family": "Slochower",
+        "given": "David R."
+      },
+      {
+        "family": "Hu",
+        "given": "Dongbo"
+      },
+      {
+        "family": "Malladi",
+        "given": "Venkat S."
+      },
+      {
+        "family": "Greene",
+        "given": "Casey S."
+      },
+      {
+        "family": "Gitter",
+        "given": "Anthony"
+      }
+    ],
+    "container-title": "PLOS Computational Biology",
+    "editor": [
+      {
+        "family": "Schneidman-Duhovny",
+        "given": "Dina"
+      }
+    ],
+    "id": "himmelstein_open_2019",
+    "issued": {
+      "date-parts": [
+        [
+          2019,
+          6
+        ]
+      ]
+    },
+    "number": "6",
+    "page": "e1007128",
+    "title": "Open collaborative writing with Manubot",
+    "type": "",
+    "volume": "15"
+  }
+]

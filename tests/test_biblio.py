@@ -8,7 +8,8 @@ from citeproc import SCHEMA_PATH
 from epijats.xml import baseprint as restyle
 from epijats.metadata import BiblioRefItem
 from epijats.parse.back import BiblioRefItemModel
-from epijats import biblio
+from epijats import BiblioRefPool, FormatIssue, ref_list_from_csljson
+from epijats import biblio, dom
 from epijats import condition as fc
 
 from .test_baseprint import lxml_element_from_str, str_from_element
@@ -23,7 +24,7 @@ def parse_clean_ref_item(src: str | Path):
         with open(src, "r") as f:
             src = f.read().strip()
     model = BiblioRefItemModel()
-    issues: list[fc.FormatIssue] = []
+    issues: list[FormatIssue] = []
     ref_item = model.load(issues.append, lxml_element_from_str(src))
     assert not issues
     assert isinstance(ref_item, BiblioRefItem)
@@ -43,7 +44,7 @@ def parse_pmc_ref(p: Path):
     with open(p, "r") as f:
         src = f.read().strip()
     model = BiblioRefItemModel()
-    issues: list[fc.FormatIssue] = []
+    issues: list[FormatIssue] = []
     ref_item = model.load(issues.append, lxml_element_from_str(src))
     conditions = set(i.condition for i in issues) - KNOWN_PMC_NO_SUPPORT
     assert not conditions
@@ -114,8 +115,23 @@ def test_biblio_ref_html(case):
 
 
 def test_csl_valid():
-        schema = etree.RelaxNG(etree.parse(SCHEMA_PATH))
-        csl_path = Path(__file__).parent / "../epijats/csl/full-preview.csl"
-        parser = etree.XMLParser(remove_comments=True, encoding='utf-8')
-        root = etree.parse(csl_path, parser)
-        assert schema.validate(root), str(schema.error_log)
+    schema = etree.RelaxNG(etree.parse(SCHEMA_PATH))
+    csl_path = Path(__file__).parent / "../epijats/csl/full-preview.csl"
+    parser = etree.XMLParser(remove_comments=True, encoding='utf-8')
+    root = etree.parse(csl_path, parser)
+    assert schema.validate(root), str(schema.error_log)
+
+
+def test_read_pool_from_csljson():
+    csljson_path = Path(__file__).parent / "cases/ref_list_csl.json"
+    jsondata = json.loads(csljson_path.read_text())
+    assert len(jsondata) == 3
+    full_list = ref_list_from_csljson(jsondata)
+    assert len(full_list.references) == 3
+    biblio = BiblioRefPool(full_list.references)
+    biblio.cite("stuff")
+    biblio.cite("bazargan_format_of_record")
+    assert len(biblio.used) == 2
+    used_list = dom.BiblioRefList(biblio.used)
+    expect = list(reversed(full_list.references[:2]))
+    assert used_list.references == expect
