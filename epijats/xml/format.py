@@ -12,7 +12,7 @@ from ..tree import (
     ArrayContent,
     BiformElement,
     MixedContent,
-    PureElement,
+    Element,
     WhitespaceElement,
 )
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class ElementFormatter(Protocol):
-    def format(self, src: PureElement, level: int) -> Iterable[XmlElement]: ...
+    def format(self, src: Element, level: int) -> Iterable[XmlElement]: ...
 
 
 def append_content(src: str, dest: XmlElement) -> None:
@@ -83,7 +83,7 @@ class CommonContentFormatter:
         self.markup = MarkupFormatter(sub)
         self.default = IndentFormatter(sub)
 
-    def format_content(self, src: PureElement, level: int, dest: XmlElement) -> None:
+    def format_content(self, src: Element, level: int, dest: XmlElement) -> None:
         if isinstance(src.content, str):
             dest.text = src.content
         elif isinstance(src, BiformElement):
@@ -131,7 +131,7 @@ class XmlFormatter(ElementFormatter):
             warn("lxml specific output will be removed.", DeprecationWarning)
         self.ET = get_ET(use_lxml=use_lxml)
 
-    def to_one_only(self, src: PureElement, level: int) -> XmlElement:
+    def to_one_only(self, src: Element, level: int) -> XmlElement:
         ret: XmlElement = self.ET.Element(src.xml.tag, src.xml.attrib)
         if isinstance(src, CitationTuple):
             self.citation.format_content(src.content, level, ret)
@@ -139,12 +139,12 @@ class XmlFormatter(ElementFormatter):
             self.common.format_content(src, level, ret)
         return ret
 
-    def root(self, src: PureElement) -> XmlElement:
+    def root(self, src: Element) -> XmlElement:
         return root_namespaces(self.to_one_only(src, 0))
 
-    def format(self, src: PureElement, level: int) -> Iterable[XmlElement]:
+    def format(self, src: Element, level: int) -> Iterable[XmlElement]:
         return [self.to_one_only(src, level)]
 
-    def to_str(self, src: PureElement) -> str:
+    def to_str(self, src: Element) -> str:
         e = self.root(src)
         return self.ET.tostring(e).decode()  # type: ignore[no-any-return]

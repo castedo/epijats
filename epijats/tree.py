@@ -36,7 +36,7 @@ class StartTag:
         return True
 
 
-class PureElement(Protocol):
+class Element(Protocol):
     @property
     def xml(self) -> StartTag: ...
 
@@ -46,15 +46,16 @@ class PureElement(Protocol):
     @property
     def is_void(self) -> bool: ...
 
+    @property
+    def tail(self) -> str | None: ...
+
 
 @dataclass
-class Element(PureElement):
+class _GeneralElementBase(Element):
     _xml: StartTag
-    _tail: str | None
 
     def __init__(self, xml_tag: str | StartTag):
         self._xml = StartTag(xml_tag)
-        self._tail = None
 
     @property
     def xml(self) -> StartTag:
@@ -64,55 +65,59 @@ class Element(PureElement):
     def is_void(self) -> bool:
         return False
 
-    @property
-    def tail(self) -> str | None:
-        return self._tail
 
-
-class ElementBase(Element):
+class ElementBase(_GeneralElementBase, Element):
     @property
     def tail(self) -> None:
         return None
 
 
+class Inline(Element, Protocol):
+    @property
+    def tail(self) -> str: ...
+
+    @tail.setter
+    def tail(self, value: str) -> None: ...
+
+
 @dataclass
-class Inline(Element):
+class InlineBase(_GeneralElementBase, Inline):
+    _tail: str
+
     def __init__(self, xml_tag: str | StartTag):
         super().__init__(xml_tag)
+        self._tail = ""
 
     @property
     def tail(self) -> str:
-        return self._tail or ""
+        return self._tail
 
     @tail.setter
     def tail(self, value: str) -> None:
         self._tail = value
 
 
-InlineBase: TypeAlias = Inline
-
-
 @dataclass
 class ArrayContent:
-    _children: list[PureElement]
+    _children: list[Element]
 
-    def __init__(self, content: Iterable[PureElement] = ()):
+    def __init__(self, content: Iterable[Element] = ()):
         self._children = list(content)
 
-    def __iter__(self) -> Iterator[PureElement]:
+    def __iter__(self) -> Iterator[Element]:
         return iter(self._children)
 
     def __len__(self) -> int:
         return len(self._children)
 
-    def append(self, e: PureElement) -> None:
+    def append(self, e: Element) -> None:
         self._children.append(e)
 
-    def extend(self, es: Iterable[PureElement]) -> None:
+    def extend(self, es: Iterable[Element]) -> None:
         self._children.extend(es)
 
     @property
-    def only_child(self) -> PureElement | None:
+    def only_child(self) -> Element | None:
         return self._children[0] if len(self._children) == 1 else None
 
 
@@ -154,46 +159,22 @@ class MixedContent:
 
 Content: TypeAlias = MixedContent | ArrayContent | str
 ContentT = TypeVar('ContentT', MixedContent, ArrayContent, str)
-ContentCovT = TypeVar('ContentCovT', covariant=True, bound=Content)
-ElementT = TypeVar('ElementT', bound=PureElement)
-
-
-class Parent(Protocol, Generic[ElementT, ContentCovT]):
-    this: ElementT
-
-    @property
-    def content(self) -> ContentCovT: ...
 
 
 @dataclass
-class ParentInline(Inline, Parent[Inline, ContentT]):
+class Parent(ElementBase, Generic[ContentT]):
     _content: ContentT
 
     def __init__(self, xml_tag: str | StartTag, content: ContentT):
         super().__init__(xml_tag)
         self._content = content
-        self.this: Inline = self
 
     @property
     def content(self) -> ContentT:
         return self._content
 
 
-@dataclass
-class ParentItem(Element, Parent[Element, ContentT]):
-    _content: ContentT
-
-    def __init__(self, xml_tag: str | StartTag, content: ContentT):
-        super().__init__(xml_tag)
-        self._content = content
-        self.this: Element = self
-
-    @property
-    def content(self) -> ContentT:
-        return self._content
-
-
-class MarkupBlock(ParentItem[MixedContent]):
+class MarkupBlock(Parent[MixedContent]):
     """Semantic of HTML div containing only phrasing content"""
 
     def __init__(self, content: MixedContent | str = ""):
@@ -213,13 +194,13 @@ class MarkupElement(InlineBase):
         return self._content
 
 
-class DataElement(ParentItem[ArrayContent]):
-    def __init__(self, xml_tag: str | StartTag, array: Iterable[PureElement] = ()):
+class DataElement(Parent[ArrayContent]):
+    def __init__(self, xml_tag: str | StartTag, array: Iterable[Element] = ()):
         super().__init__(xml_tag, ArrayContent(array))
 
 
-class BiformElement(ParentItem[ArrayContent]):
-    def __init__(self, xml_tag: str | StartTag, array: Iterable[PureElement] = ()):
+class BiformElement(Parent[ArrayContent]):
+    def __init__(self, xml_tag: str | StartTag, array: Iterable[Element] = ()):
         super().__init__(xml_tag, ArrayContent(array))
 
     @property

@@ -11,7 +11,7 @@ from ..tree import Element, Inline, MixedContent
 from . import kit
 from .kit import Log, Model, LoaderTagModel as tag_model
 
-from .content import ArrayContentSession
+from .content import ArrayContentSession, MixedModel
 from .htmlish import (
     ext_link_model,
     formatted_text_model,
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-def copytext_model() -> Model[Inline]:
+def copytext_model() -> MixedModel:
     # Corresponds to {COPYTEXT} in BpDF spec ed.2
     ret = kit.UnionModel[Inline]()
     ret |= formatted_text_model(ret)
@@ -153,7 +153,7 @@ class PermissionsModel(kit.TagModelBase[dom.Permissions]):
 
 
 class AbstractModel(kit.TagModelBase[Abstract]):
-    def __init__(self, block: Model[Element], inline: Model[Inline]):
+    def __init__(self, block: Model[Element], inline: MixedModel):
         super().__init__('abstract')
         self._roll = RollContentMold(block, inline)
 

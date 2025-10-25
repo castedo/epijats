@@ -100,7 +100,16 @@ class ArrayContentSession:
 
 
 MixedModel: TypeAlias = Model[Inline]
-MixedModelBase: TypeAlias = kit.LoadModelBase[Inline]
+
+
+class MixedModelBase(kit.LoadModelBase[Inline]):
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[Inline]) -> bool:
+        parsed = self.load(log, xe)
+        if parsed is not None:
+            if xe.tail:
+                parsed.tail = xe.tail
+            dest(parsed)
+        return parsed is not None
 
 
 def parse_mixed_content(
@@ -155,14 +164,14 @@ class DataContentMold(ArrayContentMold):
 
 class PendingMarkupBlock:
     def __init__(
-        self, dest: Sink[Element], init: Parent[Element, MixedContent] | None = None
+        self, dest: Sink[Element], init: Parent[MixedContent] | None = None
     ):
         self.dest = dest
         self._pending = init
 
     def close(self) -> bool:
         if self._pending is not None and not self._pending.content.blank():
-            self.dest(self._pending.this)
+            self.dest(self._pending)
             self._pending = None
             return True
         return False

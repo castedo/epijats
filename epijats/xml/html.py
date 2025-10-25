@@ -10,7 +10,7 @@ from ..document import Abstract
 from ..math import FormulaElement
 from ..parse.baseprint import get_ET
 from ..elements import Citation, CitationTuple
-from ..tree import MixedContent, PureElement
+from ..tree import Element, MixedContent
 from .format import CommonContentFormatter, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
@@ -22,14 +22,14 @@ ET = get_ET(use_lxml=False)
 
 class Htmlizer(ABC):
     @abstractmethod
-    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool: ...
+    def handle(self, src: Element, level: int, dest: list[XmlElement]) -> bool: ...
 
 
 class BaseHtmlizer(Htmlizer, ElementFormatter):
     def __init__(self, subformat: ElementFormatter):
         self.common = CommonContentFormatter(subformat)
 
-    def format(self, src: PureElement, level: int) -> Iterable[XmlElement]:
+    def format(self, src: Element, level: int) -> Iterable[XmlElement]:
         ret: list[XmlElement] = []
         if not self.handle(src, level, ret):
             warn(f"Unknown XML {src.xml.tag}")
@@ -48,7 +48,7 @@ class UnionHtmlizer(BaseHtmlizer):
         self._subs.append(other)
         return self
 
-    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+    def handle(self, src: Element, level: int, dest: list[XmlElement]) -> bool:
         return any(s.handle(src, level, dest) for s in self._subs)
 
 
@@ -83,7 +83,7 @@ class DefaultHtmlizer(BaseHtmlizer):
     def __init__(self, html: ElementFormatter):
         super().__init__(html)
 
-    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+    def handle(self, src: Element, level: int, dest: list[XmlElement]) -> bool:
         E = ET.Element
         html_tag = HTML_FROM_XML.get(src.xml.tag)
         ret: XmlElement
@@ -106,7 +106,7 @@ class TableHtmlizer(BaseHtmlizer):
     def __init__(self, html: ElementFormatter):
         super().__init__(html)
 
-    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+    def handle(self, src: Element, level: int, dest: list[XmlElement]) -> bool:
         ret: XmlElement
         if src.xml.tag == 'table-wrap':
             ret = ET.Element('div', {'class': "table-wrap"})
@@ -122,13 +122,13 @@ class TableHtmlizer(BaseHtmlizer):
         dest.append(ret)
         return True
 
-    def table(self, src: PureElement, level: int) -> XmlElement:
+    def table(self, src: Element, level: int) -> XmlElement:
         attrib = src.xml.attrib.copy()
         attrib.setdefault('frame', 'hsides')
         attrib.setdefault('rules', 'groups')
         return ET.Element(src.xml.tag, dict(sorted(attrib.items())))  # type: ignore[no-any-return]
 
-    def table_cell(self, src: PureElement, level: int) -> XmlElement:
+    def table_cell(self, src: Element, level: int) -> XmlElement:
         attrib = {}
         for key, value in src.xml.attrib.items():
             if key in {'rowspan', 'colspan'}:
@@ -144,7 +144,7 @@ class CitationTupleHtmlizer(Htmlizer):
     def __init__(self, html: ElementFormatter):
         self._html = html
 
-    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+    def handle(self, src: Element, level: int, dest: list[XmlElement]) -> bool:
         if not isinstance(src, CitationTuple):
             return False
         assert src.xml.tag == 'sup'
@@ -168,7 +168,7 @@ class MathHtmlizer(Htmlizer):
     def __init__(self) -> None:
         self.bare_tex = False
 
-    def handle(self, src: PureElement, level: int, dest: list[XmlElement]) -> bool:
+    def handle(self, src: Element, level: int, dest: list[XmlElement]) -> bool:
         if isinstance(src, FormulaElement):
             ret = ET.Element('span', {'class': f"math {src.formula_style}"})
             ret.text = src.tex
@@ -218,7 +218,7 @@ class HtmlGenerator:
     def proto_section_to_str(self, src: dom.ProtoSection) -> str:
         return self._html_content_to_str(self._proto_section_content(src))
 
-    def _blocks_content(self, src: Iterable[PureElement]) -> Iterator[XmlElement]:
+    def _blocks_content(self, src: Iterable[Element]) -> Iterator[XmlElement]:
         for p in src:
             for sub in self._html.format(p, 0):
                 sub.tail = "\n"

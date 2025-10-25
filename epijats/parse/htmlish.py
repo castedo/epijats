@@ -26,8 +26,8 @@ from .content import (
 from .tree import (
     BiformModel,
     EmptyElementModel,
-    InlineModel,
     ItemModel,
+    MarkupModel,
     TagMold,
 )
 from .kit import Log, Model, Sink
@@ -40,7 +40,7 @@ def markup_model(
     tag: str, child_model: MixedModel, *, jats_tag: str | None = None
 ) -> MixedModel:
     tm = TagMold(tag, jats_tag=jats_tag)
-    return InlineModel(tm, MixedContentMold(child_model))
+    return MarkupModel(tm, child_model)
 
 
 def minimally_formatted_text_model(content: MixedModel) -> MixedModel:

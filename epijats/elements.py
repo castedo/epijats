@@ -11,8 +11,8 @@ from .tree import (
     InlineBase,
     MarkupElement,
     MixedContent,
-    ParentItem,
-    PureElement,
+    Parent,
+    Element,
     StartTag,
 )
 
@@ -46,7 +46,7 @@ class ExternalHyperlink(MarkupElement):
 
 
 class ListItem(BiformElement):
-    def __init__(self, content: Iterable[PureElement] = ()):
+    def __init__(self, content: Iterable[Element] = ()):
         super().__init__('li', ArrayContent(content))
 
 
@@ -58,17 +58,17 @@ class CrossReference(MarkupElement):
         self.xml.attrib = {"href": "#" + rid}
 
 
-class Paragraph(ParentItem[MixedContent]):
+class Paragraph(Parent[MixedContent]):
     def __init__(self, content: MixedContent | str = ""):
         super().__init__('p', MixedContent(content))
 
 
-class BlockQuote(ParentItem[ArrayContent]):
+class BlockQuote(Parent[ArrayContent]):
     def __init__(self) -> None:
         super().__init__('blockquote', ArrayContent())
 
 
-class PreElement(ParentItem[MixedContent]):
+class PreElement(Parent[MixedContent]):
     def __init__(self, content: MixedContent | str = "") -> None:
         super().__init__('pre', MixedContent(content))
 
@@ -110,8 +110,8 @@ class CitationTuple(InlineBase):
         return len(self._citations)
 
 
-class ItemElement(ParentItem[ArrayContent]):
-    def __init__(self, xml_tag: str, content: Iterable[PureElement] = ()):
+class ItemElement(Parent[ArrayContent]):
+    def __init__(self, xml_tag: str, content: Iterable[Element] = ()):
         super().__init__(xml_tag, ArrayContent(content))
 
 

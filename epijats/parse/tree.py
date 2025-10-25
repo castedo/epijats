@@ -12,14 +12,11 @@ from ..tree import (
     BiformElement,
     ContentT,
     Element,
-    ElementT,
     Inline,
     MarkupBlock,
+    MarkupElement,
     MixedContent,
     Parent,
-    ParentInline,
-    ParentItem,
-    PureElement,
     StartTag,
     WhitespaceElement,
 )
@@ -28,6 +25,7 @@ from . import kit
 from .content import (
     ContentMold,
     MixedModel,
+    MixedModelBase,
     parse_mixed_content,
 )
 from .kit import Log
@@ -92,12 +90,12 @@ class TagMold:
             return True
         return self.stag.issubset(stag)
 
-    def copy_attributes(self, log: Log, xe: XmlElement, dest: PureElement) -> None:
+    def copy_attributes(self, log: Log, xe: XmlElement, dest: Element) -> None:
         kit.check_no_attrib(log, xe, self._ok_attrib_keys)
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
 
 
-class ElementModelBase(kit.LoadModelBase[ElementT], Generic[ElementT, ContentT]):
+class ElementModelBase(kit.LoadModelBase[Element], Generic[ContentT]):
     def __init__(self, mold: TagMold, content_mold: ContentMold[ContentT]):
         self.tag_mold = mold
         self.content_mold: ContentMold[ContentT] = content_mold
@@ -106,31 +104,44 @@ class ElementModelBase(kit.LoadModelBase[ElementT], Generic[ElementT, ContentT])
         stag = StartTag.from_xml(xe)
         return stag is not None and self.tag_mold.match(stag)
 
-    def load(self, log: Log, xe: XmlElement) -> ElementT | None:
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
         ret = self.start(self.tag_mold.stag)
         if ret is not None:
-            self.tag_mold.copy_attributes(log, xe, ret.this)
+            self.tag_mold.copy_attributes(log, xe, ret)
             self.content_mold.read(log, xe, ret.content)
-            return ret.this
+            return ret
         return None
 
     @abstractmethod
-    def start(self, stag: StartTag) -> Parent[ElementT, ContentT] | None: ...
+    def start(self, stag: StartTag) -> Parent[ContentT] | None: ...
 
 
-class InlineModel(ElementModelBase[Inline, ContentT]):
-    def start(self, stag: StartTag) -> Parent[Inline, ContentT] | None:
-        return ParentInline(stag, self.content_mold.content_type())
+class ItemModel(ElementModelBase[ContentT]):
+    def start(self, stag: StartTag) -> Parent[ContentT] | None:
+        return Parent(stag, self.content_mold.content_type())
 
 
-class ItemModel(ElementModelBase[Element, ContentT]):
-    def start(self, stag: StartTag) -> Parent[Element, ContentT] | None:
-        return ParentItem(stag, self.content_mold.content_type())
-
-
-class BiformModel(ElementModelBase[Element, ArrayContent]):
-    def start(self, stag: StartTag) -> Parent[Element, ArrayContent] | None:
+class BiformModel(ElementModelBase[ArrayContent]):
+    def start(self, stag: StartTag) -> Parent[ArrayContent] | None:
         return BiformElement(stag)
+
+
+class MarkupModel(MixedModelBase):
+    def __init__(self, mold: TagMold, child_model: MixedModel):
+        self.tag_mold = mold
+        self.child_model = child_model
+
+    def match(self, xe: XmlElement) -> bool:
+        stag = StartTag.from_xml(xe)
+        return stag is not None and self.tag_mold.match(stag)
+
+    def load(self, log: Log, xe: XmlElement) -> Inline | None:
+        ret = MarkupElement(self.tag_mold.stag)
+        if ret is not None:
+            self.tag_mold.copy_attributes(log, xe, ret)
+            parse_mixed_content(log, xe, self.child_model, ret.content)
+            return ret
+        return None
 
 
 class MixedContentBinderBase(kit.BinderBase[MixedContent]):

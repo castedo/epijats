@@ -4,14 +4,14 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from .metadata import Author, BiblioRefList, Permissions
-from .tree import ArrayContent, PureElement, MixedContent
+from .tree import ArrayContent, Element, MixedContent
 
 
 @dataclass
 class Abstract:
     content: ArrayContent
 
-    def __init__(self, blocks: Iterable[PureElement] = ()) -> None:
+    def __init__(self, blocks: Iterable[Element] = ()) -> None:
         self.content = ArrayContent(blocks)
 
 

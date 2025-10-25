@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from ..math import (
     MATHML_NAMESPACE_PREFIX,
@@ -111,15 +111,28 @@ class FormulaAlternativesModel(kit.TagModelBase[InlineBase]):
         return ret
 
 
-InlineOrElement = TypeVar('InlineOrElement', Inline, Element)
+class InlineFormulaModel(MixedModelBase):
+    def __init__(self, formula_style: FormulaStyle):
+        self.tag = formula_style.jats_tag
+        self.child_model = FormulaAlternativesModel(formula_style)
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == self.tag
+
+    def load(self, log: Log, xe: XmlElement) -> Inline | None:
+        kit.check_no_attrib(log, xe)
+        sess = ArrayContentSession(log)
+        result = sess.one(self.child_model)
+        sess.parse_content(xe)
+        return result.out
 
 
-class FormulaModel(kit.TagModelBase[InlineOrElement]):
+class FormulaModel(kit.TagModelBase[Element]):
     def __init__(self, formula_style: FormulaStyle):
         super().__init__(formula_style.jats_tag)
         self.child_model = FormulaAlternativesModel(formula_style)
 
-    def load(self, log: Log, xe: XmlElement) -> InlineOrElement | None:
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
         kit.check_no_attrib(log, xe)
         sess = ArrayContentSession(log)
         result = sess.one(self.child_model)
@@ -132,7 +145,7 @@ def inline_formula_model() -> MixedModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/inline-formula.html
     """
-    return FormulaModel(FormulaStyle.INLINE)
+    return InlineFormulaModel(FormulaStyle.INLINE)
 
 
 def disp_formula_model() -> kit.Model[Element]:
