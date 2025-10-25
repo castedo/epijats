@@ -25,8 +25,12 @@ from ..tree import (
 )
 
 from . import kit
-from .content import ContentMold, parse_mixed_content
-from .kit import Log, Model
+from .content import (
+    ContentMold,
+    MixedModel,
+    parse_mixed_content,
+)
+from .kit import Log
 
 
 if TYPE_CHECKING:
@@ -39,7 +43,7 @@ class EmptyElementModel(kit.TagModelBase[Element]):
         tag: str,
         *,
         attrib: set[str] = set(),
-        factory: Callable[[], Element] | None = None
+        factory: Callable[[], Element] | None = None,
     ):
         super().__init__(tag)
         self.factory = factory
@@ -57,8 +61,8 @@ class EmptyElementModel(kit.TagModelBase[Element]):
         return ret
 
 
-class MarkupBlockModel(kit.LoadModel[Element]):
-    def __init__(self, inline_model: Model[Inline]):
+class MarkupBlockModel(kit.LoadModelBase[Element]):
+    def __init__(self, inline_model: MixedModel):
         self.inline_model = inline_model
 
     def match(self, xe: XmlElement) -> bool:
@@ -93,7 +97,7 @@ class TagMold:
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
 
 
-class ElementModelBase(kit.LoadModel[ElementT], Generic[ElementT, ContentT]):
+class ElementModelBase(kit.LoadModelBase[ElementT], Generic[ElementT, ContentT]):
     def __init__(self, mold: TagMold, content_mold: ContentMold[ContentT]):
         self.tag_mold = mold
         self.content_mold: ContentMold[ContentT] = content_mold

@@ -30,22 +30,21 @@ def html_from_element(src: tree.Inline) -> str:
     return html.content_to_str(content)
 
 
-def parse_element(src: str | Path, model: kit.Model[kit.Inline], issues):
+def parse_element(src: str | Path, model, issues):
     if isinstance(src, Path):
         with open(src, "r") as f:
             src = f.read().strip()
-
-    result = kit.SinkDestination[tree.Element]()
-    parser = model.bound_parser(issues.append, result)
-
     e = lxml_element_from_str(src)
     assert isinstance(e.tag, str)
-    parse_func = parser.match(e)
-    assert parse_func
-    assert parse_func(e)
-
-    assert isinstance(result.out, tree.Element)
-    return result.out
+    assert model.match(e)
+    try:
+        result = kit.SinkDestination[tree.Element]()
+        assert model.parse(issues.append, e, result)
+        return result.out
+    except:
+        mc = MixedContent()
+        assert model.parse(issues.append, e, mc)
+        return next(iter(mc))
 
 
 def check_xml_html(case_dir, model, bare_tex):

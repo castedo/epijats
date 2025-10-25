@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
@@ -37,33 +36,43 @@ class StartTag:
         return True
 
 
-@dataclass
-class PureElement(ABC):
-    xml: StartTag
-
-    def __init__(self, xml_tag: str | StartTag):
-        self.xml = StartTag(xml_tag)
+class PureElement(Protocol):
+    @property
+    def xml(self) -> StartTag: ...
 
     @property
-    @abstractmethod
     def content(self) -> Content | None: ...
 
     @property
-    def void(self) -> bool:
-        return False
+    def is_void(self) -> bool: ...
 
 
 @dataclass
 class Element(PureElement):
+    _xml: StartTag
     _tail: str | None
 
     def __init__(self, xml_tag: str | StartTag):
-        super().__init__(xml_tag)
+        self._xml = StartTag(xml_tag)
         self._tail = None
+
+    @property
+    def xml(self) -> StartTag:
+        return self._xml
+
+    @property
+    def is_void(self) -> bool:
+        return False
 
     @property
     def tail(self) -> str | None:
         return self._tail
+
+
+class ElementBase(Element):
+    @property
+    def tail(self) -> None:
+        return None
 
 
 @dataclass
@@ -78,6 +87,9 @@ class Inline(Element):
     @tail.setter
     def tail(self, value: str) -> None:
         self._tail = value
+
+
+InlineBase: TypeAlias = Inline
 
 
 @dataclass
@@ -188,9 +200,17 @@ class MarkupBlock(ParentItem[MixedContent]):
         super().__init__('div', MixedContent(content))
 
 
-class MarkupElement(ParentInline[MixedContent]):
+@dataclass
+class MarkupElement(InlineBase):
+    _content: MixedContent
+
     def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
-        super().__init__(xml_tag, MixedContent(content))
+        super().__init__(xml_tag)
+        self._content = MixedContent(content)
+
+    @property
+    def content(self) -> MixedContent:
+        return self._content
 
 
 class DataElement(ParentItem[ArrayContent]):
@@ -210,7 +230,7 @@ class BiformElement(ParentItem[ArrayContent]):
         return None
 
 
-class HtmlVoidElement(Element):
+class HtmlVoidInline(InlineBase):
     """HTML void element (such as <br />).
 
     Only HTML void elements should be serialized in the self-closing XML syntax.
@@ -223,11 +243,21 @@ class HtmlVoidElement(Element):
         return None
 
     @property
-    def void(self) -> bool:
+    def is_void(self) -> bool:
         return True
 
 
-class WhitespaceElement(Inline):
+class HtmlVoidElement(ElementBase):
+    @property
+    def content(self) -> None:
+        return None
+
+    @property
+    def is_void(self) -> bool:
+        return True
+
+
+class WhitespaceElement(InlineBase):
     """Baseprint XML whitespace-only element.
 
     To avoid interoperability problems between HTML and XML parsers,

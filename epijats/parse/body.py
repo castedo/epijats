@@ -10,11 +10,13 @@ from ..elements import Citation, CitationTuple
 from ..tree import Element, Inline, MixedContent
 
 from . import kit
-from .kit import Log, Model
+from .kit import Log
 from .content import (
     ContentMold,
     PendingMarkupBlock,
     MixedContentMold,
+    MixedModel,
+    MixedModelBase,
     RollContentMold,
     parse_mixed_content,
 )
@@ -39,7 +41,7 @@ if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-def hypertext_model(biblio: BiblioRefPool | None) -> Model[Inline]:
+def hypertext_model(biblio: BiblioRefPool | None) -> MixedModel:
     # Corresponds to {HYPERTEXT} in BpDF spec ed.2
     # but with experimental inline math element too
     hypotext = hypotext_model()
@@ -73,7 +75,7 @@ class CoreModels:
         self.block = block
 
 
-class CitationModel(kit.LoadModel[Citation]):
+class CitationModel(kit.LoadModelBase[Citation]):
     def __init__(self, biblio: BiblioRefPool):
         self.biblio = biblio
 
@@ -108,7 +110,7 @@ class CitationModel(kit.LoadModel[Citation]):
         return ret
 
 
-class AutoCorrectCitationModel(kit.LoadModel[Inline]):
+class AutoCorrectCitationModel(MixedModelBase):
     def __init__(self, biblio: BiblioRefPool):
         submodel = CitationModel(biblio)
         self._submodel = submodel
@@ -166,7 +168,7 @@ class CitationRangeHelper:
         self.stopper = None
 
 
-class CitationTupleModel(kit.LoadModel[Inline]):
+class CitationTupleModel(MixedModelBase):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__()
         self._submodel = CitationModel(biblio)
@@ -195,8 +197,8 @@ class CitationTupleModel(kit.LoadModel[Inline]):
         return ret if len(ret) else None
 
 
-class JatsCrossReferenceModel(kit.LoadModel[Inline]):
-    def __init__(self, content_model: Model[Inline], biblio: BiblioRefPool | None):
+class JatsCrossReferenceModel(MixedModelBase):
+    def __init__(self, content_model: MixedModel, biblio: BiblioRefPool | None):
         self.content_model = content_model
         self.biblio = biblio
 
@@ -222,8 +224,8 @@ class JatsCrossReferenceModel(kit.LoadModel[Inline]):
         return ret
 
 
-class HtmlCrossReferenceModel(kit.LoadModel[Inline]):
-    def __init__(self, content_model: Model[Inline]):
+class HtmlCrossReferenceModel(MixedModelBase):
+    def __init__(self, content_model: MixedModel):
         self.content_model = content_model
 
     def match(self, xe: XmlElement) -> bool:
@@ -245,8 +247,8 @@ class HtmlCrossReferenceModel(kit.LoadModel[Inline]):
 
 
 def cross_reference_model(
-    content_model: Model[Inline], biblio: BiblioRefPool | None
-) -> Model[Inline]:
+    content_model: MixedModel, biblio: BiblioRefPool | None
+) -> MixedModel:
     jats_xref = JatsCrossReferenceModel(content_model, biblio)
     return jats_xref | HtmlCrossReferenceModel(content_model)
 
@@ -300,7 +302,7 @@ class ProtoSectionParser:
         pending.close()
 
 
-class SectionModel(kit.LoadModel[dom.Section]):
+class SectionModel(kit.LoadModelBase[dom.Section]):
     """<sec> Section
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """

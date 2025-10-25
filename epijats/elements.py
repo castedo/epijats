@@ -7,27 +7,19 @@ from .tree import (
     ArrayContent,
     BiformElement,
     HtmlVoidElement,
-    Inline,
+    HtmlVoidInline,
+    InlineBase,
     MarkupElement,
     MixedContent,
-    ParentInline,
     ParentItem,
     PureElement,
     StartTag,
 )
 
 
-class LineBreak(Inline):
+class LineBreak(HtmlVoidInline):
     def __init__(self) -> None:
         super().__init__('br')
-
-    @property
-    def content(self) -> None:
-        return None
-
-    @property
-    def void(self) -> bool:
-        return True
 
 
 class TableColumn(HtmlVoidElement):
@@ -40,17 +32,9 @@ class HorizontalRule(HtmlVoidElement):
         super().__init__('hr')
 
 
-class WordBreak(Inline):
+class WordBreak(HtmlVoidInline):
     def __init__(self) -> None:
         super().__init__('wbr')
-
-    @property
-    def content(self) -> None:
-        return None
-
-    @property
-    def void(self) -> bool:
-        return True
 
 
 @dataclass
@@ -102,7 +86,7 @@ class Citation(MarkupElement):
 
 
 @dataclass
-class CitationTuple(Inline):
+class CitationTuple(InlineBase):
     _citations: list[Citation]
 
     def __init__(self, citations: Iterable[Citation] = ()) -> None:
@@ -131,6 +115,11 @@ class ItemElement(ParentItem[ArrayContent]):
         super().__init__(xml_tag, ArrayContent(content))
 
 
-class IssueElement(ParentInline[str]):
+class IssueElement(InlineBase):
     def __init__(self, msg: str):
-        super().__init__('format-issue', msg)
+        super().__init__('format-issue')
+        self.msg = msg
+
+    @property
+    def content(self) -> str:
+        return self.msg

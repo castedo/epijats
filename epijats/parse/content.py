@@ -46,6 +46,35 @@ def parse_array_content(
             log(fc.IgnoredTail.issue(s))
 
 
+class OnlyOnceParser(Parser):
+    def __init__(self, log: Log, parser: Parser):
+        self.log = log
+        self._parser = parser
+        self._parse_done = False
+
+    def match(self, xe: XmlElement) -> kit.ParseFunc | None:
+        fun = self._parser.match(xe)
+        return None if fun is None else self._parse
+
+    def _parse(self, e: XmlElement) -> bool:
+        parse_func = self._parser.match(e)
+        if parse_func is None:
+            return False
+        if not self._parse_done:
+            self._parse_done = parse_func(e)
+        else:
+            self.log(fc.ExcessElement.issue(e))
+        return True
+
+
+class OnlyOnceBinder(Binder[DestT]):
+    def __init__(self, binder: Binder[DestT]):
+        self.binder = binder
+
+    def bound_parser(self, log: Log, dest: DestT) -> Parser:
+        return OnlyOnceParser(log, self.binder.bound_parser(log, dest))
+
+
 class ArrayContentSession:
     """Parsing session for array (non-mixed, data-oriented) XML content."""
 
@@ -57,12 +86,12 @@ class ArrayContentSession:
         self._parsers.append(binder.bound_parser(self.log, dest))
 
     def bind_once(self, binder: Binder[DestT], dest: DestT) -> None:
-        once = kit.OnlyOnceBinder(binder)
+        once = OnlyOnceBinder(binder)
         self._parsers.append(once.bound_parser(self.log, dest))
 
     def one(self, model: Model[ParsedT]) -> kit.Outcome[ParsedT]:
         ret = kit.SinkDestination[ParsedT]()
-        once = kit.OnlyOnceBinder(model)
+        once = OnlyOnceBinder(model)
         self._parsers.append(once.bound_parser(self.log, ret))
         return ret
 
@@ -70,8 +99,12 @@ class ArrayContentSession:
         parse_array_content(self.log, e, self._parsers)
 
 
+MixedModel: TypeAlias = Model[Inline]
+MixedModelBase: TypeAlias = kit.LoadModelBase[Inline]
+
+
 def parse_mixed_content(
-    log: Log, e: XmlElement, emodel: Model[Inline], dest: MixedContent
+    log: Log, e: XmlElement, emodel: MixedModel, dest: MixedContent
 ) -> None:
     dest.append_text(e.text)
     eparser = emodel.bound_parser(log, dest.append)
@@ -89,7 +122,7 @@ class ContentMold(Protocol, Generic[ContentT]):
 
 
 class MixedContentMold(ContentMold[MixedContent]):
-    def __init__(self, child_model: Model[Inline]):
+    def __init__(self, child_model: MixedModel):
         self.content_type = MixedContent
         self.child_model = child_model
 
@@ -142,7 +175,7 @@ class PendingMarkupBlock:
 
 
 class RollContentMold(ArrayContentMold):
-    def __init__(self, block_model: Model[Element], inline_model: Model[Inline]):
+    def __init__(self, block_model: Model[Element], inline_model: MixedModel):
         self.content_type = ArrayContent
         self.block_model = block_model
         self.inline_model = inline_model

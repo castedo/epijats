@@ -95,7 +95,7 @@ class CommonContentFormatter:
             self.default.format_content(src.content, level, dest)
         elif isinstance(src.content, MixedContent):
             self.markup.format(src.content, level, dest)
-        elif src.void:
+        elif src.is_void:
             # HTML void elements must be self-closing and all others not,
             # for compatibility with HTML parsers.
             dest.text = None

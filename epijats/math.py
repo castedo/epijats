@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from .tree import DataElement, ArrayContent, Inline, MarkupElement, StartTag
+from .tree import DataElement, ArrayContent, InlineBase, MarkupElement, StartTag
 
 
 MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
@@ -24,7 +24,7 @@ class FormulaStyle(StrEnum):
         return 'inline-formula' if self == FormulaStyle.INLINE else 'disp-formula'
 
 
-class FormulaElement(Inline):
+class FormulaElement(InlineBase):
     formula_style: FormulaStyle
     tex: str | None
     mathml: MathmlElement | None

@@ -17,6 +17,8 @@ from .content import (
     ArrayContentMold,
     DataContentMold,
     MixedContentMold,
+    MixedModel,
+    MixedModelBase,
     PendingMarkupBlock,
     parse_array_content,
     parse_mixed_content,
@@ -35,13 +37,13 @@ if TYPE_CHECKING:
 
 
 def markup_model(
-    tag: str, child_model: Model[Inline], *, jats_tag: str | None = None
-) -> Model[Inline]:
+    tag: str, child_model: MixedModel, *, jats_tag: str | None = None
+) -> MixedModel:
     tm = TagMold(tag, jats_tag=jats_tag)
     return InlineModel(tm, MixedContentMold(child_model))
 
 
-def minimally_formatted_text_model(content: Model[Inline]) -> Model[Inline]:
+def minimally_formatted_text_model(content: MixedModel) -> MixedModel:
     ret = kit.UnionModel[Inline]()
     ret |= markup_model('b', content, jats_tag='bold')
     ret |= markup_model('i', content, jats_tag='italic')
@@ -50,7 +52,7 @@ def minimally_formatted_text_model(content: Model[Inline]) -> Model[Inline]:
     return ret
 
 
-def preformat_model(hypertext: Model[Inline]) -> Model[Element]:
+def preformat_model(hypertext: MixedModel) -> Model[Element]:
     tm = TagMold('pre', jats_tag='preformat')
     return ItemModel(tm, MixedContentMold(hypertext))
 
@@ -65,7 +67,7 @@ def blockquote_model(roll_content_mold: ArrayContentMold) -> Model[Element]:
     return BiformModel(tm, roll_content_mold)
 
 
-class BreakModel(kit.LoadModel[Inline]):
+class BreakModel(MixedModelBase):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['br', 'break']
 
@@ -73,7 +75,7 @@ class BreakModel(kit.LoadModel[Inline]):
         return dom.LineBreak()
 
 
-def break_model() -> Model[Inline]:
+def break_model() -> MixedModel:
     """<break> Line Break
     Like HTML <br>.
 
@@ -82,18 +84,18 @@ def break_model() -> Model[Inline]:
     return BreakModel()
 
 
-def code_model(hypertext: Model[Inline]) -> Model[Inline]:
-    return InlineModel(TagMold('code'), MixedContentMold(hypertext))
+def code_model(hypertext: MixedModel) -> MixedModel:
+    return markup_model('code', hypertext)
 
 
-def formatted_text_model(content: Model[Inline]) -> Model[Inline]:
+def formatted_text_model(content: MixedModel) -> MixedModel:
     ret = kit.UnionModel[Inline]()
     ret |= minimally_formatted_text_model(content)
     ret |= markup_model('tt', content, jats_tag='monospace')
     return ret
 
 
-def hypotext_model() -> Model[Inline]:
+def hypotext_model() -> MixedModel:
     # Corresponds to {HYPOTEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
     ret = kit.UnionModel[Inline]()
@@ -101,10 +103,12 @@ def hypotext_model() -> Model[Inline]:
     return ret
 
 
-class JatsExtLinkModel(kit.TagModelBase[Inline]):
-    def __init__(self, content_model: Model[Inline]):
-        super().__init__('ext-link')
+class JatsExtLinkModel(MixedModelBase):
+    def __init__(self, content_model: MixedModel):
         self.content_model = content_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'ext-link'
 
     def load(self, log: Log, e: XmlElement) -> Inline | None:
         link_type = e.attrib.get("ext-link-type")
@@ -123,10 +127,13 @@ class JatsExtLinkModel(kit.TagModelBase[Inline]):
             return ret
 
 
-class HtmlExtLinkModel(kit.TagModelBase[Inline]):
-    def __init__(self, content_model: Model[Inline]):
-        super().__init__(StartTag('a', {'rel': 'external'}))
+class HtmlExtLinkModel(MixedModelBase):
+    def __init__(self, content_model: MixedModel):
+        self.stag = StartTag('a', {'rel': 'external'})
         self.content_model = content_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return kit.match_start_tag(xe, self.stag)
 
     def load(self, log: Log, xe: XmlElement) -> Inline | None:
         kit.check_no_attrib(log, xe, ['rel', 'href'])
@@ -143,12 +150,12 @@ class HtmlExtLinkModel(kit.TagModelBase[Inline]):
             return ret
 
 
-def ext_link_model(content_model: Model[Inline]) -> Model[Inline]:
+def ext_link_model(content_model: MixedModel) -> MixedModel:
     return JatsExtLinkModel(content_model) | HtmlExtLinkModel(content_model)
 
 
 class HtmlParagraphModel(Model[Element]):
-    def __init__(self, hypertext: Model[Inline], block: Model[Element]):
+    def __init__(self, hypertext: MixedModel, block: Model[Element]):
         self.inline_model = hypertext
         self.block_model = block
 
@@ -183,7 +190,7 @@ class HtmlParagraphModel(Model[Element]):
         return True
 
 
-class ListModel(kit.LoadModel[Element]):
+class ListModel(kit.LoadModelBase[Element]):
     def __init__(self, item_content_mold: ArrayContentMold):
         tm = TagMold('li', jats_tag='list-item')
         self._list_content = BiformModel(tm, item_content_mold)
@@ -205,7 +212,7 @@ class ListModel(kit.LoadModel[Element]):
         return ret
 
 
-def def_term_model(term_text: Model[Inline]) -> Model[Element]:
+def def_term_model(term_text: MixedModel) -> Model[Element]:
     """<term> Definition List: Term
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
@@ -224,7 +231,7 @@ def def_def_model(def_content: ArrayContentMold) -> Model[Element]:
 
 
 def def_item_model(
-    term_text: Model[Inline], def_content: ArrayContentMold
+    term_text: MixedModel, def_content: ArrayContentMold
 ) -> Model[Element]:
     """<def-item> Definition List: Definition Item
 
@@ -236,7 +243,7 @@ def def_item_model(
 
 
 def def_list_model(
-    hypertext_model: Model[Inline], roll_content: ArrayContentMold
+    hypertext_model: MixedModel, roll_content: ArrayContentMold
 ) -> Model[Element]:
     tm = TagMold('dl', jats_tag='def-list')
     child_model = def_item_model(hypertext_model, roll_content)
@@ -244,7 +251,7 @@ def def_list_model(
 
 
 class TableCellModel(kit.TagModelBase[Element]):
-    def __init__(self, content_model: Model[Inline], *, header: bool):
+    def __init__(self, content_model: MixedModel, *, header: bool):
         super().__init__('th' if header else 'td')
         self.content_model = content_model
         self._ok_attrib_keys = {'align', 'colspan', 'rowspan'}
@@ -270,7 +277,7 @@ def col_group_model() -> Model[Element]:
     return ItemModel(tm, DataContentMold(col))
 
 
-def table_wrap_model(text: Model[Inline]) -> Model[Element]:
+def table_wrap_model(text: MixedModel) -> Model[Element]:
     br = break_model()
     th = TableCellModel(text | br, header=True)
     td = TableCellModel(text | br, header=False)

@@ -251,7 +251,7 @@ class UnionModel(Model[ParsedT]):
         return self
 
 
-class LoadModel(Model[ParsedT]):
+class LoadModelBase(Model[ParsedT]):
     @abstractmethod
     def load(self, log: Log, e: XmlElement) -> ParsedT | None: ...
 
@@ -271,7 +271,7 @@ class LoadModel(Model[ParsedT]):
         return parsed is not None
 
 
-class TagModelBase(LoadModel[ParsedT]):
+class TagModelBase(LoadModelBase[ParsedT]):
     def __init__(self, tag: str | StartTag | None = None):
         if tag is None:
             tag = getattr(type(self), 'TAG')
@@ -292,35 +292,6 @@ class LoaderTagModel(TagModelBase[ParsedT]):
 
     def load(self, log: Log, e: XmlElement) -> ParsedT | None:
         return self._loader(log, e)
-
-
-class OnlyOnceParser(Parser):
-    def __init__(self, log: Log, parser: Parser):
-        self.log = log
-        self._parser = parser
-        self._parse_done = False
-
-    def match(self, xe: XmlElement) -> ParseFunc | None:
-        fun = self._parser.match(xe)
-        return None if fun is None else self._parse
-
-    def _parse(self, e: XmlElement) -> bool:
-        parse_func = self._parser.match(e)
-        if parse_func is None:
-            return False
-        if not self._parse_done:
-            self._parse_done = parse_func(e)
-        else:
-            self.log(fc.ExcessElement.issue(e))
-        return True
-
-
-class OnlyOnceBinder(Binder[DestT]):
-    def __init__(self, binder: Binder[DestT]):
-        self.binder = binder
-
-    def bound_parser(self, log: Log, dest: DestT) -> Parser:
-        return OnlyOnceParser(log, self.binder.bound_parser(log, dest))
 
 
 class Outcome(Protocol[ParsedCovT]):

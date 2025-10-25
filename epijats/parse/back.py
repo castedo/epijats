@@ -160,7 +160,7 @@ def load_edition(log: Log, e: XmlElement) -> int | None:
         return None
 
 
-class SourceTitleModel(kit.LoadModel[str]):
+class SourceTitleModel(kit.LoadModelBase[str]):
     def match(self, xe: XmlElement) -> bool:
         # JATS/HTML conflict in use of <source> tag
         return xe.tag in ['source-title', 'source']
