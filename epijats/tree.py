@@ -48,6 +48,10 @@ class PureElement(ABC):
     @abstractmethod
     def content(self) -> Content | None: ...
 
+    @property
+    def void(self) -> bool:
+        return False
+
 
 @dataclass
 class Element(PureElement):
@@ -179,6 +183,7 @@ class ParentItem(Element, Parent[Element, ContentT]):
 
 class MarkupBlock(ParentItem[MixedContent]):
     """Semantic of HTML div containing only phrasing content"""
+
     def __init__(self, content: MixedContent | str = ""):
         super().__init__('div', MixedContent(content))
 
@@ -205,7 +210,7 @@ class BiformElement(ParentItem[ArrayContent]):
         return None
 
 
-class HtmlVoidElement(Inline):
+class HtmlVoidElement(Element):
     """HTML void element (such as <br />).
 
     Only HTML void elements should be serialized in the self-closing XML syntax.
@@ -216,6 +221,10 @@ class HtmlVoidElement(Inline):
     @property
     def content(self) -> None:
         return None
+
+    @property
+    def void(self) -> bool:
+        return True
 
 
 class WhitespaceElement(Inline):

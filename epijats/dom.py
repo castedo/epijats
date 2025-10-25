@@ -13,9 +13,12 @@ __all__ = [
     'Document',
     'Element',
     'ExternalHyperlink',
+    'HorizontalRule',
     'IssueElement',
     'ItemElement',
     'License',
+    'LineBreak',
+    'ListItem',
     'MarkupBlock',
     'MarkupElement',
     'MixedContent',
@@ -27,6 +30,8 @@ __all__ = [
     'PreElement',
     'ProtoSection',
     'Section',
+    'TableColumn',
+    'WordBreak',
 ]
 
 from .tree import (
@@ -51,10 +56,15 @@ from .elements import (
     CitationTuple,
     CrossReference,
     ExternalHyperlink,
+    HorizontalRule,
     IssueElement,
     ItemElement,
+    LineBreak,
+    ListItem,
     Paragraph,
     PreElement,
+    TableColumn,
+    WordBreak,
 )
 
 from .metadata import (

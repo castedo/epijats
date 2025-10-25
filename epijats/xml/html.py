@@ -62,6 +62,7 @@ HTML_FROM_XML = {
     'dl': 'dl',
     'dt': 'dt',
     'format-issue': 'output',
+    'hr': 'hr',
     'i': 'em',
     'li': 'li',
     'tt': 'samp',
@@ -74,6 +75,7 @@ HTML_FROM_XML = {
     'thead': 'thead',
     'tr': 'tr',
     'ul': 'ul',
+    'wbr': 'wbr',
 }
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Callable
 from typing import Generic, TYPE_CHECKING
 
 from .. import condition as fc
@@ -12,7 +13,6 @@ from ..tree import (
     ContentT,
     Element,
     ElementT,
-    HtmlVoidElement,
     Inline,
     MarkupBlock,
     MixedContent,
@@ -34,14 +34,19 @@ if TYPE_CHECKING:
 
 
 class EmptyElementModel(kit.TagModelBase[Element]):
-    def __init__(self, tag: str, *, is_html_tag: bool, attrib: set[str] = set()):
+    def __init__(
+        self,
+        tag: str,
+        *,
+        attrib: set[str] = set(),
+        factory: Callable[[], Element] | None = None
+    ):
         super().__init__(tag)
-        self.is_html_tag = is_html_tag
+        self.factory = factory
         self._ok_attrib_keys = attrib
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
-        klass = HtmlVoidElement if self.is_html_tag else WhitespaceElement
-        ret = klass(self.tag)
+        ret = self.factory() if self.factory else WhitespaceElement(self.tag)
         kit.check_no_attrib(log, e, self._ok_attrib_keys)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
         if e.text and e.text.strip():

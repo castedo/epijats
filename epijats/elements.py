@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from .tree import (
     ArrayContent,
+    BiformElement,
+    HtmlVoidElement,
     Inline,
     MarkupElement,
     MixedContent,
@@ -15,12 +17,53 @@ from .tree import (
 )
 
 
+class LineBreak(Inline):
+    def __init__(self) -> None:
+        super().__init__('br')
+
+    @property
+    def content(self) -> None:
+        return None
+
+    @property
+    def void(self) -> bool:
+        return True
+
+
+class TableColumn(HtmlVoidElement):
+    def __init__(self) -> None:
+        super().__init__('col')
+
+
+class HorizontalRule(HtmlVoidElement):
+    def __init__(self) -> None:
+        super().__init__('hr')
+
+
+class WordBreak(Inline):
+    def __init__(self) -> None:
+        super().__init__('wbr')
+
+    @property
+    def content(self) -> None:
+        return None
+
+    @property
+    def void(self) -> bool:
+        return True
+
+
 @dataclass
 class ExternalHyperlink(MarkupElement):
     def __init__(self, href: str):
         super().__init__('a')
         self.href = href
         self.xml.attrib = {'rel': 'external', 'href': href}
+
+
+class ListItem(BiformElement):
+    def __init__(self, content: Iterable[PureElement] = ()):
+        super().__init__('li', ArrayContent(content))
 
 
 @dataclass

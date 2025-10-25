@@ -4,6 +4,12 @@ import tempfile
 from pathlib import Path
 
 from epijats import dom, write_baseprint
+from epijats.xml.format import XmlFormatter
+from epijats.xml.html import HtmlGenerator
+
+
+XML = XmlFormatter(use_lxml=False)
+HTML = HtmlGenerator()
 
 
 def read_article_xml(art: dom.Article) -> str:
@@ -13,7 +19,7 @@ def read_article_xml(art: dom.Article) -> str:
             return f.read()
 
 
-def test_simple_title():
+def test_simple_title() -> None:
     art = dom.Article()
     art.title = dom.MixedContent("Do <b>not</b> tag me!")
     got = read_article_xml(art)
@@ -30,13 +36,15 @@ def test_simple_title():
 """
 
 
-def test_mixed_content():
-    mc = dom.MixedContent()
+def test_mixed_content() -> None:
+    div = dom.MarkupBlock()
+    mc = div.content
     mc.append_text("hi")
-    mc.append(dom.MarkupElement('b'))
+    mc.append(dom.MarkupElement('b', "ya"))
     mc.append(dom.IssueElement("serious"))
     assert len(list(mc)) == 2
-    assert mc.text == "hi"
+    expect = "<div>hi<b>ya</b><format-issue>serious</format-issue></div>"
+    assert XML.to_str(div) == expect
 
 
 def test_author():
@@ -46,7 +54,7 @@ def test_author():
     dom.Author(name, "joy@pane.com", me)
 
 
-def test_permissions():
+def test_permissions() -> None:
     license = dom.License()
     license.license_p.append_text("whatever")
     license.license_ref = 'https://creativecommons.org/licenses/by-nd/'
@@ -55,3 +63,22 @@ def test_permissions():
     copyright.statement.append_text("Mine!")
     permissions = dom.Permissions(license, copyright)
     assert not permissions.blank()
+
+
+def test_inline_elements() -> None:
+    mc = dom.MixedContent()
+    mc.append_text("0")
+    mc.append(dom.LineBreak())
+    mc.append_text("1")
+    mc.append(dom.WordBreak())
+    mc.append_text("2")
+    assert HTML.content_to_str(mc) == "0<br>1<wbr>2"
+
+
+def test_block_elements() -> None:
+    bq = dom.BlockQuote()
+    bq.content.append(dom.HorizontalRule())
+    assert XML.to_str(bq) == """\
+<blockquote>
+  <hr />
+</blockquote>"""

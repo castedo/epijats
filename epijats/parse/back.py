@@ -46,7 +46,7 @@ class PersonGroupModel(kit.TagModelBase[bp.PersonGroup]):
         sess = ArrayContentSession(log)
         sess.bind(tag_model('name', load_person_name), ret.persons.append)
         sess.bind(tag_model('string-name', kit.load_string), ret.persons.append)
-        etal = sess.one(EmptyElementModel('etal', is_html_tag=False))
+        etal = sess.one(EmptyElementModel('etal'))
         sess.parse_content(e)
         ret.etal = bool(etal.out)
         return ret

@@ -4,11 +4,9 @@ from typing import TYPE_CHECKING
 
 from .. import dom
 from .. import condition as fc
-from ..elements import Paragraph
 from ..tree import (
     DataElement,
     Element,
-    HtmlVoidElement,
     Inline,
     MarkupElement,
     StartTag,
@@ -72,7 +70,7 @@ class BreakModel(kit.LoadModel[Inline]):
         return xe.tag in ['br', 'break']
 
     def load(self, log: Log, e: XmlElement) -> Inline | None:
-        return HtmlVoidElement('br')
+        return dom.LineBreak()
 
 
 def break_model() -> Model[Inline]:
@@ -160,7 +158,7 @@ class HtmlParagraphModel(Model[Element]):
     def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
         # ignore JATS <p specific-use> attribute from BpDF ed.1
         kit.check_no_attrib(log, xe, ['specific-use'])
-        pending = PendingMarkupBlock(dest, Paragraph())
+        pending = PendingMarkupBlock(dest, dom.Paragraph())
         autoclosed = False
         if xe.text:
             pending.content.append_text(xe.text)
@@ -179,7 +177,7 @@ class HtmlParagraphModel(Model[Element]):
                 parse_mixed_content(log, s, self.inline_model, pending.content)
                 pending.content.append_text(s.tail)
         if not pending.close() or autoclosed:
-            dest(Paragraph())
+            dest(dom.Paragraph())
         if xe.tail:
             log(fc.IgnoredTail.issue(xe))
         return True
@@ -267,7 +265,7 @@ def data_element_model(tag: str, child_model: Model[Element]) -> Model[Element]:
 
 
 def col_group_model() -> Model[Element]:
-    col = EmptyElementModel('col', attrib={'span', 'width'}, is_html_tag=True)
+    col = EmptyElementModel('col', attrib={'span', 'width'}, factory=dom.TableColumn)
     tm = TagMold('colgroup', optional_attrib={'span', 'width'})
     return ItemModel(tm, DataContentMold(col))
 

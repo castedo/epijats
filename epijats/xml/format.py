@@ -11,7 +11,6 @@ from ..elements import CitationTuple
 from ..tree import (
     ArrayContent,
     BiformElement,
-    HtmlVoidElement,
     MixedContent,
     PureElement,
     WhitespaceElement,
@@ -96,7 +95,7 @@ class CommonContentFormatter:
             self.default.format_content(src.content, level, dest)
         elif isinstance(src.content, MixedContent):
             self.markup.format(src.content, level, dest)
-        elif isinstance(src, HtmlVoidElement):
+        elif src.void:
             # HTML void elements must be self-closing and all others not,
             # for compatibility with HTML parsers.
             dest.text = None
