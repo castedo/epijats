@@ -92,30 +92,6 @@ def get_enum_value(
     return ret
 
 
-if TYPE_CHECKING:
-    ParseFunc: TypeAlias = Callable[[XmlElement], bool]
-
-
-class Parser(ABC):
-    @abstractmethod
-    def match(self, xe: XmlElement) -> ParseFunc | None:
-        """Test whether Parser handles an element, without issue logging."""
-        ...
-
-    def parse_element(self, e: XmlElement) -> bool:
-        """Try parsing element.
-
-        Logs issues if XmlElement is matched/handled.
-
-        Returns:
-          True if parser matches/handles the XmlElement and parsed successfully.
-          False if parser does not match/handle the XmlElement or parsing failed.
-        """
-
-        fun = self.match(e)
-        return False if fun is None else fun(e)
-
-
 DestT = TypeVar('DestT')
 DestConT = TypeVar('DestConT', contravariant=True)
 
@@ -161,37 +137,15 @@ def load_int(
         return None
 
 
-class Binder(Protocol, Generic[DestConT]):
-    def bound_parser(self, log: Log, dest: DestConT, /) -> Parser: ...
-
-
-class StatelessParser(Parser, Generic[DestT]):
-    def __init__(self, match_fun: ParseFunc, parse_fun: ParseFunc):
-        self.match_fun = match_fun
-        self.parse_fun = parse_fun
-
-    def match(self, xe: XmlElement) -> ParseFunc | None:
-        if self.match_fun(xe):
-            return self.parse_fun
-        return None
-
-
-class BinderBase(ABC, Binder[DestT]):
+class Binder(ABC, Generic[DestConT]):
     @abstractmethod
     def match(self, xe: XmlElement) -> bool: ...
 
     @abstractmethod
-    def read(self, log: Log, xe: XmlElement, dest: DestT) -> None: ...
-
-    def bound_parser(self, log: Log, dest: DestT) -> Parser:
-        def parse_fun(xe: XmlElement) -> bool:
-            self.read(log, xe, dest)
-            return True
-
-        return StatelessParser(self.match, parse_fun)
+    def parse(self, log: Log, xe: XmlElement, dest: DestConT) -> None: ...
 
 
-class TagBinderBase(BinderBase[DestT]):
+class TagBinderBase(Binder[DestT]):
     def __init__(self, tag: str | StartTag | None = None):
         if tag is None:
             tag = getattr(type(self), 'TAG')
@@ -208,19 +162,7 @@ class TagBinderBase(BinderBase[DestT]):
 Sink: TypeAlias = Callable[[ParsedT], None]
 
 
-class Model(ABC, Binder[Sink[ParsedT]]):
-    @abstractmethod
-    def match(self, xe: XmlElement) -> bool: ...
-
-    @abstractmethod
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool: ...
-
-    def bound_parser(self, log: Log, dest: Sink[ParsedT]) -> Parser:
-        def parse_fun(xe: XmlElement) -> bool:
-            return self.parse(log, xe, dest)
-
-        return StatelessParser(self.match, parse_fun)
-
+class Model(Binder[Sink[ParsedT]]):
     def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
         ret = UnionModel[ParsedT]()
         ret |= self
@@ -235,11 +177,11 @@ class UnionModel(Model[ParsedT]):
     def match(self, xe: XmlElement) -> bool:
         return any(b.match(xe) for b in self._binders)
 
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> None:
         for b in self._binders:
             if b.match(xe):
-                return b.parse(log, xe, dest)
-        return False
+                b.parse(log, xe, dest)
+                return
 
     def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
         ret = UnionModel[ParsedT]()
@@ -261,12 +203,11 @@ class LoadModelBase(Model[ParsedT]):
         else:
             return None
 
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> None:
         parsed = self.load(log, xe)
         if parsed is not None:
             # mypy v1.9 has issue below but not v1.15
             dest(parsed)  # type: ignore[arg-type, unused-ignore]
-        return parsed is not None
 
 
 class TagModelBase(LoadModelBase[ParsedT]):

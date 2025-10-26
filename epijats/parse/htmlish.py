@@ -114,13 +114,13 @@ class JatsExtLinkModel(MixedModelBase):
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
             log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
-            return None
+            raise ValueError
         k_href = "{http://www.w3.org/1999/xlink}href"
         href = e.attrib.get(k_href)
         kit.check_no_attrib(log, e, ["ext-link-type", k_href])
         if href is None:
             log(fc.MissingAttribute.issue(e, k_href))
-            return None
+            raise ValueError
         else:
             ret = dom.ExternalHyperlink(href)
             parse_mixed_content(log, e, self.content_model, ret.content)
@@ -162,7 +162,7 @@ class HtmlParagraphModel(Model[Element]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'p'
 
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> bool:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> None:
         # ignore JATS <p specific-use> attribute from BpDF ed.1
         kit.check_no_attrib(log, xe, ['specific-use'])
         pending = PendingMarkupBlock(dest, dom.Paragraph())
@@ -187,7 +187,6 @@ class HtmlParagraphModel(Model[Element]):
             dest(dom.Paragraph())
         if xe.tail:
             log(fc.IgnoredTail.issue(xe))
-        return True
 
 
 class ListModel(kit.LoadModelBase[Element]):
@@ -207,8 +206,7 @@ class ListModel(kit.LoadModelBase[Element]):
             kit.check_no_attrib(log, xe)
             tag = str(xe.tag)
         ret = DataElement(tag)
-        parser = self._list_content.bound_parser(log, ret.content.append)
-        parse_array_content(log, xe, parser)
+        parse_array_content(log, xe, self._list_content, ret.content.append)
         return ret
 
 

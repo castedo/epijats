@@ -102,7 +102,7 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
     return bp.Author(name.out, email.out, orcid.out)
 
 
-class LicenseRefBinder(kit.BinderBase[dom.License]):
+class LicenseRefBinder(kit.Binder[dom.License]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in [
             "license-ref",
@@ -110,7 +110,7 @@ class LicenseRefBinder(kit.BinderBase[dom.License]):
             "{http://www.niso.org/schemas/ali/1.0/}license_ref",
         ]
 
-    def read(self, log: Log, xe: XmlElement, dest: dom.License) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: dom.License) -> None:
         kit.check_no_attrib(log, xe, ['content-type'])
         dest.license_ref = kit.load_string_content(log, xe)
         from_attribute = kit.get_enum_value(log, xe, 'content-type', dom.CcLicenseType)
@@ -169,7 +169,7 @@ class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
         super().__init__('article-meta')
         self._abstract_model = abstract_model
 
-    def read(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'title-group')
         sess = ArrayContentSession(log)
@@ -194,7 +194,7 @@ class ArticleFrontBinder(kit.TagBinderBase[dom.Article]):
         super().__init__('front')
         self._meta_model = ArticleMetaBinder(abstract_model)
 
-    def read(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'article-meta')
         sess = ArrayContentSession(log)

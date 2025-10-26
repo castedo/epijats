@@ -39,11 +39,11 @@ def parse_element(src: str | Path, model, issues):
     assert model.match(e)
     try:
         result = kit.SinkDestination[tree.Element]()
-        assert model.parse(issues.append, e, result)
+        model.parse(issues.append, e, result)
         return result.out
     except:
         mc = MixedContent()
-        assert model.parse(issues.append, e, mc)
+        model.parse(issues.append, e, mc)
         return next(iter(mc))
 
 

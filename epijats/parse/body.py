@@ -285,7 +285,7 @@ class ProtoSectionParser:
                 if title is None:
                     log(fc.ExcessElement.issue(s))
                 else:
-                    self._title_model.read(log, s, title)
+                    self._title_model.parse(log, s, title)
                     title = None
             elif self.block_model.match(s):
                 pending.close()
@@ -322,11 +322,11 @@ class SectionModel(kit.LoadModelBase[dom.Section]):
         return ret
 
 
-class BodyModel(kit.BinderBase[dom.ProtoSection]):
+class BodyModel(kit.Binder[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
         self._proto = ProtoSectionParser(models, SectionModel(models))
 
-    def read(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> None:
+    def parse(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> None:
         kit.check_no_attrib(log, xe)
         self._proto.parse(log, xe, target, None)
 

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias
 
 from .. import condition as fc
@@ -22,7 +23,6 @@ from .kit import (
     Log,
     Model,
     ParsedT,
-    Parser,
     Sink,
 )
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-def parse_array_content(
+def _parse_array_content(
     log: Log, e: XmlElement, parsers: Iterable[Parser] | Parser
 ) -> None:
     if isinstance(parsers, Parser):
@@ -46,33 +46,71 @@ def parse_array_content(
             log(fc.IgnoredTail.issue(s))
 
 
+if TYPE_CHECKING:
+    ParseFunc: TypeAlias = Callable[[XmlElement], None]
+
+
+class Parser(ABC):
+    @abstractmethod
+    def match(self, xe: XmlElement) -> ParseFunc | None:
+        """Test whether Parser handles an element, without issue logging."""
+        ...
+
+    def parse_element(self, e: XmlElement) -> bool:
+        """Try parsing element.
+
+        Logs issues if XmlElement is matched/handled.
+
+        Returns:
+          True if parser matches/handles the XmlElement and parsed successfully.
+          False if parser does not match/handle the XmlElement or parsing failed.
+        """
+
+        fun = self.match(e)
+        if fun is not None:
+            fun(e)
+        return fun is not None
+
+
+class StatelessParser(Parser, Generic[DestT]):
+    def __init__(self, binder: Binder[DestT], log: Log, dest: DestT):
+        def parse_fun(xe: XmlElement) -> None:
+            binder.parse(log, xe, dest)
+
+        self.match_fun = binder.match
+        self.parse_fun = parse_fun
+
+    def match(self, xe: XmlElement) -> ParseFunc | None:
+        if self.match_fun(xe):
+            return self.parse_fun
+        return None
+
+
+def parse_array_content(
+    log: Log, xe: XmlElement, binder: Binder[DestT], dest: DestT
+) -> None:
+    _parse_array_content(log, xe, StatelessParser(binder, log, dest))
+
+
 class OnlyOnceParser(Parser):
-    def __init__(self, log: Log, parser: Parser):
+    def __init__(self, log: Log, binder: Binder[DestT], dest: DestT):
         self.log = log
-        self._parser = parser
+        self._parser = StatelessParser(binder, log, dest)
         self._parse_done = False
 
-    def match(self, xe: XmlElement) -> kit.ParseFunc | None:
+    def match(self, xe: XmlElement) -> ParseFunc | None:
         fun = self._parser.match(xe)
         return None if fun is None else self._parse
 
-    def _parse(self, e: XmlElement) -> bool:
+    def _parse(self, e: XmlElement) -> None:
         parse_func = self._parser.match(e)
         if parse_func is None:
-            return False
+            return
         if not self._parse_done:
-            self._parse_done = parse_func(e)
+            parse_func(e)
+            self._parse_done = True
         else:
             self.log(fc.ExcessElement.issue(e))
-        return True
-
-
-class OnlyOnceBinder(Binder[DestT]):
-    def __init__(self, binder: Binder[DestT]):
-        self.binder = binder
-
-    def bound_parser(self, log: Log, dest: DestT) -> Parser:
-        return OnlyOnceParser(log, self.binder.bound_parser(log, dest))
 
 
 class ArrayContentSession:
@@ -83,45 +121,48 @@ class ArrayContentSession:
         self._parsers: list[Parser] = []
 
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
-        self._parsers.append(binder.bound_parser(self.log, dest))
+        self._parsers.append(StatelessParser(binder, self.log, dest))
 
     def bind_once(self, binder: Binder[DestT], dest: DestT) -> None:
-        once = OnlyOnceBinder(binder)
-        self._parsers.append(once.bound_parser(self.log, dest))
+        self._parsers.append(OnlyOnceParser(self.log, binder, dest))
 
     def one(self, model: Model[ParsedT]) -> kit.Outcome[ParsedT]:
         ret = kit.SinkDestination[ParsedT]()
-        once = OnlyOnceBinder(model)
-        self._parsers.append(once.bound_parser(self.log, ret))
+        self._parsers.append(OnlyOnceParser(self.log, model, ret))
         return ret
 
     def parse_content(self, e: XmlElement) -> None:
-        parse_array_content(self.log, e, self._parsers)
+        _parse_array_content(self.log, e, self._parsers)
 
 
 MixedModel: TypeAlias = Model[Inline]
-
-
-class MixedModelBase(kit.LoadModelBase[Inline]):
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[Inline]) -> bool:
-        parsed = self.load(log, xe)
-        if parsed is not None:
-            if xe.tail:
-                parsed.tail = xe.tail
-            dest(parsed)
-        return parsed is not None
 
 
 def parse_mixed_content(
     log: Log, e: XmlElement, emodel: MixedModel, dest: MixedContent
 ) -> None:
     dest.append_text(e.text)
-    eparser = emodel.bound_parser(log, dest.append)
     for s in e:
-        if not eparser.parse_element(s):
+        if emodel.match(s):
+            try:
+                emodel.parse(log, s, dest.append)
+            except ValueError:
+                log(fc.InvalidElementData.issue(s))
+                parse_mixed_content(log, s, emodel, dest)
+                dest.append_text(s.tail)
+        else:
             log(fc.UnsupportedElement.issue(s))
             parse_mixed_content(log, s, emodel, dest)
             dest.append_text(s.tail)
+
+
+class MixedModelBase(kit.LoadModelBase[Inline]):
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[Inline]) -> None:
+        parsed = self.load(log, xe)
+        if parsed is not None:
+            if xe.tail:
+                parsed.tail = xe.tail
+            dest(parsed)
 
 
 class ContentMold(Protocol, Generic[ContentT]):
@@ -145,8 +186,7 @@ class SubElementMixedContentMold(ContentMold[MixedContent]):
         self.child_model = child_model
 
     def read(self, log: Log, xe: XmlElement, dest: MixedContent) -> None:
-        parser = self.child_model.bound_parser(log, dest)
-        parse_array_content(log, xe, parser)
+        parse_array_content(log, xe, self.child_model, dest)
 
 
 ArrayContentMold: TypeAlias = ContentMold[ArrayContent]
@@ -158,8 +198,7 @@ class DataContentMold(ArrayContentMold):
         self.child_model = child_model
 
     def read(self, log: Log, xe: XmlElement, dest: ArrayContent) -> None:
-        parser = self.child_model.bound_parser(log, dest.append)
-        parse_array_content(log, xe, parser)
+        parse_array_content(log, xe, self.child_model, dest.append)
 
 
 class PendingMarkupBlock:

@@ -33,6 +33,7 @@ def parse_clean_ref_item(src: str | Path):
 
 KNOWN_PMC_NO_SUPPORT = {
     fc.UnsupportedElement(tag='ext-link', parent='comment'),
+    fc.InvalidPubId('pub-id', 'element-citation'),
     fc.UnsupportedAttributeValue(tag='pub-id', attribute='pub-id-type', value='pii'), 
     fc.UnsupportedAttributeValue(
         tag='pub-id', attribute='pub-id-type', value='medline'

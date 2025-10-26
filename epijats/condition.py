@@ -100,6 +100,11 @@ class UnsupportedElement(ElementFormatCondition):
 
 
 @dataclass(frozen=True)
+class InvalidElementData(ElementFormatCondition):
+    """Invalid element data"""
+
+
+@dataclass(frozen=True)
 class ExcessElement(ElementFormatCondition):
     """Excess XML element"""
 
@@ -128,11 +133,15 @@ class InvalidOrcid(ElementFormatCondition):
     """Invalid ORCID"""
 
 
-class InvalidDoi(ElementFormatCondition):
+class InvalidPubId(ElementFormatCondition):
+    """Invalid Publication ID"""
+
+
+class InvalidDoi(InvalidPubId):
     """Invalid DOI"""
 
 
-class InvalidPmid(ElementFormatCondition):
+class InvalidPmid(InvalidPubId):
     """Invalid PMID"""
 
 

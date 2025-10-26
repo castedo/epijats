@@ -144,11 +144,11 @@ class MarkupModel(MixedModelBase):
         return None
 
 
-class MixedContentBinderBase(kit.BinderBase[MixedContent]):
+class MixedContentBinderBase(kit.Binder[MixedContent]):
     def __init__(self, content_mold: ContentMold[MixedContent]):
         self.content_mold = content_mold
 
-    def read(self, log: Log, xe: XmlElement, target: MixedContent) -> None:
+    def parse(self, log: Log, xe: XmlElement, target: MixedContent) -> None:
         kit.check_no_attrib(log, xe)
         if target.blank():
             self.content_mold.read(log, xe, target)

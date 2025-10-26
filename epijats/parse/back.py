@@ -111,10 +111,11 @@ class PubIdBinder(kit.TagBinderBase[dict[bp.PubIdType, str]]):
 
     TAG = 'pub-id'
 
-    def read(self, log: Log, e: XmlElement, dest: dict[bp.PubIdType, str]) -> None:
+    def parse(self, log: Log, e: XmlElement, dest: dict[bp.PubIdType, str]) -> None:
         kit.check_no_attrib(log, e, ['pub-id-type'])
         pub_id_type = kit.get_enum_value(log, e, 'pub-id-type', bp.PubIdType)
         if not pub_id_type:
+            log(fc.InvalidPubId.issue(e))
             return
         if pub_id_type in dest:
             log(fc.ExcessElement.issue(e))
@@ -177,7 +178,7 @@ class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
 
     TAG = 'element-citation'
 
-    def read(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:
+    def parse(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         source_title = sess.one(SourceTitleModel())
