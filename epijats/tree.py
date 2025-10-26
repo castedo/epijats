@@ -46,12 +46,9 @@ class Element(Protocol):
     @property
     def is_void(self) -> bool: ...
 
-    @property
-    def tail(self) -> str | None: ...
-
 
 @dataclass
-class _GeneralElementBase(Element):
+class ElementBase(Element):
     _xml: StartTag
 
     def __init__(self, xml_tag: str | StartTag):
@@ -66,12 +63,6 @@ class _GeneralElementBase(Element):
         return False
 
 
-class ElementBase(_GeneralElementBase, Element):
-    @property
-    def tail(self) -> None:
-        return None
-
-
 class Inline(Element, Protocol):
     @property
     def tail(self) -> str: ...
@@ -80,21 +71,11 @@ class Inline(Element, Protocol):
     def tail(self, value: str) -> None: ...
 
 
-@dataclass
-class InlineBase(_GeneralElementBase, Inline):
-    _tail: str
+class InlineBase(ElementBase, Inline):
+    tail: str = ""
 
     def __init__(self, xml_tag: str | StartTag):
         super().__init__(xml_tag)
-        self._tail = ""
-
-    @property
-    def tail(self) -> str:
-        return self._tail
-
-    @tail.setter
-    def tail(self, value: str) -> None:
-        self._tail = value
 
 
 @dataclass

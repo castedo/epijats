@@ -203,14 +203,18 @@ class HtmlGenerator:
                 ss.append(ET.tostring(x, encoding='unicode', method='html'))
         return "".join(ss)
 
-    def content_to_str(self, src: MixedContent) -> str:
-        ss: list[str | XmlElement] = [src.text]
+    def _elements(self, src: Iterable[Element]) -> Iterator[str | XmlElement]:
         for it in src:
             for sub in self._html.format(it, 0):
-                ss.append(sub)
-            if it.tail:
-                ss.append(it.tail)
-        return self._html_content_to_str(ss)
+                yield sub
+            if tail := getattr(it, 'tail', ''):
+                yield tail
+
+    def elements_to_str(self, src: Iterable[Element]) -> str:
+        return self._html_content_to_str(self._elements(src))
+
+    def content_to_str(self, src: MixedContent) -> str:
+        return self._html_content_to_str([src.text, *self._elements(src)])
 
     def abstract_to_str(self, src: Abstract) -> str:
         return self._html_content_to_str(self._blocks_content(src.content))

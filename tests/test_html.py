@@ -70,7 +70,7 @@ def check_xml_html(case_dir, model, bare_tex):
     else:
         expect_html_str = expected_xml_str
     html = HtmlGenerator()
-    got = html.content_to_str(MixedContent([element]))
+    got = html.elements_to_str([element])
     assert html.bare_tex == bare_tex
     assert got == expect_html_str
 
