@@ -135,7 +135,8 @@ class ArrayContentSession:
         _parse_array_content(self.log, e, self._parsers)
 
 
-MixedModel: TypeAlias = Model[Inline]
+MixedModel: TypeAlias = Binder[MixedContent]
+UnionMixedModel: TypeAlias = kit.UnionBinder[MixedContent]
 
 
 def parse_mixed_content(
@@ -144,25 +145,28 @@ def parse_mixed_content(
     dest.append_text(e.text)
     for s in e:
         if emodel.match(s):
-            try:
-                emodel.parse(log, s, dest.append)
-            except ValueError:
-                log(fc.InvalidElementData.issue(s))
-                parse_mixed_content(log, s, emodel, dest)
-                dest.append_text(s.tail)
+            emodel.parse(log, s, dest)
         else:
             log(fc.UnsupportedElement.issue(s))
             parse_mixed_content(log, s, emodel, dest)
             dest.append_text(s.tail)
 
 
-class MixedModelBase(kit.LoadModelBase[Inline]):
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[Inline]) -> None:
-        parsed = self.load(log, xe)
-        if parsed is not None:
-            if xe.tail:
-                parsed.tail = xe.tail
-            dest(parsed)
+class MixedModelBase(Binder[MixedContent]):
+    @abstractmethod
+    def load(self, log: Log, xe: XmlElement) -> Inline | None: ...
+
+    def parse(self, log: Log, xe: XmlElement, dest: MixedContent) -> None:
+        try:
+            parsed = self.load(log, xe)
+            if parsed is not None:
+                if xe.tail:
+                    parsed.tail = xe.tail
+                dest.append(parsed)
+        except ValueError:
+            log(fc.InvalidElementData.issue(xe))
+            parse_mixed_content(log, xe, self, dest)
+            dest.append_text(xe.tail)
 
 
 class ContentMold(Protocol, Generic[ContentT]):
@@ -239,7 +243,7 @@ class RollContentMold(ArrayContentMold):
                 pending.close()
                 self.block_model.parse(log, s, dest.append)
             elif self.inline_model.match(s):
-                self.inline_model.parse(log, s, pending.content.append)
+                self.inline_model.parse(log, s, pending.content)
             else:
                 log(fc.UnsupportedElement.issue(s))
             if tail and tail.strip():

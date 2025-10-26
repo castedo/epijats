@@ -20,6 +20,7 @@ from .content import (
     MixedModel,
     MixedModelBase,
     PendingMarkupBlock,
+    UnionMixedModel,
     parse_array_content,
     parse_mixed_content,
 )
@@ -44,7 +45,7 @@ def markup_model(
 
 
 def minimally_formatted_text_model(content: MixedModel) -> MixedModel:
-    ret = kit.UnionModel[Inline]()
+    ret = UnionMixedModel()
     ret |= markup_model('b', content, jats_tag='bold')
     ret |= markup_model('i', content, jats_tag='italic')
     ret |= markup_model('sub', content)
@@ -89,7 +90,7 @@ def code_model(hypertext: MixedModel) -> MixedModel:
 
 
 def formatted_text_model(content: MixedModel) -> MixedModel:
-    ret = kit.UnionModel[Inline]()
+    ret = UnionMixedModel()
     ret |= minimally_formatted_text_model(content)
     ret |= markup_model('tt', content, jats_tag='monospace')
     return ret
@@ -98,7 +99,7 @@ def formatted_text_model(content: MixedModel) -> MixedModel:
 def hypotext_model() -> MixedModel:
     # Corresponds to {HYPOTEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
-    ret = kit.UnionModel[Inline]()
+    ret = UnionMixedModel()
     ret |= formatted_text_model(ret)
     return ret
 
@@ -171,7 +172,7 @@ class HtmlParagraphModel(Model[Element]):
             pending.content.append_text(xe.text)
         for s in xe:
             if self.inline_model.match(s):
-                self.inline_model.parse(log, s, pending.content.append)
+                self.inline_model.parse(log, s, pending.content)
             elif self.block_model.match(s):
                 pending.close()
                 autoclosed = True

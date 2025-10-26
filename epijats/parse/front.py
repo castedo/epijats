@@ -6,12 +6,12 @@ from .. import condition as fc
 from .. import dom
 from .. import metadata as bp
 from ..document import Abstract
-from ..tree import Element, Inline, MixedContent
+from ..tree import Element, MixedContent
 
 from . import kit
 from .kit import Log, Model, LoaderTagModel as tag_model
 
-from .content import ArrayContentSession, MixedModel
+from .content import ArrayContentSession, MixedModel, UnionMixedModel
 from .htmlish import (
     ext_link_model,
     formatted_text_model,
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 def copytext_model() -> MixedModel:
     # Corresponds to {COPYTEXT} in BpDF spec ed.2
-    ret = kit.UnionModel[Inline]()
+    ret = kit.UnionBinder[MixedContent]()
     ret |= formatted_text_model(ret)
     ret |= ext_link_model(hypotext_model())
     return ret
@@ -42,7 +42,7 @@ def copytext_element_model(tag: str) -> MixedContentBinder:
 def article_title_model() -> MixedContentBinder:
     # Contents corresponds to {MINITEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
-    minitext_model = kit.UnionModel[Inline]()
+    minitext_model = UnionMixedModel()
     minitext_model |= minimally_formatted_text_model(minitext_model)
     minitext_content = MixedContentMold(minitext_model)
     return MixedContentBinder('article-title', minitext_content)

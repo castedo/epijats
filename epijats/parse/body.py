@@ -18,6 +18,7 @@ from .content import (
     MixedModel,
     MixedModelBase,
     RollContentMold,
+    UnionMixedModel,
     parse_mixed_content,
 )
 from .htmlish import (
@@ -45,7 +46,7 @@ def hypertext_model(biblio: BiblioRefPool | None) -> MixedModel:
     # Corresponds to {HYPERTEXT} in BpDF spec ed.2
     # but with experimental inline math element too
     hypotext = hypotext_model()
-    hypertext = kit.UnionModel[Inline]()
+    hypertext = UnionMixedModel()
     if biblio:
         # model for <sup>~CITE must preempt regular <sup> model
         hypertext |= AutoCorrectCitationModel(biblio)
@@ -294,7 +295,7 @@ class ProtoSectionParser:
                 pending.close()
                 self.section_model.parse(log, s, target.subsections.append)
             elif self.inline_model.match(s):
-                self.inline_model.parse(log, s, pending.content.append)
+                self.inline_model.parse(log, s, pending.content)
             else:
                 log(fc.UnsupportedElement.issue(s))
             if tail and tail.strip():

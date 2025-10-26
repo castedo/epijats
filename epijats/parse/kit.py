@@ -144,6 +144,35 @@ class Binder(ABC, Generic[DestConT]):
     @abstractmethod
     def parse(self, log: Log, xe: XmlElement, dest: DestConT) -> None: ...
 
+    def __or__(self, other: Binder[DestConT]) -> Binder[DestConT]:
+        ret = UnionBinder[DestConT]()
+        ret |= self
+        ret |= other
+        return ret
+
+
+class UnionBinder(Binder[DestT]):
+    def __init__(self) -> None:
+        self._binders: list[Binder[DestT]] = []
+
+    def match(self, xe: XmlElement) -> bool:
+        return any(b.match(xe) for b in self._binders)
+
+    def parse(self, log: Log, xe: XmlElement, dest: DestT) -> None:
+        for b in self._binders:
+            if b.match(xe):
+                b.parse(log, xe, dest)
+                return
+
+    def __or__(self, other: Binder[DestT]) -> Binder[DestT]:
+        ret = UnionBinder[DestT]()
+        ret._binders = [self, other]
+        return ret
+
+    def __ior__(self, other: Binder[DestT]) -> UnionBinder[DestT]:
+        self._binders.append(other)
+        return self
+
 
 class TagBinderBase(Binder[DestT]):
     def __init__(self, tag: str | StartTag | None = None):
@@ -160,37 +189,8 @@ class TagBinderBase(Binder[DestT]):
 
 
 Sink: TypeAlias = Callable[[ParsedT], None]
-
-
-class Model(Binder[Sink[ParsedT]]):
-    def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
-        ret = UnionModel[ParsedT]()
-        ret |= self
-        ret |= other
-        return ret
-
-
-class UnionModel(Model[ParsedT]):
-    def __init__(self) -> None:
-        self._binders: list[Model[ParsedT]] = []
-
-    def match(self, xe: XmlElement) -> bool:
-        return any(b.match(xe) for b in self._binders)
-
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> None:
-        for b in self._binders:
-            if b.match(xe):
-                b.parse(log, xe, dest)
-                return
-
-    def __or__(self, other: Model[ParsedT]) -> Model[ParsedT]:
-        ret = UnionModel[ParsedT]()
-        ret._binders = [self, other]
-        return ret
-
-    def __ior__(self, other: Model[ParsedT]) -> UnionModel[ParsedT]:
-        self._binders.append(other)
-        return self
+Model: TypeAlias = Binder[Sink[ParsedT]]
+UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
 
 
 class LoadModelBase(Model[ParsedT]):
