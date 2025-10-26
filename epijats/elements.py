@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, MutableSequence
 from dataclasses import dataclass
+from typing import Generic, TypeVar
+from warnings import warn
 
+from . import tree
 from .tree import (
     ArrayContent,
-    BiformElement,
     HtmlVoidElement,
     HtmlVoidInline,
     InlineBase,
@@ -45,11 +47,6 @@ class ExternalHyperlink(MarkupElement):
         self.xml.attrib = {'rel': 'external', 'href': href}
 
 
-class ListItem(BiformElement):
-    def __init__(self, content: Iterable[Element] = ()):
-        super().__init__('li', ArrayContent(content))
-
-
 @dataclass
 class CrossReference(MarkupElement):
     def __init__(self, rid: str):
@@ -73,6 +70,34 @@ class PreElement(Parent[MixedContent]):
         super().__init__('pre', MixedContent(content))
 
 
+ElementT = TypeVar('ElementT', bound=Element)
+
+
+@dataclass
+class ItemListElement(tree.ElementBase, Generic[ElementT]):
+    _items: list[ElementT]
+
+    def __init__(self, xml_tag: str, items: Iterable[ElementT] = ()):
+        super().__init__(xml_tag)
+        self._items = list(items)
+
+    @property
+    def content(self) -> ArrayContent:
+        return ArrayContent(self._items)
+
+    def __iter__(self) -> Iterator[ElementT]:
+        return iter(self._items)
+
+    def append(self, item: ElementT) -> None:
+        self._items.append(item)
+
+    def extend(self, items: Iterable[ElementT]) -> None:
+        self._items.extend(items)
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+
 @dataclass
 class Citation(MarkupElement):
     def __init__(self, rid: str, rord: int):
@@ -85,34 +110,59 @@ class Citation(MarkupElement):
         return text is not None and text.strip() == self.content.text
 
 
-@dataclass
-class CitationTuple(InlineBase):
-    _citations: list[Citation]
+class CitationTuple(ItemListElement[Citation], tree.Inline):
+    tail: str = ""
 
     def __init__(self, citations: Iterable[Citation] = ()) -> None:
-        super().__init__('sup')
-        self._citations = list(citations)
-
-    @property
-    def content(self) -> ArrayContent:
-        return ArrayContent(self._citations)
-
-    def __iter__(self) -> Iterator[Citation]:
-        return iter(self._citations)
-
-    def append(self, c: Citation) -> None:
-        self._citations.append(c)
-
-    def extend(self, cs: Iterable[Citation]) -> None:
-        self._citations.extend(cs)
-
-    def __len__(self) -> int:
-        return len(self._citations)
+        super().__init__('sup', citations)
 
 
 class ItemElement(Parent[ArrayContent]):
     def __init__(self, xml_tag: str, content: Iterable[Element] = ()):
         super().__init__(xml_tag, ArrayContent(content))
+        warn("Use specific element class for specific tag", DeprecationWarning)
+
+
+class ListItem(tree.BiformElement):
+    def __init__(self, content: Iterable[Element] = ()):
+        super().__init__('li', ArrayContent(content))
+
+
+class OrderedList(ItemListElement[ListItem]):
+    def __init__(self, items: Iterable[ListItem] = ()):
+        super().__init__('ol', items)
+
+
+class UnorderedList(ItemListElement[ListItem]):
+    def __init__(self, items: Iterable[ListItem] = ()):
+        super().__init__('ul', items)
+
+
+class DTerm(tree.BiformElement):
+    def __init__(self, content: Iterable[Element] = ()):
+        super().__init__('dt', content)
+
+
+class DDefinition(tree.BiformElement):
+    def __init__(self, content: Iterable[Element] = ()):
+        super().__init__('dd', content)
+
+
+class DItem(tree.ElementBase):
+    def __init__(self, term: DTerm, definitions: Iterable[DDefinition] = ()):
+        super().__init__('div')
+        self.term = term
+        self.definitions: MutableSequence[DDefinition] = list(definitions)
+
+    @property
+    def content(self) -> ArrayContent:
+        return ArrayContent([self.term, *self.definitions])
+
+
+@dataclass
+class DList(ItemListElement[DItem]):
+    def __init__(self, items: Iterable[DItem] = ()):
+        super().__init__('dl', items)
 
 
 class IssueElement(InlineBase):

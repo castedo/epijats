@@ -185,7 +185,7 @@ class HtmlParagraphModel(Model[Element]):
                 parse_mixed_content(log, s, self.inline_model, pending.content)
                 pending.content.append_text(s.tail)
         if not pending.close() or autoclosed:
-            dest(dom.Paragraph())
+            dest(dom.Paragraph(" "))
         if xe.tail:
             log(fc.IgnoredTail.issue(xe))
 

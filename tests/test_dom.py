@@ -75,10 +75,24 @@ def test_inline_elements() -> None:
     assert HTML.content_to_str(mc) == "0<br>1<wbr>2"
 
 
-def test_block_elements() -> None:
+def test_block_element() -> None:
     bq = dom.BlockQuote()
     bq.content.append(dom.HorizontalRule())
     assert XML.to_str(bq) == """\
 <blockquote>
   <hr />
 </blockquote>"""
+
+
+def test_dlist_element() -> None:
+    dt = dom.DTerm([dom.MarkupBlock('0')])
+    dd = dom.DDefinition([dom.MarkupBlock('nada')])
+    di = dom.DItem(dt, [dd])
+    dl = dom.DList([di])
+    assert XML.to_str(dl) == """\
+<dl>
+  <div>
+    <dt>0</dt>
+    <dd>nada</dd>
+  </div>
+</dl>"""
