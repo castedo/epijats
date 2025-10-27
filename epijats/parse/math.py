@@ -63,7 +63,7 @@ class AnyMathmlModel(MixedModelBase):
         if isinstance(e.tag, str):
             assert e.tag.startswith(MATHML_NAMESPACE_PREFIX)
             ret = MathmlElement(StartTag(e.tag, dict(e.attrib)))
-            parse_mixed_content(log, e, self, ret.content)
+            parse_mixed_content(log, e, self, ret.append)
         return ret
 
 
@@ -80,7 +80,7 @@ class MathmlElementModel(kit.TagModelBase[Inline]):
 
     def load(self, log: Log, e: XmlElement) -> Inline | None:
         ret = MathmlElement(StartTag(self.tag, dict(e.attrib)))
-        parse_mixed_content(log, e, self._model, ret.content)
+        parse_mixed_content(log, e, self._model, ret.append)
         return ret
 
 

@@ -7,7 +7,7 @@ from .. import dom
 from .. import condition as fc
 from ..biblio import BiblioRefPool
 from ..elements import Citation, CitationTuple
-from ..tree import Element, Inline, MixedContent
+from ..tree import Element, Inline, MutableMixedContent
 
 from . import kit
 from .kit import Log
@@ -221,7 +221,7 @@ class JatsCrossReferenceModel(MixedModelBase):
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
         ret = dom.CrossReference(rid)
-        parse_mixed_content(log, e, self.content_model, ret.content)
+        parse_mixed_content(log, e, self.content_model, ret.append)
         return ret
 
 
@@ -243,7 +243,7 @@ class HtmlCrossReferenceModel(MixedModelBase):
             log(fc.InvalidAttributeValue.issue(xe, 'href', href))
             return None
         ret = dom.CrossReference(href[1:])
-        parse_mixed_content(log, xe, self.content_model, ret.content)
+        parse_mixed_content(log, xe, self.content_model, ret.append)
         return ret
 
 
@@ -255,7 +255,7 @@ def cross_reference_model(
 
 
 class SectionTitleBinder(MixedContentBinderBase):
-    def __init__(self, content_mold: ContentMold[MixedContent]):
+    def __init__(self, content_mold: ContentMold[str | Inline]):
         super().__init__(content_mold)
 
     def match(self, xe: XmlElement) -> bool:
@@ -274,11 +274,11 @@ class ProtoSectionParser:
         log: Log,
         xe: XmlElement,
         target: dom.ProtoSection,
-        title: MixedContent | None,
+        title: MutableMixedContent | None,
     ) -> None:
         pending = PendingMarkupBlock(target.presection.append)
         if xe.text and xe.text.strip():
-            pending.content.append_text(xe.text)
+            pending.append(xe.text)
         for s in xe:
             tail = s.tail
             s.tail = None
@@ -295,11 +295,11 @@ class ProtoSectionParser:
                 pending.close()
                 self.section_model.parse(log, s, target.subsections.append)
             elif self.inline_model.match(s):
-                self.inline_model.parse(log, s, pending.content)
+                self.inline_model.parse(log, s, pending.append)
             else:
                 log(fc.UnsupportedElement.issue(s))
             if tail and tail.strip():
-                pending.content.append_text(tail)
+                pending.append(tail)
         pending.close()
 
 

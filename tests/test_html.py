@@ -3,7 +3,7 @@ from pathlib import Path
 
 from epijats.parse import kit, tree
 from epijats.parse.body import CoreModels
-from epijats.tree import MixedContent
+from epijats.tree import MutableMixedContent
 from epijats.xml.format import XmlFormatter
 from epijats.xml.html import HtmlGenerator
 
@@ -25,7 +25,7 @@ P_CHILD_CASE = Path(__file__).parent / "cases" / "p_child"
 
 def html_from_element(src: tree.Inline) -> str:
     html = HtmlGenerator()
-    content = MixedContent()
+    content = MutableMixedContent()
     content.append(src)
     return html.content_to_str(content)
 
@@ -42,7 +42,7 @@ def parse_element(src: str | Path, model, issues):
         model.parse(issues.append, e, result)
         return result.out
     except:
-        mc = MixedContent()
+        mc = MutableMixedContent()
         model.parse(issues.append, e, mc)
         return next(iter(mc))
 

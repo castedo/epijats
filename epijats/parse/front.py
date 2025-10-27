@@ -6,7 +6,7 @@ from .. import condition as fc
 from .. import dom
 from .. import metadata as bp
 from ..document import Abstract
-from ..tree import Element, MixedContent
+from ..tree import Element, MixedContent, MutableMixedContent
 
 from . import kit
 from .kit import Log, Model, LoaderTagModel as tag_model
@@ -54,7 +54,7 @@ class TitleGroupModel(kit.TagModelBase[MixedContent]):
     def load(self, log: Log, xe: XmlElement) -> dom.MixedContent | None:
         kit.check_no_attrib(log, xe)
         sess = ArrayContentSession(log)
-        title = MixedContent()
+        title = MutableMixedContent()
         sess.bind_once(article_title_model(), title)
         sess.parse_content(xe)
         return None if title.blank() else title
@@ -149,7 +149,7 @@ class PermissionsModel(kit.TagModelBase[dom.Permissions]):
     def load(self, log: Log, e: XmlElement) -> dom.Permissions | None:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
-        statement = MixedContent()
+        statement = MutableMixedContent()
         sess.bind_once(copytext_element_model('copyright-statement'), statement)
         license = sess.one(LicenseModel())
         sess.parse_content(e)
@@ -167,7 +167,7 @@ class AbstractModel(kit.TagModelBase[Abstract]):
     def load(self, log: Log, xe: XmlElement) -> Abstract | None:
         kit.check_no_attrib(log, xe)
         a = Abstract()
-        self._roll.read(log, xe, a.content)
+        self._roll.read(log, xe, a.content.append)
         return a if len(a.content) else None
 
 

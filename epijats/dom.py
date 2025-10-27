@@ -26,6 +26,7 @@ __all__ = [
     'MarkupBlock',
     'MarkupElement',
     'MixedContent',
+    'MutableMixedContent',
     'Orcid',
     'OrderedList',
     'Paragraph',
@@ -46,6 +47,7 @@ from .tree import (
     MarkupBlock,
     MarkupElement,
     MixedContent,
+    MutableMixedContent,
 )
 
 from .document import (

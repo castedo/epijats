@@ -21,7 +21,7 @@ def read_article_xml(art: dom.Article) -> str:
 
 def test_simple_title() -> None:
     art = dom.Article()
-    art.title = dom.MixedContent("Do <b>not</b> tag me!")
+    art.title = dom.MutableMixedContent("Do <b>not</b> tag me!")
     got = read_article_xml(art)
     assert got == """\
 <article>
@@ -38,11 +38,9 @@ def test_simple_title() -> None:
 
 def test_mixed_content() -> None:
     div = dom.MarkupBlock()
-    mc = div.content
-    mc.append_text("hi")
-    mc.append(dom.MarkupElement('b', "ya"))
-    mc.append(dom.IssueElement("serious"))
-    assert len(list(mc)) == 2
+    div.append("hi")
+    div.append(dom.MarkupElement('b', "ya"))
+    div.append(dom.IssueElement("serious"))
     expect = "<div>hi<b>ya</b><format-issue>serious</format-issue></div>"
     assert XML.to_str(div) == expect
 
@@ -56,28 +54,28 @@ def test_author():
 
 def test_permissions() -> None:
     license = dom.License()
-    license.license_p.append_text("whatever")
+    license.license_p.append("whatever")
     license.license_ref = 'https://creativecommons.org/licenses/by-nd/'
     license.cc_license_type = dom.CcLicenseType.from_url(license.license_ref)
     copyright = dom.Copyright()
-    copyright.statement.append_text("Mine!")
+    copyright.statement.append("Mine!")
     permissions = dom.Permissions(license, copyright)
     assert not permissions.blank()
 
 
 def test_inline_elements() -> None:
-    mc = dom.MixedContent()
-    mc.append_text("0")
+    mc = dom.MutableMixedContent()
+    mc.append("0")
     mc.append(dom.LineBreak())
-    mc.append_text("1")
+    mc.append("1")
     mc.append(dom.WordBreak())
-    mc.append_text("2")
+    mc.append("2")
     assert HTML.content_to_str(mc) == "0<br>1<wbr>2"
 
 
 def test_block_element() -> None:
     bq = dom.BlockQuote()
-    bq.content.append(dom.HorizontalRule())
+    bq.append(dom.HorizontalRule())
     assert XML.to_str(bq) == """\
 <blockquote>
   <hr />

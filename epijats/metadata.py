@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar, Iterable
 
-from .tree import MixedContent
+from .tree import MixedContent, MutableMixedContent
 
 
 @dataclass(frozen=True)
@@ -85,10 +85,10 @@ class PersonGroup:
 
 @dataclass
 class Copyright:
-    statement: MixedContent
+    statement: MutableMixedContent
 
     def __init__(self, statement: MixedContent | str = '') -> None:
-        self.statement = MixedContent(statement)
+        self.statement = MutableMixedContent(statement)
 
     def blank(self) -> bool:
         return self.statement.blank()
@@ -124,12 +124,12 @@ _CC_URLS = {
 
 @dataclass
 class License:
-    license_p: MixedContent
+    license_p: MutableMixedContent
     license_ref: str
     cc_license_type: CcLicenseType | None
 
     def __init__(self) -> None:
-        self.license_p = MixedContent()
+        self.license_p = MutableMixedContent()
         self.license_ref = ''
         self.cc_license_type = None
 

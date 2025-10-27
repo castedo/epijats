@@ -27,6 +27,7 @@ from .content import (
 from .tree import (
     BiformModel,
     EmptyElementModel,
+    MixedParentElementModel,
     ItemModel,
     MarkupModel,
     TagMold,
@@ -55,7 +56,7 @@ def minimally_formatted_text_model(content: MixedModel) -> MixedModel:
 
 def preformat_model(hypertext: MixedModel) -> Model[Element]:
     tm = TagMold('pre', jats_tag='preformat')
-    return ItemModel(tm, MixedContentMold(hypertext))
+    return MixedParentElementModel(tm, MixedContentMold(hypertext))
 
 
 def blockquote_model(roll_content_mold: ArrayContentMold) -> Model[Element]:
@@ -124,7 +125,7 @@ class JatsExtLinkModel(MixedModelBase):
             raise ValueError
         else:
             ret = dom.ExternalHyperlink(href)
-            parse_mixed_content(log, e, self.content_model, ret.content)
+            parse_mixed_content(log, e, self.content_model, ret.append)
             return ret
 
 
@@ -147,7 +148,7 @@ class HtmlExtLinkModel(MixedModelBase):
             return None
         else:
             ret = dom.ExternalHyperlink(href)
-            parse_mixed_content(log, xe, self.content_model, ret.content)
+            parse_mixed_content(log, xe, self.content_model, ret.append)
             return ret
 
 
@@ -169,21 +170,22 @@ class HtmlParagraphModel(Model[Element]):
         pending = PendingMarkupBlock(dest, dom.Paragraph())
         autoclosed = False
         if xe.text:
-            pending.content.append_text(xe.text)
+            pending.append(xe.text)
         for s in xe:
             if self.inline_model.match(s):
-                self.inline_model.parse(log, s, pending.content)
+                self.inline_model.parse(log, s, pending.append)
             elif self.block_model.match(s):
                 pending.close()
                 autoclosed = True
                 log(fc.BlockElementInPhrasingContent.issue(s))
                 self.block_model.parse(log, s, dest)
                 if s.tail and s.tail.strip():
-                    pending.content.append_text(s.tail)
+                    pending.append(s.tail)
             else:
                 log(fc.UnsupportedElement.issue(s))
-                parse_mixed_content(log, s, self.inline_model, pending.content)
-                pending.content.append_text(s.tail)
+                parse_mixed_content(log, s, self.inline_model, pending.append)
+                if s.tail:
+                    pending.append(s.tail)
         if not pending.close() or autoclosed:
             dest(dom.Paragraph(" "))
         if xe.tail:
@@ -207,7 +209,7 @@ class ListModel(kit.LoadModelBase[Element]):
             kit.check_no_attrib(log, xe)
             tag = str(xe.tag)
         ret = DataElement(tag)
-        parse_array_content(log, xe, self._list_content, ret.content.append)
+        parse_array_content(log, xe, self._list_content, ret.append)
         return ret
 
 
@@ -217,7 +219,7 @@ def def_term_model(term_text: MixedModel) -> Model[Element]:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
     tm = TagMold('dt', jats_tag='term')
-    return ItemModel(tm, MixedContentMold(term_text))
+    return MixedParentElementModel(tm, MixedContentMold(term_text))
 
 
 def def_def_model(def_content: ArrayContentMold) -> Model[Element]:
@@ -260,7 +262,7 @@ class TableCellModel(kit.TagModelBase[Element]):
         kit.confirm_attrib_value(log, e, 'align', align_attribs)
         ret = MarkupElement(self.tag)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
-        parse_mixed_content(log, e, self.content_model, ret.content)
+        parse_mixed_content(log, e, self.content_model, ret.append)
         if ret.content.empty():
             ret.content.text = ' '
         return ret

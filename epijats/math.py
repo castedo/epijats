@@ -39,7 +39,7 @@ class FormulaElement(InlineBase):
     def content(self) -> ArrayContent:
         alts = DataElement("alternatives")
         if self.tex:
-            alts.content.append(MarkupElement('tex-math', self.tex))
+            alts.append(MarkupElement('tex-math', self.tex))
         if self.mathml:
-            alts.content.append(self.mathml)
+            alts.append(self.mathml)
         return ArrayContent((alts,))

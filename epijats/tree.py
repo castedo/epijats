@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
@@ -48,7 +49,7 @@ class Element(Protocol):
 
 
 @dataclass
-class ElementBase(Element):
+class ElementBase(ABC, Element):
     _xml: StartTag
 
     def __init__(self, xml_tag: str | StartTag):
@@ -91,15 +92,17 @@ class ArrayContent:
     def __len__(self) -> int:
         return len(self._children)
 
-    def append(self, e: Element) -> None:
-        self._children.append(e)
-
-    def extend(self, es: Iterable[Element]) -> None:
-        self._children.extend(es)
-
     @property
     def only_child(self) -> Element | None:
         return self._children[0] if len(self._children) == 1 else None
+
+
+class MutableArrayContent(ArrayContent):
+    def append(self, e: Element) -> None:
+        self._children.append(e)
+
+    def __call__(self, a: Element) -> None:
+        self.append(a)
 
 
 @dataclass
@@ -107,6 +110,17 @@ class MixedContent:
     text: str
     _children: list[Inline]
 
+    def __iter__(self) -> Iterator[Inline]:
+        return iter(self._children)
+
+    def empty(self) -> bool:
+        return not self._children and not self.text
+
+    def blank(self) -> bool:
+        return not self._children and not self.text.strip()
+
+
+class MutableMixedContent(MixedContent):
     def __init__(self, content: str | MixedContent | Iterable[Inline] = ""):
         if isinstance(content, str):
             self.text = content
@@ -118,71 +132,90 @@ class MixedContent:
             self.text = ""
             self._children = list(content)
 
-    def __iter__(self) -> Iterator[Inline]:
-        return iter(self._children)
-
-    def append(self, e: Inline) -> None:
-        self._children.append(e)
-
-    def append_text(self, s: str | None) -> None:
-        if s:
+    def append(self, a: str | Inline) -> None:
+        if isinstance(a, str):
             if self._children:
-                self._children[-1].tail += s
+                self._children[-1].tail += a
             else:
-                self.text += s
+                self.text += a
+        else:
+            self._children.append(a)
 
-    def empty(self) -> bool:
-        return not self._children and not self.text
-
-    def blank(self) -> bool:
-        return not self._children and not self.text.strip()
+    def __call__(self, a: str | Inline) -> None:
+        self.append(a)
 
 
-Content: TypeAlias = MixedContent | ArrayContent | str
-ContentT = TypeVar('ContentT', MixedContent, ArrayContent, str)
+Content: TypeAlias = str | ArrayContent | MixedContent
+AppendT = TypeVar('AppendT', str, Element, str | Inline, covariant=True)
 
 
 @dataclass
-class Parent(ElementBase, Generic[ContentT]):
-    _content: ContentT
+class Parent(ElementBase, Generic[AppendT]):
+    @abstractmethod
+    def append(self, a: AppendT) -> None: ...
 
-    def __init__(self, xml_tag: str | StartTag, content: ContentT):
-        super().__init__(xml_tag)
-        self._content = content
+
+class ArrayParentElement(Parent[Element]):
+    _content: MutableArrayContent
+
+    def __init__(self, xml_tag: str | StartTag, content: Iterable[Element] = ()):
+        super().__init__(StartTag(xml_tag))
+        self._content = MutableArrayContent(content)
 
     @property
-    def content(self) -> ContentT:
+    def content(self) -> ArrayContent:
         return self._content
 
-
-class MarkupBlock(Parent[MixedContent]):
-    """Semantic of HTML div containing only phrasing content"""
-
-    def __init__(self, content: MixedContent | str = ""):
-        super().__init__('div', MixedContent(content))
+    def append(self, a: Element) -> None:
+        self._content.append(a)
 
 
-@dataclass
-class MarkupElement(InlineBase):
-    _content: MixedContent
+class MixedParentElement(Parent[str | Inline]):
+    _content: MutableMixedContent
 
-    def __init__(self, xml_tag: str | StartTag, content: str | MixedContent = ""):
-        super().__init__(xml_tag)
-        self._content = MixedContent(content)
+    def __init__(self, xml_tag: str | StartTag, content: MixedContent | str = ""):
+        super().__init__(StartTag(xml_tag))
+        self._content = MutableMixedContent(content)
 
     @property
     def content(self) -> MixedContent:
         return self._content
 
+    def append(self, a: str | Inline) -> None:
+        self._content(a)
 
-class DataElement(Parent[ArrayContent]):
+
+class MarkupBlock(MixedParentElement):
+    """Semantic of HTML div containing only phrasing content"""
+
+    def __init__(self, content: MixedContent | str = ""):
+        super().__init__('div', content)
+
+
+@dataclass
+class MarkupElement(InlineBase):
+    _content: MutableMixedContent
+
+    def __init__(self, xml_tag: str | StartTag, content: MixedContent | str = ""):
+        super().__init__(xml_tag)
+        self._content = MutableMixedContent(content)
+
+    @property
+    def content(self) -> MixedContent:
+        return self._content
+
+    def append(self, a: str | Inline) -> None:
+        self._content(a)
+
+
+class DataElement(ArrayParentElement):
     def __init__(self, xml_tag: str | StartTag, array: Iterable[Element] = ()):
-        super().__init__(xml_tag, ArrayContent(array))
+        super().__init__(xml_tag, array)
 
 
-class BiformElement(Parent[ArrayContent]):
+class BiformElement(ArrayParentElement):
     def __init__(self, xml_tag: str | StartTag, array: Iterable[Element] = ()):
-        super().__init__(xml_tag, ArrayContent(array))
+        super().__init__(xml_tag, array)
 
     @property
     def just_phrasing(self) -> MixedContent | None:

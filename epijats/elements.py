@@ -8,13 +8,14 @@ from warnings import warn
 from . import tree
 from .tree import (
     ArrayContent,
+    ArrayParentElement,
+    Element,
     HtmlVoidElement,
     HtmlVoidInline,
     InlineBase,
     MarkupElement,
     MixedContent,
-    Parent,
-    Element,
+    MixedParentElement,
     StartTag,
 )
 
@@ -55,19 +56,19 @@ class CrossReference(MarkupElement):
         self.xml.attrib = {"href": "#" + rid}
 
 
-class Paragraph(Parent[MixedContent]):
+class Paragraph(MixedParentElement):
     def __init__(self, content: MixedContent | str = ""):
-        super().__init__('p', MixedContent(content))
+        super().__init__('p', content)
 
 
-class BlockQuote(Parent[ArrayContent]):
+class BlockQuote(ArrayParentElement):
     def __init__(self) -> None:
         super().__init__('blockquote', ArrayContent())
 
 
-class PreElement(Parent[MixedContent]):
+class PreElement(MixedParentElement):
     def __init__(self, content: MixedContent | str = "") -> None:
-        super().__init__('pre', MixedContent(content))
+        super().__init__('pre', content)
 
 
 ElementT = TypeVar('ElementT', bound=Element)
@@ -104,7 +105,7 @@ class Citation(MarkupElement):
         super().__init__(StartTag('xref', {'rid': rid, 'ref-type': 'bibr'}))
         self.rid = rid
         self.rord = rord
-        self.content.append_text(str(rord))
+        self.append(str(rord))
 
     def matching_text(self, text: str | None) -> bool:
         return text is not None and text.strip() == self.content.text
@@ -117,7 +118,7 @@ class CitationTuple(ItemListElement[Citation], tree.Inline):
         super().__init__('sup', citations)
 
 
-class ItemElement(Parent[ArrayContent]):
+class ItemElement(ArrayParentElement):
     def __init__(self, xml_tag: str, content: Iterable[Element] = ()):
         super().__init__(xml_tag, ArrayContent(content))
         warn("Use specific element class for specific tag", DeprecationWarning)

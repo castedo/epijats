@@ -4,24 +4,24 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from .metadata import Author, BiblioRefList, Permissions
-from .tree import ArrayContent, Element, MixedContent
+from .tree import Element, MixedContent, MutableArrayContent, MutableMixedContent
 
 
 @dataclass
 class Abstract:
-    content: ArrayContent
+    content: MutableArrayContent
 
     def __init__(self, blocks: Iterable[Element] = ()) -> None:
-        self.content = ArrayContent(blocks)
+        self.content = MutableArrayContent(blocks)
 
 
 @dataclass
 class ProtoSection:
-    presection: ArrayContent
+    presection: MutableArrayContent
     subsections: list[Section]
 
     def __init__(self) -> None:
-        self.presection = ArrayContent()
+        self.presection = MutableArrayContent()
         self.subsections = []
 
     def has_content(self) -> bool:
@@ -34,11 +34,11 @@ class ArticleBody(ProtoSection): ...
 @dataclass
 class Section(ProtoSection):
     id: str | None
-    title: MixedContent
+    title: MutableMixedContent
 
     def __init__(self, id: str | None = None, title: MixedContent | str = ""):
         super().__init__()
-        self.title = MixedContent(title)
+        self.title = MutableMixedContent(title)
         self.id = id
 
 
