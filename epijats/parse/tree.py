@@ -28,7 +28,7 @@ from .content import (
     MixedModelBase,
     parse_mixed_content,
 )
-from .kit import Log
+from .kit import Log, ParsedT
 
 
 if TYPE_CHECKING:
@@ -95,14 +95,19 @@ class TagMold:
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
 
 
-class ElementModelBase(kit.LoadModelBase[Element], Generic[ContentT]):
-    def __init__(self, mold: TagMold, content_mold: ContentMold[ContentT]):
+class TagLoadModelBase(kit.LoadModelBase[ParsedT], Generic[ParsedT]):
+    def __init__(self, mold: TagMold):
         self.tag_mold = mold
-        self.content_mold: ContentMold[ContentT] = content_mold
 
     def match(self, xe: XmlElement) -> bool:
         stag = StartTag.from_xml(xe)
         return stag is not None and self.tag_mold.match(stag)
+
+
+class ElementModelBase(TagLoadModelBase[Element], Generic[ContentT]):
+    def __init__(self, tag_mold: TagMold, content_mold: ContentMold[ContentT]):
+        super().__init__(tag_mold)
+        self.content_mold: ContentMold[ContentT] = content_mold
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:
         ret = self.start(self.tag_mold.stag)

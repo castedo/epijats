@@ -19,7 +19,7 @@ from .htmlish import (
     minimally_formatted_text_model,
 )
 from .back import load_person_name
-from .content import MixedContentMold, RollContentMold, SubElementMixedContentMold
+from .content import MixedContentMold, RollContentMold
 from .tree import MixedContentBinder
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 def copytext_model() -> MixedModel:
     # Corresponds to {COPYTEXT} in BpDF spec ed.2
-    ret = kit.UnionBinder[MixedContent]()
+    ret = UnionMixedModel()
     ret |= formatted_text_model(ret)
     ret |= ext_link_model(hypotext_model())
     return ret
@@ -48,9 +48,16 @@ def article_title_model() -> MixedContentBinder:
     return MixedContentBinder('article-title', minitext_content)
 
 
-def title_group_model() -> MixedContentBinder:
-    content = SubElementMixedContentMold(article_title_model())
-    return MixedContentBinder('title-group', content)
+class TitleGroupModel(kit.TagModelBase[MixedContent]):
+    TAG = 'title-group'
+
+    def load(self, log: Log, xe: XmlElement) -> dom.MixedContent | None:
+        kit.check_no_attrib(log, xe)
+        sess = ArrayContentSession(log)
+        title = MixedContent()
+        sess.bind_once(article_title_model(), title)
+        sess.parse_content(xe)
+        return None if title.blank() else title
 
 
 def orcid_model() -> Model[bp.Orcid]:
@@ -173,20 +180,16 @@ class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'title-group')
         sess = ArrayContentSession(log)
-        title = MixedContent()
-        sess.bind_once(title_group_model(), title)
+        title = sess.one(TitleGroupModel())
         authors = sess.one(tag_model('contrib-group', load_author_group))
         abstract = sess.one(self._abstract_model)
         permissions = sess.one(PermissionsModel())
         sess.parse_content(xe)
-        if not title.blank():
-            dest.title = title
+        dest.title = title.out
         if authors.out is not None:
             dest.authors = authors.out
-        if abstract.out:
-            dest.abstract = abstract.out
-        if permissions.out is not None:
-            dest.permissions = permissions.out
+        dest.abstract = abstract.out
+        dest.permissions = permissions.out
 
 
 class ArticleFrontBinder(kit.TagBinderBase[dom.Article]):

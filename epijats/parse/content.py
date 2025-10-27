@@ -128,7 +128,7 @@ class ArrayContentSession:
 
     def one(self, model: Model[ParsedT]) -> kit.Outcome[ParsedT]:
         ret = kit.SinkDestination[ParsedT]()
-        self._parsers.append(OnlyOnceParser(self.log, model, ret))
+        self.bind_once(model, ret)
         return ret
 
     def parse_content(self, e: XmlElement) -> None:
@@ -152,7 +152,7 @@ def parse_mixed_content(
             dest.append_text(s.tail)
 
 
-class MixedModelBase(Binder[MixedContent]):
+class MixedModelBase(MixedModel):
     @abstractmethod
     def load(self, log: Log, xe: XmlElement) -> Inline | None: ...
 
@@ -182,15 +182,6 @@ class MixedContentMold(ContentMold[MixedContent]):
 
     def read(self, log: Log, xe: XmlElement, dest: MixedContent) -> None:
         parse_mixed_content(log, xe, self.child_model, dest)
-
-
-class SubElementMixedContentMold(ContentMold[MixedContent]):
-    def __init__(self, child_model: kit.Binder[MixedContent]):
-        self.content_type = MixedContent
-        self.child_model = child_model
-
-    def read(self, log: Log, xe: XmlElement, dest: MixedContent) -> None:
-        parse_array_content(log, xe, self.child_model, dest)
 
 
 ArrayContentMold: TypeAlias = ContentMold[ArrayContent]
