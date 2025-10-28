@@ -27,6 +27,7 @@ from .content import (
 from .tree import (
     BiformModel,
     EmptyElementModel,
+    EmptyInlineModel,
     MixedParentElementModel,
     ItemModel,
     MarkupModel,
@@ -69,21 +70,14 @@ def blockquote_model(roll_content_mold: ArrayContentMold) -> Model[Element]:
     return BiformModel(tm, roll_content_mold)
 
 
-class BreakModel(MixedModelBase):
-    def match(self, xe: XmlElement) -> bool:
-        return xe.tag in ['br', 'break']
-
-    def load(self, log: Log, e: XmlElement) -> Inline | None:
-        return dom.LineBreak()
-
-
 def break_model() -> MixedModel:
     """<break> Line Break
     Like HTML <br>.
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
     """
-    return BreakModel()
+    
+    return EmptyInlineModel(TagMold('br', jats_tag='break'), dom.LineBreak)
 
 
 def code_model(hypertext: MixedModel) -> MixedModel:
@@ -273,7 +267,8 @@ def data_element_model(tag: str, child_model: Model[Element]) -> Model[Element]:
 
 
 def col_group_model() -> Model[Element]:
-    col = EmptyElementModel('col', attrib={'span', 'width'}, factory=dom.TableColumn)
+    tm = TagMold('col', optional_attrib={'span', 'width'})
+    col = EmptyElementModel(tm, dom.TableColumn)
     tm = TagMold('colgroup', optional_attrib={'span', 'width'})
     return ItemModel(tm, DataContentMold(col))
 

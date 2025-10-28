@@ -12,7 +12,7 @@ from .content import (
 )
 from . import kit
 from .kit import Log, LoaderTagModel as tag_model
-from .tree import EmptyElementModel
+from .tree import TrivialElementModel
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
@@ -46,7 +46,7 @@ class PersonGroupModel(kit.TagModelBase[bp.PersonGroup]):
         sess = ArrayContentSession(log)
         sess.bind(tag_model('name', load_person_name), ret.persons.append)
         sess.bind(tag_model('string-name', kit.load_string), ret.persons.append)
-        etal = sess.one(EmptyElementModel('etal'))
+        etal = sess.one(TrivialElementModel('etal'))
         sess.parse_content(e)
         ret.etal = bool(etal.out)
         return ret

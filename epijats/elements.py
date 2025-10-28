@@ -66,9 +66,15 @@ class BlockQuote(ArrayParentElement):
         super().__init__('blockquote', ArrayContent())
 
 
+class Preformat(MixedParentElement):
+    def __init__(self, content: MixedContent | str = "") -> None:
+        super().__init__('pre', content)
+
+
 class PreElement(MixedParentElement):
     def __init__(self, content: MixedContent | str = "") -> None:
         super().__init__('pre', content)
+        warn("Use class Preformat", DeprecationWarning)
 
 
 ElementT = TypeVar('ElementT', bound=Element)

@@ -19,7 +19,6 @@ from ..tree import (
     MutableMixedContent,
     Parent,
     StartTag,
-    WhitespaceElement,
 )
 
 from . import kit
@@ -29,35 +28,33 @@ from .content import (
     MixedModelBase,
     parse_mixed_content,
 )
-from .kit import Log, ParsedT
+from .kit import Log, ParsedT, Sink
 
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-class EmptyElementModel(kit.TagModelBase[Element]):
-    def __init__(
-        self,
-        tag: str,
-        *,
-        attrib: set[str] = set(),
-        factory: Callable[[], Element] | None = None,
-    ):
-        super().__init__(tag)
-        self.factory = factory
-        self._ok_attrib_keys = attrib
+def check_no_content(log: Log, xe: XmlElement) -> None:
+    if xe.text and xe.text.strip():
+        log(fc.IgnoredText.issue(xe))
+    for s in xe:
+        log(fc.ExcessElement.issue(s))
+        if s.tail and s.tail.strip():
+            log(fc.IgnoredTail.issue(s))
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
-        ret = self.factory() if self.factory else WhitespaceElement(self.tag)
-        kit.check_no_attrib(log, e, self._ok_attrib_keys)
-        kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
-        if e.text and e.text.strip():
-            log(fc.IgnoredText.issue(e))
-        for s in e:
-            if s.tail and s.tail.strip():
-                log(fc.IgnoredTail.issue(s))
-        return ret
+
+class TrivialElementModel(kit.LoadModelBase[str]):
+    def __init__(self, tag: str):
+        self.tag = tag
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == self.tag
+
+    def load(self, log: Log, xe: XmlElement) -> str | None:
+        kit.check_no_attrib(log, xe)
+        check_no_content(log, xe)
+        return self.tag
 
 
 class MarkupBlockModel(kit.LoadModelBase[Element]):
@@ -96,25 +93,51 @@ class TagMold:
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
 
 
-class TagLoadModelBase(kit.LoadModelBase[ParsedT], Generic[ParsedT]):
-    def __init__(self, mold: TagMold):
-        self.tag_mold = mold
+class TagMoldModelBase(kit.Model[ParsedT]):
+    def __init__(self, tag_mold: TagMold):
+        self.tag_mold = tag_mold
 
     def match(self, xe: XmlElement) -> bool:
         stag = StartTag.from_xml(xe)
         return stag is not None and self.tag_mold.match(stag)
 
 
-class ElementModelBase(TagLoadModelBase[Element], Generic[AppendT]):
+class EmptyElementModel(TagMoldModelBase[Element]):
+    def __init__(self, tag_mold: TagMold, factory: Callable[[], Element]):
+        super().__init__(tag_mold)
+        self.factory = factory
+
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
+        ret = self.factory()
+        self.tag_mold.copy_attributes(log, xe, ret)
+        check_no_content(log, xe)
+        sink(ret)
+
+
+class EmptyInlineModel(TagMoldModelBase[str | Inline]):
+    def __init__(self, tag_mold: TagMold, factory: Callable[[], Inline]):
+        super().__init__(tag_mold)
+        self.factory = factory
+
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        ret = self.factory()
+        self.tag_mold.copy_attributes(log, xe, ret)
+        check_no_content(log, xe)
+        sink(ret)
+        if xe.tail:
+            sink(xe.tail)
+
+
+class ElementModelBase(TagMoldModelBase[Element], Generic[AppendT]):
     def __init__(self, tag_mold: TagMold, content_mold: ContentMold[AppendT]):
         super().__init__(tag_mold)
         self.content_mold: ContentMold[AppendT] = content_mold
 
-    def load(self, log: Log, xe: XmlElement) -> Element | None:
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
         ret = self.start(self.tag_mold.stag)
         self.tag_mold.copy_attributes(log, xe, ret)
         self.content_mold.read(log, xe, ret.append)
-        return ret
+        sink(ret)
 
     @abstractmethod
     def start(self, stag: StartTag) -> Parent[AppendT]: ...
