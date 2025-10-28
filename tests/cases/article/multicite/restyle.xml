@@ -17,22 +17,11 @@
     </article-meta>
   </front>
   <article-body>
-    <p>X<sup>2</sup><sup>
-        <xref rid="ref-1" ref-type="bibr">1</xref>
-      </sup></p>
-    <p>OneToThree<sup>
-        <xref rid="ref-1" ref-type="bibr">1</xref>,
-        <xref rid="ref-himmelstein_open_2019" ref-type="bibr">2</xref>,
-        <xref rid="ref-hartl_essential_2006" ref-type="bibr">3</xref>
-      </sup></p>
-    <p><b>Two<sup>
-        <xref rid="ref-himmelstein_open_2019" ref-type="bibr">2</xref>
-      </sup></b></p>
+    <p>X<sup>2</sup><sup><xref rid="ref-1" ref-type="bibr">1</xref></sup></p>
+    <p>OneToThree<sup><xref rid="ref-1" ref-type="bibr">1</xref>,<xref rid="ref-himmelstein_open_2019" ref-type="bibr">2</xref>,<xref rid="ref-hartl_essential_2006" ref-type="bibr">3</xref></sup></p>
+    <p><b>Two<sup><xref rid="ref-himmelstein_open_2019" ref-type="bibr">2</xref></sup></b></p>
     <section>
-      <h2>OneThree<sup>
-          <xref rid="ref-1" ref-type="bibr">1</xref>,
-          <xref rid="ref-hartl_essential_2006" ref-type="bibr">3</xref>
-        </sup></h2>
+      <h2>OneThree<sup><xref rid="ref-1" ref-type="bibr">1</xref>,<xref rid="ref-hartl_essential_2006" ref-type="bibr">3</xref></sup></h2>
     </section>
   </article-body>
   <back>

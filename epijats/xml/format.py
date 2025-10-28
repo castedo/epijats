@@ -56,14 +56,29 @@ class MarkupFormatter:
             dest.text = ' '
 
 
+class InlineListFormatter:
+    def __init__(self, sub: ElementFormatter, *, sep: str = ''):
+        self.sub = sub
+        self.sep = sep
+
+    def format(self, src: ArrayContent, level: int, dest: XmlElement) -> None:
+        sub: XmlElement | None = None
+        todo = list(src)
+        while todo:
+            it = todo.pop(0)
+            sublevel = level if isinstance(it.content, MixedContent) else level + 1
+            for sub in self.sub.format(it, sublevel):
+                if todo:
+                    sub.tail = self.sep
+                dest.append(sub)  # type: ignore[arg-type]
+
+
 class IndentFormatter:
     def __init__(self, sub: ElementFormatter, sep: str = ''):
         self.sub = sub
         self.sep = sep
 
-    def format_content(
-        self, src: ArrayContent, level: int, dest: XmlElement
-    ) -> None:
+    def format(self, src: ArrayContent, level: int, dest: XmlElement) -> None:
         last_newline = "\n" + "  " * level
         newline = "\n" + ("  " * (level + 1))
         sub: XmlElement | None = None
@@ -90,9 +105,9 @@ class CommonContentFormatter:
             if src.just_phrasing is not None:
                 self.markup.format(src.just_phrasing, level, dest)
             else:
-                self.default.format_content(src.content, level, dest)
+                self.default.format(src.content, level, dest)
         elif isinstance(src.content, ArrayContent):
-            self.default.format_content(src.content, level, dest)
+            self.default.format(src.content, level, dest)
         elif isinstance(src.content, MixedContent):
             self.markup.format(src.content, level, dest)
         elif src.is_void:
@@ -125,7 +140,7 @@ def root_namespaces(src: XmlElement) -> XmlElement:
 
 class XmlFormatter(ElementFormatter):
     def __init__(self, *, use_lxml: bool = False):
-        self.citation = IndentFormatter(self, sep=",")
+        self.citation = InlineListFormatter(self, sep=",")
         self.common = CommonContentFormatter(self)
         if use_lxml:
             warn("lxml specific output will be removed.", DeprecationWarning)
@@ -134,7 +149,7 @@ class XmlFormatter(ElementFormatter):
     def to_one_only(self, src: Element, level: int) -> XmlElement:
         ret: XmlElement = self.ET.Element(src.xml.tag, src.xml.attrib)
         if isinstance(src, CitationTuple):
-            self.citation.format_content(src.content, level, ret)
+            self.citation.format(src.content, level, ret)
         else:
             self.common.format_content(src, level, ret)
         return ret

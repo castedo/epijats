@@ -5,16 +5,12 @@
         <article-title>Cite in Abstract</article-title>
       </title-group>
       <abstract>
-        <p>JATS<sup>
-            <xref rid="ref-1" ref-type="bibr">1</xref>
-          </sup></p>
+        <p>JATS<sup><xref rid="ref-1" ref-type="bibr">1</xref></sup></p>
       </abstract>
     </article-meta>
   </front>
   <article-body>
-    <p>JATS<sup>
-        <xref rid="ref-1" ref-type="bibr">1</xref>
-      </sup></p>
+    <p>JATS<sup><xref rid="ref-1" ref-type="bibr">1</xref></sup></p>
   </article-body>
   <back>
     <ref-list>
