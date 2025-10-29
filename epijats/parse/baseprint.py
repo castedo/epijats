@@ -15,7 +15,7 @@ from . import kit
 from .back import RefListModel
 from .body import BodyModel, CoreModels
 from .content import ArrayContentSession
-from .front import AbstractModel, ArticleFrontBinder
+from .front import AbstractModel, ArticleFrontParser
 from .kit import Log, nolog
 
 if TYPE_CHECKING:
@@ -79,7 +79,7 @@ def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     abstract_model = AbstractModel(models.block, models.hypertext)
     kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession(log)
-    sess.bind_once(ArticleFrontBinder(abstract_model), ret)
+    sess.bind_once(ArticleFrontParser(abstract_model), ret)
     sess.bind(BodyModel(models), ret.body)
     sess.parse_content(e)
     if ret.ref_list:

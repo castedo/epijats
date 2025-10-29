@@ -127,7 +127,7 @@ def xml2html(xml):
     issues = []
     model = _.hypertext_model(None)
     out = dom.MutableMixedContent()
-    _.parse_mixed_content(issues.append, et, model, out)
+    model.parse_content(issues.append, et, out)
     return (HTML.content_to_str(out), len(issues))
 
 

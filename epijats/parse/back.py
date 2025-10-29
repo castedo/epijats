@@ -106,7 +106,7 @@ class AccessDateModel(kit.TagModelBase[bp.Date]):
         return date.build()
 
 
-class PubIdBinder(kit.Binder[dict[bp.PubIdType, str]]):
+class PubIdParser(kit.Parser[dict[bp.PubIdType, str]]):
     """<pub-id> Publication Identifier for a Cited Publication
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/pub-id.html
@@ -174,7 +174,7 @@ class SourceTitleModel(kit.LoadModelBase[str]):
         return kit.load_string(log, xe)
 
 
-class ElementCitationBinder(kit.Binder[bp.BiblioRefItem]):
+class ElementCitationParser(kit.Parser[bp.BiblioRefItem]):
     """<element-citation> Element Citation
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/element-citation.html
@@ -197,7 +197,7 @@ class ElementCitationBinder(kit.Binder[bp.BiblioRefItem]):
         for key in bp.BiblioRefItem.BIBLIO_FIELD_KEYS:
             fields[key] = sess.one(tag_model(key, kit.load_string))
         elocation_id = sess.one(tag_model('elocation-id', kit.load_string))
-        sess.bind(PubIdBinder(), dest.pub_ids)
+        sess.bind(PubIdParser(), dest.pub_ids)
         sess.parse_content(e)
         dest.source_title = source_title.out
         dest.article_title = title.out
@@ -234,7 +234,7 @@ class BiblioRefItemModel(kit.TagModelBase[bp.BiblioRefItem]):
         sess = ArrayContentSession(log)
         label = PositiveIntModel('label', 1048576, strip_trailing_period=True)
         sess.one(label)  # ignoring if it's a valid integer
-        sess.bind_once(ElementCitationBinder(), ret)
+        sess.bind_once(ElementCitationParser(), ret)
         sess.parse_content(xe)
         ret.id = xe.attrib.get('id', "")
         return ret

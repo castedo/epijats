@@ -13,7 +13,6 @@ from ..tree import Element, Inline, InlineBase, StartTag
 from . import kit
 from .content import ArrayContentSession, MixedModel
 from .kit import Log, Sink
-from .content import parse_mixed_content
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
@@ -81,7 +80,7 @@ class MathmlElementModel(kit.LoadModelBase[Inline]):
 
     def load(self, log: Log, e: XmlElement) -> Inline | None:
         ret = MathmlElement(StartTag(self.tag, dict(e.attrib)))
-        parse_mixed_content(log, e, self._model, ret.append)
+        self._model.parse_content(log, e, ret.append)
         return ret
 
 

@@ -20,7 +20,6 @@ from .content import (
     PendingMarkupBlock,
     UnionMixedModel,
     parse_array_content,
-    parse_mixed_content,
 )
 from .tree import (
     BiformModel,
@@ -117,7 +116,7 @@ class JatsExtLinkModel(MixedModel):
             self.parse_content(log, e, sink)
         else:
             ret = dom.ExternalHyperlink(href)
-            parse_mixed_content(log, e, self.content_model, ret.append)
+            self.content_model.parse_content(log, e, ret.append)
             sink(ret)
 
 
@@ -138,7 +137,7 @@ class HtmlExtLinkModel(MixedModel):
             log(fc.InvalidAttributeValue.issue(xe, 'href', href))
         else:
             ret = dom.ExternalHyperlink(href)
-            parse_mixed_content(log, xe, self.content_model, ret.append)
+            self.content_model.parse_content(log, xe, ret.append)
             sink(ret)
 
 
@@ -255,7 +254,7 @@ class TableCellModel(kit.LoadModelBase[Element]):
         kit.confirm_attrib_value(log, e, 'align', align_attribs)
         ret = MarkupElement(self.tag)
         kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
-        parse_mixed_content(log, e, self.content_model, ret.append)
+        self.content_model.parse_content(log, e, ret.append)
         if ret.content.empty():
             ret.content.text = ' '
         return ret

@@ -12,12 +12,10 @@ from ..tree import Element, Inline, MutableMixedContent
 from . import kit
 from .kit import Log, Sink
 from .content import (
-    ContentModel,
     MixedModel,
     PendingMarkupBlock,
     RollContentModel,
     UnionMixedModel,
-    parse_mixed_content,
 )
 from .htmlish import (
     HtmlParagraphModel,
@@ -32,7 +30,7 @@ from .htmlish import (
     preformat_model,
     table_wrap_model,
 )
-from .tree import MarkupBlockModel, MixedContentBinderBase
+from .tree import MarkupBlockModel
 from .math import disp_formula_model, inline_formula_model
 
 
@@ -240,7 +238,7 @@ class HtmlCrossReferenceModel(MixedModel):
             log(fc.InvalidAttributeValue.issue(xe, 'href', href))
             return None
         ret = dom.CrossReference(href[1:])
-        parse_mixed_content(log, xe, self.content_model, ret.append)
+        self.content_model.parse_content(log, xe, ret.append)
         sink(ret)
 
 
@@ -251,20 +249,12 @@ def cross_reference_model(
     return jats_xref | HtmlCrossReferenceModel(content_model)
 
 
-class SectionTitleBinder(MixedContentBinderBase):
-    def __init__(self, content_mold: ContentModel[str | Inline]):
-        super().__init__(content_mold)
-
-    def match(self, xe: XmlElement) -> bool:
-        return xe.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']
-
-
 class ProtoSectionParser:
     def __init__(self, models: CoreModels, section_model: SectionModel):
         self.inline_model = models.hypertext
         self.block_model = models.block
         self.section_model = section_model
-        self._title_model = SectionTitleBinder(models.heading)
+        self.heading_content_model = models.heading
 
     def parse(
         self,
@@ -279,11 +269,11 @@ class ProtoSectionParser:
         for s in xe:
             tail = s.tail
             s.tail = None
-            if self._title_model.match(s):
+            if s.tag in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']:
                 if title is None:
                     log(fc.ExcessElement.issue(s))
                 else:
-                    self._title_model.parse(log, s, title)
+                    self.heading_content_model.parse_content(log, s, title)
                     title = None
             elif self.block_model.match(s):
                 pending.close()
@@ -320,7 +310,7 @@ class SectionModel(kit.LoadModelBase[dom.Section]):
         return ret
 
 
-class BodyModel(kit.Binder[dom.ProtoSection]):
+class BodyModel(kit.Parser[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
         self._proto = ProtoSectionParser(models, SectionModel(models))
 

@@ -6,7 +6,7 @@ from .. import condition as fc
 from .. import dom
 from .. import metadata as bp
 from ..document import Abstract
-from ..tree import Element, MixedContent, MutableMixedContent
+from ..tree import Element, Inline, MixedContent, MutableMixedContent
 
 from . import kit
 from .kit import Log, Model, LoaderTagModel as tag_model
@@ -34,11 +34,11 @@ def copytext_model() -> MixedModel:
     return ret
 
 
-def copytext_element_model(tag: str) -> MixedContentBinder:
+def copytext_element_model(tag: str) -> Model[str | Inline]:
     return MixedContentBinder(tag, copytext_model())
 
 
-def article_title_model() -> MixedContentBinder:
+def article_title_model() -> Model[str | Inline]:
     # Contents corresponds to {MINITEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
     minitext_model = UnionMixedModel()
@@ -108,7 +108,7 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
     return bp.Author(name.out, email.out, orcid.out)
 
 
-class LicenseRefBinder(kit.Binder[dom.License]):
+class LicenseRefParser(kit.Parser[dom.License]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in [
             "license-ref",
@@ -138,7 +138,7 @@ class LicenseModel(kit.LoadModelBase[dom.License]):
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         sess.bind_once(copytext_element_model('license-p'), ret.license_p)
-        sess.bind_once(LicenseRefBinder(), ret)
+        sess.bind_once(LicenseRefParser(), ret)
         sess.parse_content(e)
         return None if ret.blank() else ret
 
@@ -172,7 +172,7 @@ class AbstractModel(kit.TagModelBase[Abstract]):
         return a if len(a.content) else None
 
 
-class ArticleMetaBinder(kit.Binder[dom.Article]):
+class ArticleMetaParser(kit.Parser[dom.Article]):
     def __init__(self, abstract_model: Model[Abstract]):
         self._abstract_model = abstract_model
 
@@ -195,9 +195,9 @@ class ArticleMetaBinder(kit.Binder[dom.Article]):
         dest.permissions = permissions.out
 
 
-class ArticleFrontBinder(kit.Binder[dom.Article]):
+class ArticleFrontParser(kit.Parser[dom.Article]):
     def __init__(self, abstract_model: Model[Abstract]):
-        self._meta_model = ArticleMetaBinder(abstract_model)
+        self._meta_model = ArticleMetaParser(abstract_model)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'front'

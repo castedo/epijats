@@ -125,7 +125,7 @@ class IgnoredText(ElementFormatCondition):
 
 
 @dataclass(frozen=True)
-class IgnoredTail(IgnoredText):
+class IgnoredTail(ElementFormatCondition):
     """Unexpected text ignored after XML element"""
 
 

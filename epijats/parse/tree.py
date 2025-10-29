@@ -16,7 +16,6 @@ from ..tree import (
     MarkupBlock,
     MarkupElement,
     MixedParentElement,
-    MutableMixedContent,
     Parent,
     StartTag,
 )
@@ -25,7 +24,6 @@ from . import kit
 from .content import (
     ContentModel,
     MixedModel,
-    parse_mixed_content,
 )
 from .kit import Log, Sink
 
@@ -121,9 +119,6 @@ class EmptyInlineModel(MixedModel):
         check_no_content(log, xe)
         sink(ret)
 
-    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
-        parse_mixed_content(log, xe, self, sink)
-
 
 class ElementModelBase(kit.Model[Element], Generic[AppendT]):
     def __init__(self, tag_mold: TagMold, content_mold: ContentModel[AppendT]):
@@ -175,26 +170,15 @@ class MarkupMixedModel(MixedModel):
         self.content_model.parse_content(log, xe, ret.append)
         sink(ret)
 
-    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
-        self.content_model.parse_content(log, xe, sink)
 
-
-class MixedContentBinderBase(kit.Binder[MutableMixedContent]):
-    def __init__(self, content_mold: ContentModel[str | Inline]):
-        self.content_mold = content_mold
-
-    def parse(self, log: Log, xe: XmlElement, target: MutableMixedContent) -> None:
-        kit.check_no_attrib(log, xe)
-        if target.blank():
-            self.content_mold.parse_content(log, xe, target)
-        else:
-            log(fc.ExcessElement.issue(xe))
-
-
-class MixedContentBinder(MixedContentBinderBase):
+class MixedContentBinder(kit.Model[str | Inline]):
     def __init__(self, tag: str, content_mold: ContentModel[str | Inline]):
-        super().__init__(content_mold)
+        self.content_mold = content_mold
         self.tag = tag
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == self.tag
+
+    def parse(self, log: Log, xe: XmlElement, target: Sink[str | Inline]) -> None:
+        kit.check_no_attrib(log, xe)
+        self.content_mold.parse_content(log, xe, target)

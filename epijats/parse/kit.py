@@ -128,46 +128,66 @@ def load_int(
         return None
 
 
-class Binder(ABC, Generic[DestConT]):
+class Parser(ABC, Generic[DestConT]):
     @abstractmethod
     def match(self, xe: XmlElement) -> bool: ...
 
     @abstractmethod
     def parse(self, log: Log, xe: XmlElement, dest: DestConT) -> None: ...
 
-    def __or__(self, other: Binder[DestConT]) -> Binder[DestConT]:
-        ret = UnionBinder[DestConT]()
+    def parse_str(self, log: Log, s: str, dest: DestConT) -> bool:
+        return False
+
+    def parse_content(self, log: Log, xe: XmlElement, dest: DestConT) -> None:
+        if xe.text:
+            if not self.parse_str(log, xe.text, dest):
+                log(fc.IgnoredText.issue(xe))
+        for s in xe:
+            if self.match(s):
+                self.parse(log, s, dest)
+            else:
+                log(fc.UnsupportedElement.issue(s))
+                self.parse_content(log, s, dest)
+            if s.tail:
+                if not self.parse_str(log, s.tail, dest):
+                    log(fc.IgnoredTail.issue(s))
+
+    def __or__(self, other: Parser[DestConT]) -> Parser[DestConT]:
+        ret = UnionParser[DestConT]()
         ret |= self
         ret |= other
         return ret
 
 
-class UnionBinder(Binder[DestT]):
+class UnionParser(Parser[DestT]):
     def __init__(self) -> None:
-        self._binders: list[Binder[DestT]] = []
+        self._parsers: list[Parser[DestT]] = []
 
     def match(self, xe: XmlElement) -> bool:
-        return any(b.match(xe) for b in self._binders)
+        return any(p.match(xe) for p in self._parsers)
 
     def parse(self, log: Log, xe: XmlElement, dest: DestT) -> None:
-        for b in self._binders:
-            if b.match(xe):
-                b.parse(log, xe, dest)
+        for p in self._parsers:
+            if p.match(xe):
+                p.parse(log, xe, dest)
                 return
 
-    def __or__(self, other: Binder[DestT]) -> Binder[DestT]:
-        ret = UnionBinder[DestT]()
-        ret._binders = [self, other]
+    def parse_str(self, log: Log, s: str, dest: DestT) -> bool:
+        return any(p.parse_str(log, s, dest) for p in self._parsers)
+
+    def __or__(self, other: Parser[DestT]) -> Parser[DestT]:
+        ret = UnionParser[DestT]()
+        ret._parsers = [self, other]
         return ret
 
-    def __ior__(self, other: Binder[DestT]) -> UnionBinder[DestT]:
-        self._binders.append(other)
+    def __ior__(self, other: Parser[DestT]) -> UnionParser[DestT]:
+        self._parsers.append(other)
         return self
 
 
 Sink: TypeAlias = Callable[[ParsedT], None]
-Model: TypeAlias = Binder[Sink[ParsedT]]
-UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
+Model: TypeAlias = Parser[Sink[ParsedT]]
+UnionModel: TypeAlias = UnionParser[Sink[ParsedT]]
 
 
 class LoadModelBase(Model[ParsedT]):
