@@ -29,9 +29,9 @@ if TYPE_CHECKING:
 
 
 def _parse_array_content(
-    log: Log, e: XmlElement, parsers: Iterable[Parser] | Parser
+    log: Log, e: XmlElement, parsers: Iterable[BoundParser] | BoundParser
 ) -> None:
-    if isinstance(parsers, Parser):
+    if isinstance(parsers, BoundParser):
         parsers = [parsers]
     if e.text and e.text.strip():
         log(fc.IgnoredText.issue(e))
@@ -48,10 +48,10 @@ if TYPE_CHECKING:
     ParseFunc: TypeAlias = Callable[[XmlElement], None]
 
 
-class Parser(ABC):
+class BoundParser(ABC):
     @abstractmethod
     def match(self, xe: XmlElement) -> ParseFunc | None:
-        """Test whether Parser handles an element, without issue logging."""
+        """Test whether BoundParser handles an element, without issue logging."""
         ...
 
     def parse_element(self, e: XmlElement) -> bool:
@@ -70,7 +70,7 @@ class Parser(ABC):
         return fun is not None
 
 
-class StatelessParser(Parser, Generic[DestT]):
+class StatelessParser(BoundParser, Generic[DestT]):
     def __init__(self, binder: Binder[DestT], log: Log, dest: DestT):
         def parse_fun(xe: XmlElement) -> None:
             binder.parse(log, xe, dest)
@@ -90,7 +90,7 @@ def parse_array_content(
     _parse_array_content(log, xe, StatelessParser(binder, log, dest))
 
 
-class OnlyOnceParser(Parser):
+class OnlyOnceParser(BoundParser):
     def __init__(self, log: Log, binder: Binder[DestT], dest: DestT):
         self.log = log
         self._parser = StatelessParser(binder, log, dest)
@@ -116,7 +116,7 @@ class ArrayContentSession:
 
     def __init__(self, log: Log):
         self.log = log
-        self._parsers: list[Parser] = []
+        self._parsers: list[BoundParser] = []
 
     def bind(self, binder: Binder[DestT], dest: DestT) -> None:
         self._parsers.append(StatelessParser(binder, self.log, dest))

@@ -52,11 +52,14 @@ class PersonGroupModel(kit.TagModelBase[bp.PersonGroup]):
         return ret
 
 
-class PositiveIntModel(kit.TagModelBase[int]):
+class PositiveIntModel(kit.LoadModelBase[int]):
     def __init__(self, tag: str, max_int: int, *, strip_trailing_period: bool = False):
-        super().__init__(tag)
+        self.tag = tag
         self.max_int = max_int
         self.strip_trailing_period = strip_trailing_period
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == self.tag
 
     def load(self, log: Log, e: XmlElement) -> int | None:
         kit.check_no_attrib(log, e)
@@ -103,13 +106,14 @@ class AccessDateModel(kit.TagModelBase[bp.Date]):
         return date.build()
 
 
-class PubIdBinder(kit.TagBinderBase[dict[bp.PubIdType, str]]):
+class PubIdBinder(kit.Binder[dict[bp.PubIdType, str]]):
     """<pub-id> Publication Identifier for a Cited Publication
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/pub-id.html
     """
 
-    TAG = 'pub-id'
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'pub-id'
 
     def parse(self, log: Log, e: XmlElement, dest: dict[bp.PubIdType, str]) -> None:
         kit.check_no_attrib(log, e, ['pub-id-type'])
@@ -170,13 +174,14 @@ class SourceTitleModel(kit.LoadModelBase[str]):
         return kit.load_string(log, xe)
 
 
-class ElementCitationBinder(kit.TagBinderBase[bp.BiblioRefItem]):
+class ElementCitationBinder(kit.Binder[bp.BiblioRefItem]):
     """<element-citation> Element Citation
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/element-citation.html
     """
 
-    TAG = 'element-citation'
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'element-citation'
 
     def parse(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:
         kit.check_no_attrib(log, e)

@@ -74,7 +74,7 @@ def break_model() -> MixedModel:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
     """
-    
+
     return EmptyInlineModel(TagMold('br', jats_tag='break'), dom.LineBreak)
 
 
@@ -127,7 +127,7 @@ class HtmlExtLinkModel(MixedModel):
         self.content_model = content_model
 
     def match(self, xe: XmlElement) -> bool:
-        return kit.match_start_tag(xe, self.stag)
+        return self.stag.issubset(xe)
 
     def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
         kit.check_no_attrib(log, xe, ['rel', 'href'])
@@ -241,11 +241,14 @@ def def_list_model(
     return ItemModel(tm, DataContentModel(child_model))
 
 
-class TableCellModel(kit.TagModelBase[Element]):
+class TableCellModel(kit.LoadModelBase[Element]):
     def __init__(self, content_model: MixedModel, *, header: bool):
-        super().__init__('th' if header else 'td')
+        self.tag = 'th' if header else 'td'
         self.content_model = content_model
         self._ok_attrib_keys = {'align', 'colspan', 'rowspan'}
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == self.tag
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
         align_attribs = {'left', 'right', 'center', 'justify', None}

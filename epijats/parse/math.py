@@ -65,16 +65,19 @@ class AnyMathmlModel(MixedModel):
             sink(ret)
 
 
-class MathmlElementModel(kit.TagModelBase[Inline]):
+class MathmlElementModel(kit.LoadModelBase[Inline]):
     """<mml:math> Math (MathML Tag Set)
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/mml-math.html
     """
 
     def __init__(self, mathml_tag: str):
-        super().__init__(MATHML_NAMESPACE_PREFIX + mathml_tag)
+        self.tag = MATHML_NAMESPACE_PREFIX + mathml_tag
         self._model = AnyMathmlModel()
         self.mathml_tag = mathml_tag
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == self.tag
 
     def load(self, log: Log, e: XmlElement) -> Inline | None:
         ret = MathmlElement(StartTag(self.tag, dict(e.attrib)))

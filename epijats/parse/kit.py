@@ -33,15 +33,6 @@ def issue(
     return log(fc.FormatIssue(condition, sourceline, info))
 
 
-def match_start_tag(xe: XmlElement, ok: StartTag) -> bool:
-    if isinstance(xe.tag, str) and xe.tag == ok.tag:
-        for key, value in ok.attrib.items():
-            if xe.attrib.get(key) != value:
-                return False
-        return True
-    return False
-
-
 def check_no_attrib(log: Log, e: XmlElement, ignore: Iterable[str] = []) -> None:
     for k in e.attrib.keys():
         if k not in ignore:
@@ -174,20 +165,6 @@ class UnionBinder(Binder[DestT]):
         return self
 
 
-class TagBinderBase(Binder[DestT]):
-    def __init__(self, tag: str | StartTag | None = None):
-        if tag is None:
-            tag = getattr(type(self), 'TAG')
-        self.stag = StartTag(tag)
-
-    @property
-    def tag(self) -> str:
-        return self.stag.tag
-
-    def match(self, xe: XmlElement) -> bool:
-        return match_start_tag(xe, self.stag)
-
-
 Sink: TypeAlias = Callable[[ParsedT], None]
 Model: TypeAlias = Binder[Sink[ParsedT]]
 UnionModel: TypeAlias = UnionBinder[Sink[ParsedT]]
@@ -211,17 +188,11 @@ class LoadModelBase(Model[ParsedT]):
 
 
 class TagModelBase(LoadModelBase[ParsedT]):
-    def __init__(self, tag: str | StartTag | None = None):
-        if tag is None:
-            tag = getattr(type(self), 'TAG')
+    def __init__(self, tag: str | StartTag):
         self.stag = StartTag(tag)
 
-    @property
-    def tag(self) -> str:
-        return self.stag.tag
-
     def match(self, xe: XmlElement) -> bool:
-        return match_start_tag(xe, self.stag)
+        return self.stag.issubset(xe)
 
 
 class LoaderTagModel(TagModelBase[ParsedT]):

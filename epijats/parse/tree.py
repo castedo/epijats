@@ -27,7 +27,7 @@ from .content import (
     MixedModel,
     parse_mixed_content,
 )
-from .kit import Log, ParsedT, Sink
+from .kit import Log, Sink
 
 
 if TYPE_CHECKING:
@@ -82,29 +82,23 @@ class TagMold:
         self._ok_attrib_keys = optional_attrib | set(self.stag.attrib.keys())
         self.jats_tag = jats_tag
 
-    def match(self, stag: StartTag) -> bool:
-        if self.jats_tag is not None and stag.tag == self.jats_tag:
+    def match(self, x: StartTag | XmlElement) -> bool:
+        if self.jats_tag is not None and x.tag == self.jats_tag:
             return True
-        return self.stag.issubset(stag)
+        return self.stag.issubset(x)
 
     def copy_attributes(self, log: Log, xe: XmlElement, dest: Element) -> None:
         kit.check_no_attrib(log, xe, self._ok_attrib_keys)
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
 
 
-class TagMoldModelBase(kit.Model[ParsedT]):
-    def __init__(self, tag_mold: TagMold):
+class EmptyElementModel(kit.Model[Element]):
+    def __init__(self, tag_mold: TagMold, factory: Callable[[], Element]):
         self.tag_mold = tag_mold
+        self.factory = factory
 
     def match(self, xe: XmlElement) -> bool:
-        stag = StartTag.from_xml(xe)
-        return stag is not None and self.tag_mold.match(stag)
-
-
-class EmptyElementModel(TagMoldModelBase[Element]):
-    def __init__(self, tag_mold: TagMold, factory: Callable[[], Element]):
-        super().__init__(tag_mold)
-        self.factory = factory
+        return self.tag_mold.match(xe)
 
     def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
         ret = self.factory()
@@ -113,22 +107,13 @@ class EmptyElementModel(TagMoldModelBase[Element]):
         sink(ret)
 
 
-class TagMixedModelBase(MixedModel):
-    def __init__(self, tag_mold: TagMold):
+class EmptyInlineModel(MixedModel):
+    def __init__(self, tag_mold: TagMold, factory: Callable[[], Inline]):
         self.tag_mold = tag_mold
+        self.factory = factory
 
     def match(self, xe: XmlElement) -> bool:
-        stag = StartTag.from_xml(xe)
-        return stag is not None and self.tag_mold.match(stag)
-
-    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
-        parse_mixed_content(log, xe, self, sink)
-
-
-class EmptyInlineModel(TagMixedModelBase):
-    def __init__(self, tag_mold: TagMold, factory: Callable[[], Inline]):
-        super().__init__(tag_mold)
-        self.factory = factory
+        return self.tag_mold.match(xe)
 
     def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
         ret = self.factory()
@@ -136,11 +121,17 @@ class EmptyInlineModel(TagMixedModelBase):
         check_no_content(log, xe)
         sink(ret)
 
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        parse_mixed_content(log, xe, self, sink)
 
-class ElementModelBase(TagMoldModelBase[Element], Generic[AppendT]):
+
+class ElementModelBase(kit.Model[Element], Generic[AppendT]):
     def __init__(self, tag_mold: TagMold, content_mold: ContentModel[AppendT]):
-        super().__init__(tag_mold)
+        self.tag_mold = tag_mold
         self.content_mold: ContentModel[AppendT] = content_mold
+
+    def match(self, xe: XmlElement) -> bool:
+        return self.tag_mold.match(xe)
 
     def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
         ret = self.start(self.tag_mold.stag)
@@ -170,16 +161,22 @@ class BiformModel(ArrayParentModelBase):
         return BiformElement(stag)
 
 
-class MarkupMixedModel(TagMixedModelBase):
-    def __init__(self, tag_mold: TagMold, child_model: MixedModel):
-        super().__init__(tag_mold)
-        self.child_model = child_model
+class MarkupMixedModel(MixedModel):
+    def __init__(self, tag_mold: TagMold, content_model: MixedModel):
+        self.tag_mold = tag_mold
+        self.content_model = content_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return self.tag_mold.match(xe)
 
     def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
         ret = MarkupElement(self.tag_mold.stag)
         self.tag_mold.copy_attributes(log, xe, ret)
-        self.child_model.parse_content(log, xe, ret.append)
+        self.content_model.parse_content(log, xe, ret.append)
         sink(ret)
+
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        self.content_model.parse_content(log, xe, sink)
 
 
 class MixedContentBinderBase(kit.Binder[MutableMixedContent]):

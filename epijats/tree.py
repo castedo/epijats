@@ -28,8 +28,9 @@ class StartTag:
         attrib = dict(**xe.attrib)
         return StartTag(xe.tag, attrib) if isinstance(xe.tag, str) else None
 
-    def issubset(self, other: StartTag) -> bool:
-        if self.tag != other.tag:
+    def issubset(self, x: StartTag | XmlElement) -> bool:
+        other = x if isinstance(x, StartTag) else StartTag.from_xml(x)
+        if other is None or self.tag != other.tag:
             return False
         for key, value in self.attrib.items():
             if other.attrib.get(key) != value:

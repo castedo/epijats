@@ -46,8 +46,9 @@ def article_title_model() -> MixedContentBinder:
     return MixedContentBinder('article-title', minitext_model)
 
 
-class TitleGroupModel(kit.TagModelBase[MixedContent]):
-    TAG = 'title-group'
+class TitleGroupModel(kit.LoadModelBase[MixedContent]):
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'title-group'
 
     def load(self, log: Log, xe: XmlElement) -> dom.MixedContent | None:
         kit.check_no_attrib(log, xe)
@@ -128,8 +129,9 @@ class LicenseRefBinder(kit.Binder[dom.License]):
             dest.cc_license_type = from_attribute
 
 
-class LicenseModel(kit.TagModelBase[dom.License]):
-    TAG = 'license'
+class LicenseModel(kit.LoadModelBase[dom.License]):
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'license'
 
     def load(self, log: Log, e: XmlElement) -> dom.License | None:
         ret = dom.License()
@@ -141,8 +143,9 @@ class LicenseModel(kit.TagModelBase[dom.License]):
         return None if ret.blank() else ret
 
 
-class PermissionsModel(kit.TagModelBase[dom.Permissions]):
-    TAG = 'permissions'
+class PermissionsModel(kit.LoadModelBase[dom.Permissions]):
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'permissions'
 
     def load(self, log: Log, e: XmlElement) -> dom.Permissions | None:
         kit.check_no_attrib(log, e)
@@ -169,10 +172,12 @@ class AbstractModel(kit.TagModelBase[Abstract]):
         return a if len(a.content) else None
 
 
-class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
+class ArticleMetaBinder(kit.Binder[dom.Article]):
     def __init__(self, abstract_model: Model[Abstract]):
-        super().__init__('article-meta')
         self._abstract_model = abstract_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'article-meta'
 
     def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
         kit.check_no_attrib(log, xe)
@@ -190,10 +195,12 @@ class ArticleMetaBinder(kit.TagBinderBase[dom.Article]):
         dest.permissions = permissions.out
 
 
-class ArticleFrontBinder(kit.TagBinderBase[dom.Article]):
+class ArticleFrontBinder(kit.Binder[dom.Article]):
     def __init__(self, abstract_model: Model[Abstract]):
-        super().__init__('front')
         self._meta_model = ArticleMetaBinder(abstract_model)
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'front'
 
     def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
         kit.check_no_attrib(log, xe)
