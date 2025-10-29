@@ -16,7 +16,7 @@ from epijats.elements import Paragraph
 from epijats.metadata import BiblioRefItem
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.parse.front import AbstractModel, load_author_group
-from epijats.tree import Element
+from epijats.tree import Element, Inline
 from epijats.xml import html
 from epijats.xml.format import XmlFormatter
 
@@ -154,7 +154,7 @@ def test_nested_ext_link_xml_parse():
         + '<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
     assert xml2html(xml) == ('Foo<a href="https://x.es" rel="external">barbaz</a>boo', 1)
     xml = root_wrap('<ext-link>Foo<ext-link xlink:href="https://y.es">bar</ext-link>baz</ext-link>boo')
-    assert xml2html(xml) == ('Foo<a href="https://y.es" rel="external">bar</a>bazboo', 2)
+    assert xml2html(xml) == ('Foo<a href="https://y.es" rel="external">bar</a>bazboo', 1)
 
 
 def mock_biblio_pool() -> _.BiblioRefPool:
@@ -165,13 +165,21 @@ def mock_biblio_pool() -> _.BiblioRefPool:
     return _.BiblioRefPool([r1, r2])
 
 
+def parse_inline_element(log: _.Log, model, src: str) -> Inline:
+    dest = list[str | Inline]()
+    model.parse(log, lxml_element_from_str(src), dest.append)
+    assert len(dest) == 1
+    assert not isinstance(dest[0], str)
+    return dest[0]
+
+
 def verify_roundtrip_citation(log: _.Log, expected: str) -> Element:
     model = _.CitationTupleModel(mock_biblio_pool())
-    subel1 = model.load(log, lxml_element_from_str(expected))
+    subel1 = parse_inline_element(log, model, expected)
     assert subel1
     got = str_from_element(subel1)
     assert got == expected
-    subel2 = model.load(log, lxml_element_from_str(got))
+    subel2 = parse_inline_element(log, model, got)
     assert subel2 == subel1
     return subel2
 
@@ -198,7 +206,7 @@ def test_bare_citation():
     issues = []
     model = _.AutoCorrectCitationModel(mock_biblio_pool())
     start = """<xref rid="R1" ref-type="bibr">1</xref>"""
-    el = model.load(issues.append, lxml_element_from_str(start))
+    el = parse_inline_element(issues.append, model, start)
     assert not issues
     assert el
     assert len(list(el)) == 1

@@ -23,9 +23,8 @@ from ..tree import (
 
 from . import kit
 from .content import (
-    ContentMold,
+    ContentModel,
     MixedModel,
-    MixedModelBase,
     parse_mixed_content,
 )
 from .kit import Log, ParsedT, Sink
@@ -67,7 +66,7 @@ class MarkupBlockModel(kit.LoadModelBase[Element]):
     def load(self, log: Log, xe: XmlElement) -> Element | None:
         kit.check_no_attrib(log, xe)
         ret = MarkupBlock()
-        parse_mixed_content(log, xe, self.inline_model, ret.append)
+        self.inline_model.parse_content(log, xe, ret.append)
         return ret
 
 
@@ -114,7 +113,19 @@ class EmptyElementModel(TagMoldModelBase[Element]):
         sink(ret)
 
 
-class EmptyInlineModel(TagMoldModelBase[str | Inline]):
+class TagMixedModelBase(MixedModel):
+    def __init__(self, tag_mold: TagMold):
+        self.tag_mold = tag_mold
+
+    def match(self, xe: XmlElement) -> bool:
+        stag = StartTag.from_xml(xe)
+        return stag is not None and self.tag_mold.match(stag)
+
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        parse_mixed_content(log, xe, self, sink)
+
+
+class EmptyInlineModel(TagMixedModelBase):
     def __init__(self, tag_mold: TagMold, factory: Callable[[], Inline]):
         super().__init__(tag_mold)
         self.factory = factory
@@ -124,19 +135,17 @@ class EmptyInlineModel(TagMoldModelBase[str | Inline]):
         self.tag_mold.copy_attributes(log, xe, ret)
         check_no_content(log, xe)
         sink(ret)
-        if xe.tail:
-            sink(xe.tail)
 
 
 class ElementModelBase(TagMoldModelBase[Element], Generic[AppendT]):
-    def __init__(self, tag_mold: TagMold, content_mold: ContentMold[AppendT]):
+    def __init__(self, tag_mold: TagMold, content_mold: ContentModel[AppendT]):
         super().__init__(tag_mold)
-        self.content_mold: ContentMold[AppendT] = content_mold
+        self.content_mold: ContentModel[AppendT] = content_mold
 
     def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
         ret = self.start(self.tag_mold.stag)
         self.tag_mold.copy_attributes(log, xe, ret)
-        self.content_mold.read(log, xe, ret.append)
+        self.content_mold.parse_content(log, xe, ret.append)
         sink(ret)
 
     @abstractmethod
@@ -161,38 +170,32 @@ class BiformModel(ArrayParentModelBase):
         return BiformElement(stag)
 
 
-class MarkupModel(MixedModelBase):
-    def __init__(self, mold: TagMold, child_model: MixedModel):
-        self.tag_mold = mold
+class MarkupMixedModel(TagMixedModelBase):
+    def __init__(self, tag_mold: TagMold, child_model: MixedModel):
+        super().__init__(tag_mold)
         self.child_model = child_model
 
-    def match(self, xe: XmlElement) -> bool:
-        stag = StartTag.from_xml(xe)
-        return stag is not None and self.tag_mold.match(stag)
-
-    def load(self, log: Log, xe: XmlElement) -> Inline | None:
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
         ret = MarkupElement(self.tag_mold.stag)
-        if ret is not None:
-            self.tag_mold.copy_attributes(log, xe, ret)
-            parse_mixed_content(log, xe, self.child_model, ret.append)
-            return ret
-        return None
+        self.tag_mold.copy_attributes(log, xe, ret)
+        self.child_model.parse_content(log, xe, ret.append)
+        sink(ret)
 
 
 class MixedContentBinderBase(kit.Binder[MutableMixedContent]):
-    def __init__(self, content_mold: ContentMold[str | Inline]):
+    def __init__(self, content_mold: ContentModel[str | Inline]):
         self.content_mold = content_mold
 
     def parse(self, log: Log, xe: XmlElement, target: MutableMixedContent) -> None:
         kit.check_no_attrib(log, xe)
         if target.blank():
-            self.content_mold.read(log, xe, target)
+            self.content_mold.parse_content(log, xe, target)
         else:
             log(fc.ExcessElement.issue(xe))
 
 
 class MixedContentBinder(MixedContentBinderBase):
-    def __init__(self, tag: str, content_mold: ContentMold[str | Inline]):
+    def __init__(self, tag: str, content_mold: ContentModel[str | Inline]):
         super().__init__(content_mold)
         self.tag = tag
 

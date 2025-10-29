@@ -11,8 +11,8 @@ from ..math import (
 from ..tree import Element, Inline, InlineBase, StartTag
 
 from . import kit
-from .content import ArrayContentSession, MixedModel, MixedModelBase
-from .kit import Log
+from .content import ArrayContentSession, MixedModel
+from .kit import Log, Sink
 from .content import parse_mixed_content
 
 if TYPE_CHECKING:
@@ -52,19 +52,17 @@ MATHML_TAGS = [
 ]
 
 
-class AnyMathmlModel(MixedModelBase):
+class AnyMathmlModel(MixedModel):
     XML_TAGS = {(MATHML_NAMESPACE_PREFIX + tag) for tag in MATHML_TAGS}
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in self.XML_TAGS
 
-    def load(self, log: Log, e: XmlElement) -> Inline | None:
-        ret = None
-        if isinstance(e.tag, str):
-            assert e.tag.startswith(MATHML_NAMESPACE_PREFIX)
-            ret = MathmlElement(StartTag(e.tag, dict(e.attrib)))
-            parse_mixed_content(log, e, self, ret.append)
-        return ret
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        if isinstance(xe.tag, str):
+            ret = MathmlElement(StartTag(xe.tag, dict(xe.attrib)))
+            self.parse_content(log, xe, ret.append)
+            sink(ret)
 
 
 class MathmlElementModel(kit.TagModelBase[Inline]):
@@ -111,7 +109,7 @@ class FormulaAlternativesModel(kit.TagModelBase[InlineBase]):
         return ret
 
 
-class InlineFormulaModel(MixedModelBase):
+class InlineFormulaModel(MixedModel):
     def __init__(self, formula_style: FormulaStyle):
         self.tag = formula_style.jats_tag
         self.child_model = FormulaAlternativesModel(formula_style)
@@ -119,12 +117,13 @@ class InlineFormulaModel(MixedModelBase):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == self.tag
 
-    def load(self, log: Log, xe: XmlElement) -> Inline | None:
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
         kit.check_no_attrib(log, xe)
         sess = ArrayContentSession(log)
         result = sess.one(self.child_model)
         sess.parse_content(xe)
-        return result.out
+        if result.out:
+            sink(result.out)
 
 
 class FormulaModel(kit.TagModelBase[Element]):

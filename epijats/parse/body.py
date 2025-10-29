@@ -10,14 +10,12 @@ from ..elements import Citation, CitationTuple
 from ..tree import Element, Inline, MutableMixedContent
 
 from . import kit
-from .kit import Log
+from .kit import Log, Sink
 from .content import (
-    ContentMold,
-    PendingMarkupBlock,
-    MixedContentMold,
+    ContentModel,
     MixedModel,
-    MixedModelBase,
-    RollContentMold,
+    PendingMarkupBlock,
+    RollContentModel,
     UnionMixedModel,
     parse_mixed_content,
 )
@@ -62,9 +60,9 @@ def hypertext_model(biblio: BiblioRefPool | None) -> MixedModel:
 class CoreModels:
     def __init__(self, biblio: BiblioRefPool | None) -> None:
         self.hypertext = hypertext_model(biblio)
-        self.heading = MixedContentMold(self.hypertext | break_model())
+        self.heading = self.hypertext | break_model()
         block = kit.UnionModel[Element]()
-        roll_content = RollContentMold(block, self.hypertext)
+        roll_content = RollContentModel(block, self.hypertext)
         block |= HtmlParagraphModel(self.hypertext, block)
         block |= MarkupBlockModel(self.hypertext)
         block |= disp_formula_model()
@@ -111,7 +109,7 @@ class CitationModel(kit.LoadModelBase[Citation]):
         return ret
 
 
-class AutoCorrectCitationModel(MixedModelBase):
+class AutoCorrectCitationModel(MixedModel):
     def __init__(self, biblio: BiblioRefPool):
         submodel = CitationModel(biblio)
         self._submodel = submodel
@@ -119,12 +117,10 @@ class AutoCorrectCitationModel(MixedModelBase):
     def match(self, xe: XmlElement) -> bool:
         return self._submodel.match(xe)
 
-    def load(self, log: Log, e: XmlElement) -> Inline | None:
+    def parse(self, log: Log, e: XmlElement, sink: Sink[str | Inline]) -> None:
         citation = self._submodel.load(log, e)
         if citation:
-            return CitationTuple([citation])
-        else:
-            return None
+            sink(CitationTuple([citation]))
 
 
 class CitationRangeHelper:
@@ -169,7 +165,7 @@ class CitationRangeHelper:
         self.stopper = None
 
 
-class CitationTupleModel(MixedModelBase):
+class CitationTupleModel(MixedModel):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__()
         self._submodel = CitationModel(biblio)
@@ -180,7 +176,7 @@ class CitationTupleModel(MixedModelBase):
         # But no known archived baseprint did this.
         return xe.tag == 'sup' and any(c.tag == 'xref' for c in xe)
 
-    def load(self, log: Log, e: XmlElement) -> Inline | None:
+    def parse(self, log: Log, e: XmlElement, sink: Sink[str | Inline]) -> None:
         kit.check_no_attrib(log, e)
         range_helper = CitationRangeHelper(log, self._submodel.biblio)
         if not range_helper.is_tuple_open(e.text):
@@ -195,10 +191,11 @@ class CitationTupleModel(MixedModelBase):
                 citation.tail = ''
                 ret.append(citation)
             range_helper.new_start(child)
-        return ret if len(ret) else None
+        if len(ret):
+            sink(ret)
 
 
-class JatsCrossReferenceModel(MixedModelBase):
+class JatsCrossReferenceModel(MixedModel):
     def __init__(self, content_model: MixedModel, biblio: BiblioRefPool | None):
         self.content_model = content_model
         self.biblio = biblio
@@ -211,7 +208,7 @@ class JatsCrossReferenceModel(MixedModelBase):
             return False
         return not (self.biblio and self.biblio.is_bibr_rid(xe.attrib.get("rid")))
 
-    def load(self, log: Log, e: XmlElement) -> Inline | None:
+    def parse(self, log: Log, e: XmlElement, sink: Sink[str | Inline]) -> None:
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
             del e.attrib["alt"]
@@ -221,18 +218,18 @@ class JatsCrossReferenceModel(MixedModelBase):
             log(fc.MissingAttribute.issue(e, "rid"))
             return None
         ret = dom.CrossReference(rid)
-        parse_mixed_content(log, e, self.content_model, ret.append)
-        return ret
+        self.content_model.parse_content(log, e, ret.append)
+        sink(ret)
 
 
-class HtmlCrossReferenceModel(MixedModelBase):
+class HtmlCrossReferenceModel(MixedModel):
     def __init__(self, content_model: MixedModel):
         self.content_model = content_model
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'a' and 'rel' not in xe.attrib
 
-    def load(self, log: Log, xe: XmlElement) -> Inline | None:
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
         kit.check_no_attrib(log, xe, ['href'])
         href = xe.attrib.get("href")
         if href is None:
@@ -244,7 +241,7 @@ class HtmlCrossReferenceModel(MixedModelBase):
             return None
         ret = dom.CrossReference(href[1:])
         parse_mixed_content(log, xe, self.content_model, ret.append)
-        return ret
+        sink(ret)
 
 
 def cross_reference_model(
@@ -255,7 +252,7 @@ def cross_reference_model(
 
 
 class SectionTitleBinder(MixedContentBinderBase):
-    def __init__(self, content_mold: ContentMold[str | Inline]):
+    def __init__(self, content_mold: ContentModel[str | Inline]):
         super().__init__(content_mold)
 
     def match(self, xe: XmlElement) -> bool:

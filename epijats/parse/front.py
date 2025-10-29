@@ -19,7 +19,7 @@ from .htmlish import (
     minimally_formatted_text_model,
 )
 from .back import load_person_name
-from .content import MixedContentMold, RollContentMold
+from .content import RollContentModel
 from .tree import MixedContentBinder
 
 if TYPE_CHECKING:
@@ -35,8 +35,7 @@ def copytext_model() -> MixedModel:
 
 
 def copytext_element_model(tag: str) -> MixedContentBinder:
-    copytext_content = MixedContentMold(copytext_model())
-    return MixedContentBinder(tag, copytext_content)
+    return MixedContentBinder(tag, copytext_model())
 
 
 def article_title_model() -> MixedContentBinder:
@@ -44,8 +43,7 @@ def article_title_model() -> MixedContentBinder:
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
     minitext_model = UnionMixedModel()
     minitext_model |= minimally_formatted_text_model(minitext_model)
-    minitext_content = MixedContentMold(minitext_model)
-    return MixedContentBinder('article-title', minitext_content)
+    return MixedContentBinder('article-title', minitext_model)
 
 
 class TitleGroupModel(kit.TagModelBase[MixedContent]):
@@ -162,12 +160,12 @@ class PermissionsModel(kit.TagModelBase[dom.Permissions]):
 class AbstractModel(kit.TagModelBase[Abstract]):
     def __init__(self, block: Model[Element], inline: MixedModel):
         super().__init__('abstract')
-        self._roll = RollContentMold(block, inline)
+        self._roll = RollContentModel(block, inline)
 
     def load(self, log: Log, xe: XmlElement) -> Abstract | None:
         kit.check_no_attrib(log, xe)
         a = Abstract()
-        self._roll.read(log, xe, a.content.append)
+        self._roll.parse_content(log, xe, a.content.append)
         return a if len(a.content) else None
 
 

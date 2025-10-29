@@ -10,13 +10,10 @@ from .. import condition as fc
 from . import kit
 from ..tree import (
     AppendT,
-    ArrayContent,
     Element,
     Inline,
     MarkupBlock,
-    MixedContent,
     MixedParentElement,
-    MutableArrayContent,
 )
 from .kit import (
     Binder,
@@ -136,66 +133,63 @@ class ArrayContentSession:
         _parse_array_content(self.log, e, self._parsers)
 
 
-MixedModel: TypeAlias = Model[str | Inline]
-UnionMixedModel: TypeAlias = kit.UnionModel[str | Inline]
-
-
 def parse_mixed_content(
-    log: Log, e: XmlElement, emodel: Model[str | Inline], dest: Sink[str | Inline]
+    log: Log, xe: XmlElement, model: Model[str | Inline], sink: Sink[str | Inline]
 ) -> None:
-    if e.text:
-        dest(e.text)
-    for s in e:
-        if emodel.match(s):
-            emodel.parse(log, s, dest)
+    if xe.text:
+        sink(xe.text)
+    for s in xe:
+        if model.match(s):
+            model.parse(log, s, sink)
         else:
             log(fc.UnsupportedElement.issue(s))
-            parse_mixed_content(log, s, emodel, dest)
-            if s.tail:
-                dest(s.tail)
+            parse_mixed_content(log, s, model, sink)
+        if s.tail:
+            sink(s.tail)
 
 
-class MixedModelBase(MixedModel):
-    @abstractmethod
-    def load(self, log: Log, xe: XmlElement) -> Inline | None: ...
-
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[str | Inline]) -> None:
-        try:
-            parsed = self.load(log, xe)
-            if parsed is not None:
-                if xe.tail:
-                    parsed.tail = xe.tail
-                dest(parsed)
-        except ValueError:
-            log(fc.InvalidElementData.issue(xe))
-            parse_mixed_content(log, xe, self, dest)
-            if xe.tail:
-                dest(xe.tail)
+class ContentModel(Protocol, Generic[AppendT]):
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[AppendT]) -> None: ...
 
 
-class ContentMold(Protocol, Generic[AppendT]):
-    def read(self, log: Log, xe: XmlElement, dest: Sink[AppendT]) -> None: ...
+class MixedModel(Model[str | Inline], ContentModel[str | Inline]):
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        parse_mixed_content(log, xe, self, sink)
+
+    def __or__(self, element_model: Model[str | Inline]) -> MixedModel:
+        ret = UnionMixedModel()
+        ret |= self
+        ret |= element_model
+        return ret
 
 
-class MixedContentMold(ContentMold[str | Inline]):
-    def __init__(self, child_model: MixedModel):
-        self.content_type = MixedContent
-        self.child_model = child_model
+class UnionMixedModel(MixedModel):
+    def __init__(self) -> None:
+        self._models = kit.UnionModel[str | Inline]()
 
-    def read(self, log: Log, xe: XmlElement, dest: Sink[str | Inline]) -> None:
-        parse_mixed_content(log, xe, self.child_model, dest)
+    def match(self, xe: XmlElement) -> bool:
+        return self._models.match(xe)
+
+    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        self._models.parse(log, xe, sink)
+
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+        parse_mixed_content(log, xe, self._models, sink)
+
+    def __ior__(self, element_model: Model[str | Inline]) -> UnionMixedModel:
+        self._models |= element_model
+        return self
 
 
-ArrayContentMold: TypeAlias = ContentMold[Element]
+ArrayContentModel: TypeAlias = ContentModel[Element]
 
 
-class DataContentMold(ArrayContentMold):
+class DataContentModel(ArrayContentModel):
     def __init__(self, child_model: Model[Element]):
-        self.content_type = ArrayContent
         self.child_model = child_model
 
-    def read(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> None:
-        parse_array_content(log, xe, self.child_model, dest)
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
+        parse_array_content(log, xe, self.child_model, sink)
 
 
 class PendingMarkupBlock:
@@ -216,14 +210,13 @@ class PendingMarkupBlock:
         self._pending.append(x)
 
 
-class RollContentMold(ArrayContentMold):
+class RollContentModel(ArrayContentModel):
     def __init__(self, block_model: Model[Element], inline_model: MixedModel):
-        self.content_type = MutableArrayContent
         self.block_model = block_model
         self.inline_model = inline_model
 
-    def read(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> None:
-        pending = PendingMarkupBlock(dest)
+    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
+        pending = PendingMarkupBlock(sink)
         if xe.text and xe.text.strip():
             pending.append(xe.text)
         for s in xe:
@@ -231,7 +224,7 @@ class RollContentMold(ArrayContentMold):
             s.tail = None
             if self.block_model.match(s):
                 pending.close()
-                self.block_model.parse(log, s, dest)
+                self.block_model.parse(log, s, sink)
             elif self.inline_model.match(s):
                 self.inline_model.parse(log, s, pending.append)
             else:
