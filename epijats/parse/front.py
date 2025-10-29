@@ -20,7 +20,7 @@ from .htmlish import (
 )
 from .back import load_person_name
 from .content import RollContentModel
-from .tree import MixedContentBinder
+from .tree import MixedContentInElementParser
 
 if TYPE_CHECKING:
     from ..typeshed import XmlElement
@@ -35,7 +35,7 @@ def copytext_model() -> MixedModel:
 
 
 def copytext_element_model(tag: str) -> Model[str | Inline]:
-    return MixedContentBinder(tag, copytext_model())
+    return MixedContentInElementParser(tag, copytext_model())
 
 
 def article_title_model() -> Model[str | Inline]:
@@ -43,7 +43,7 @@ def article_title_model() -> Model[str | Inline]:
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
     minitext_model = UnionMixedModel()
     minitext_model |= minimally_formatted_text_model(minitext_model)
-    return MixedContentBinder('article-title', minitext_model)
+    return MixedContentInElementParser('article-title', minitext_model)
 
 
 class TitleGroupModel(kit.LoadModelBase[MixedContent]):

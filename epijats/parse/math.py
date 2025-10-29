@@ -57,11 +57,11 @@ class AnyMathmlModel(MixedModel):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in self.XML_TAGS
 
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[str | Inline]) -> None:
         if isinstance(xe.tag, str):
             ret = MathmlElement(StartTag(xe.tag, dict(xe.attrib)))
             self.parse_content(log, xe, ret.append)
-            sink(ret)
+            dest(ret)
 
 
 class MathmlElementModel(kit.LoadModelBase[Inline]):

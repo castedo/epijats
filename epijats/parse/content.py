@@ -25,7 +25,7 @@ from .kit import (
 )
 
 if TYPE_CHECKING:
-    from ..typeshed import XmlElement
+    from ..typeshed import XmlContent, XmlElement
 
 
 def _parse_array_content(
@@ -71,11 +71,11 @@ class BoundParser(ABC):
 
 
 class StatelessParser(BoundParser, Generic[DestT]):
-    def __init__(self, binder: Parser[DestT], log: Log, dest: DestT):
+    def __init__(self, parser: Parser[DestT], log: Log, dest: DestT):
         def parse_fun(xe: XmlElement) -> None:
-            binder.parse(log, xe, dest)
+            parser.parse(log, xe, dest)
 
-        self.match_fun = binder.match
+        self.match_fun = parser.match
         self.parse_fun = parse_fun
 
     def match(self, xe: XmlElement) -> ParseFunc | None:
@@ -85,15 +85,15 @@ class StatelessParser(BoundParser, Generic[DestT]):
 
 
 def parse_array_content(
-    log: Log, xe: XmlElement, binder: Parser[DestT], dest: DestT
+    log: Log, xe: XmlElement, parser: Parser[DestT], dest: DestT
 ) -> None:
-    _parse_array_content(log, xe, StatelessParser(binder, log, dest))
+    _parse_array_content(log, xe, StatelessParser(parser, log, dest))
 
 
 class OnlyOnceParser(BoundParser):
-    def __init__(self, log: Log, binder: Parser[DestT], dest: DestT):
+    def __init__(self, log: Log, parser: Parser[DestT], dest: DestT):
         self.log = log
-        self._parser = StatelessParser(binder, log, dest)
+        self._parser = StatelessParser(parser, log, dest)
         self._parse_done = False
 
     def match(self, xe: XmlElement) -> ParseFunc | None:
@@ -118,11 +118,11 @@ class ArrayContentSession:
         self.log = log
         self._parsers: list[BoundParser] = []
 
-    def bind(self, binder: Parser[DestT], dest: DestT) -> None:
-        self._parsers.append(StatelessParser(binder, self.log, dest))
+    def bind(self, parser: Parser[DestT], dest: DestT) -> None:
+        self._parsers.append(StatelessParser(parser, self.log, dest))
 
-    def bind_once(self, binder: Parser[DestT], dest: DestT) -> None:
-        self._parsers.append(OnlyOnceParser(self.log, binder, dest))
+    def bind_once(self, parser: Parser[DestT], dest: DestT) -> None:
+        self._parsers.append(OnlyOnceParser(self.log, parser, dest))
 
     def one(self, model: Model[ParsedT]) -> kit.Outcome[ParsedT]:
         ret = kit.SinkDestination[ParsedT]()
@@ -134,18 +134,26 @@ class ArrayContentSession:
 
 
 class ContentModel(Protocol, Generic[AppendT]):
-    def parse_content(self, log: Log, xe: XmlElement, sink: Sink[AppendT]) -> None: ...
+    def parse_content(self, log: Log, xc: XmlContent, dest: Sink[AppendT]) -> None: ...
 
 
 class MixedModel(Model[str | Inline], ContentModel[str | Inline]):
-    def parse_str(self, log: Log, s: str, dest: Sink[str | Inline]) -> bool:
-        dest(s)
-        return True
+    def parse_content(self, log: Log, xc: XmlContent, dest: Sink[str | Inline]) -> None:
+        if xc.text:
+            dest(xc.text)
+        for s in xc:
+            if self.match(s):
+                self.parse(log, s, dest)
+            else:
+                log(fc.UnsupportedElement.issue(s))
+                self.parse_content(log, s, dest)
+            if s.tail:
+                dest(s.tail)
 
-    def __or__(self, element_model: Model[str | Inline]) -> MixedModel:
+    def __or__(self, model: Model[str | Inline] | Model[Inline]) -> MixedModel:
         ret = UnionMixedModel()
         ret |= self
-        ret |= element_model
+        ret |= model
         return ret
 
 
@@ -159,8 +167,8 @@ class UnionMixedModel(MixedModel):
     def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
         self._models.parse(log, xe, sink)
 
-    def __ior__(self, element_model: Model[str | Inline]) -> UnionMixedModel:
-        self._models |= element_model
+    def __ior__(self, model: Model[str | Inline] | Model[Inline]) -> UnionMixedModel:
+        self._models |= model
         return self
 
 

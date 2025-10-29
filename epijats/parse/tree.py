@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Generic, TYPE_CHECKING
+from typing import Generic, TYPE_CHECKING, TypeVar
 
 from .. import condition as fc
 from ..tree import (
@@ -23,9 +23,10 @@ from ..tree import (
 from . import kit
 from .content import (
     ContentModel,
+    DataContentModel,
     MixedModel,
 )
-from .kit import Log, Sink
+from .kit import Log, Model, Sink
 
 
 if TYPE_CHECKING:
@@ -90,49 +91,37 @@ class TagMold:
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
 
 
-class EmptyElementModel(kit.Model[Element]):
-    def __init__(self, tag_mold: TagMold, factory: Callable[[], Element]):
+ElementT = TypeVar('ElementT', bound=Element)
+
+
+class EmptyElementModel(kit.Model[ElementT]):
+    def __init__(self, tag_mold: TagMold, factory: Callable[[], ElementT]):
         self.tag_mold = tag_mold
         self.factory = factory
 
     def match(self, xe: XmlElement) -> bool:
         return self.tag_mold.match(xe)
 
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[ElementT]) -> None:
         ret = self.factory()
         self.tag_mold.copy_attributes(log, xe, ret)
         check_no_content(log, xe)
-        sink(ret)
-
-
-class EmptyInlineModel(MixedModel):
-    def __init__(self, tag_mold: TagMold, factory: Callable[[], Inline]):
-        self.tag_mold = tag_mold
-        self.factory = factory
-
-    def match(self, xe: XmlElement) -> bool:
-        return self.tag_mold.match(xe)
-
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
-        ret = self.factory()
-        self.tag_mold.copy_attributes(log, xe, ret)
-        check_no_content(log, xe)
-        sink(ret)
+        dest(ret)
 
 
 class ElementModelBase(kit.Model[Element], Generic[AppendT]):
-    def __init__(self, tag_mold: TagMold, content_mold: ContentModel[AppendT]):
+    def __init__(self, tag_mold: TagMold, content_model: ContentModel[AppendT]):
         self.tag_mold = tag_mold
-        self.content_mold: ContentModel[AppendT] = content_mold
+        self.content_model: ContentModel[AppendT] = content_model
 
     def match(self, xe: XmlElement) -> bool:
         return self.tag_mold.match(xe)
 
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> None:
         ret = self.start(self.tag_mold.stag)
         self.tag_mold.copy_attributes(log, xe, ret)
-        self.content_mold.parse_content(log, xe, ret.append)
-        sink(ret)
+        self.content_model.parse_content(log, xe, ret.append)
+        dest(ret)
 
     @abstractmethod
     def start(self, stag: StartTag) -> Parent[AppendT]: ...
@@ -141,7 +130,10 @@ class ElementModelBase(kit.Model[Element], Generic[AppendT]):
 ArrayParentModelBase = ElementModelBase[Element]
 
 
-class ItemModel(ElementModelBase[Element]):
+class ItemModel(ArrayParentModelBase):
+    def __init__(self, tag_mold: TagMold, child_model: Model[Element]):
+        super().__init__(tag_mold, DataContentModel(child_model))
+
     def start(self, stag: StartTag) -> Parent[Element]:
         return ArrayParentElement(stag)
 
@@ -171,9 +163,9 @@ class MarkupMixedModel(MixedModel):
         sink(ret)
 
 
-class MixedContentBinder(kit.Model[str | Inline]):
-    def __init__(self, tag: str, content_mold: ContentModel[str | Inline]):
-        self.content_mold = content_mold
+class MixedContentInElementParser(kit.Model[str | Inline]):
+    def __init__(self, tag: str, content_model: ContentModel[str | Inline]):
+        self.content_model = content_model
         self.tag = tag
 
     def match(self, xe: XmlElement) -> bool:
@@ -181,4 +173,4 @@ class MixedContentBinder(kit.Model[str | Inline]):
 
     def parse(self, log: Log, xe: XmlElement, target: Sink[str | Inline]) -> None:
         kit.check_no_attrib(log, xe)
-        self.content_mold.parse_content(log, xe, target)
+        self.content_model.parse_content(log, xe, target)

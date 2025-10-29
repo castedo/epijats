@@ -130,27 +130,20 @@ def load_int(
 
 class Parser(ABC, Generic[DestConT]):
     @abstractmethod
-    def match(self, xe: XmlElement) -> bool: ...
+    def match(self, xe: XmlElement) -> bool:
+        """Test whether Parser handles an element, without issue logging."""
+        ...
 
     @abstractmethod
-    def parse(self, log: Log, xe: XmlElement, dest: DestConT) -> None: ...
+    def parse(self, log: Log, xe: XmlElement, dest: DestConT) -> None:
+        """Parse XmlElement and log any parsing issues. Only call if match True."""
+        ...
 
-    def parse_str(self, log: Log, s: str, dest: DestConT) -> bool:
-        return False
-
-    def parse_content(self, log: Log, xe: XmlElement, dest: DestConT) -> None:
-        if xe.text:
-            if not self.parse_str(log, xe.text, dest):
-                log(fc.IgnoredText.issue(xe))
-        for s in xe:
-            if self.match(s):
-                self.parse(log, s, dest)
-            else:
-                log(fc.UnsupportedElement.issue(s))
-                self.parse_content(log, s, dest)
-            if s.tail:
-                if not self.parse_str(log, s.tail, dest):
-                    log(fc.IgnoredTail.issue(s))
+    def parse_on_match(self, log: Log, xe: XmlElement, dest: DestConT) -> bool:
+        if not self.match(xe):
+            return False
+        self.parse(log, xe, dest)
+        return True
 
     def __or__(self, other: Parser[DestConT]) -> Parser[DestConT]:
         ret = UnionParser[DestConT]()
@@ -168,12 +161,8 @@ class UnionParser(Parser[DestT]):
 
     def parse(self, log: Log, xe: XmlElement, dest: DestT) -> None:
         for p in self._parsers:
-            if p.match(xe):
-                p.parse(log, xe, dest)
+            if p.parse_on_match(log, xe, dest):
                 return
-
-    def parse_str(self, log: Log, s: str, dest: DestT) -> bool:
-        return any(p.parse_str(log, s, dest) for p in self._parsers)
 
     def __or__(self, other: Parser[DestT]) -> Parser[DestT]:
         ret = UnionParser[DestT]()

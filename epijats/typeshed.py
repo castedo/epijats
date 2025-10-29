@@ -13,3 +13,4 @@ JsonData: TypeAlias = (
 )
 
 XmlElement: TypeAlias = lxml.etree._Element | xml.etree.ElementTree.Element
+XmlContent: TypeAlias = XmlElement  # ideally an access interface to only XML content
