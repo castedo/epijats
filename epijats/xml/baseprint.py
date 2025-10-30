@@ -29,8 +29,9 @@ def title_group(src: MixedContent | None) -> DataElement:
     text = ' ' if src is None else src.text
     title = MarkupElement('article-title', text)
     if src:
-        for it in src:
-            title.append(it)
+        for element, tail in src:
+            title.append(element)
+            title.append(tail)
     return DataElement('title-group', [title])
 
 

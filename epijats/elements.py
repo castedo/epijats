@@ -118,8 +118,6 @@ class Citation(MarkupElement):
 
 
 class CitationTuple(ItemListElement[Citation], tree.Inline):
-    tail: str = ""
-
     def __init__(self, citations: Iterable[Citation] = ()) -> None:
         super().__init__('sup', citations)
 
@@ -171,8 +169,6 @@ class IssueElement(ElementBase):
     def __init__(self, msg: str):
         super().__init__('format-issue')
         self.msg = msg
-
-    tail: str = ""
 
     @property
     def content(self) -> str:

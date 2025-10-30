@@ -28,7 +28,6 @@ class FormulaElement(ElementBase):
     formula_style: FormulaStyle
     tex: str | None
     mathml: MathmlElement | None
-    tail: str = ""
 
     def __init__(self, formula_style: FormulaStyle):
         super().__init__(formula_style.jats_tag)

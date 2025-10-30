@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterator
 from typing import Protocol, TYPE_CHECKING
 from warnings import warn
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class ElementFormatter(Protocol):
-    def format(self, src: Element, level: int) -> Iterable[XmlElement]: ...
+    def format(self, src: Element, level: int) -> Iterator[XmlElement]: ...
 
 
 def append_content(src: str, dest: XmlElement) -> None:
@@ -40,11 +40,11 @@ class MarkupFormatter:
 
     def format(self, src: MixedContent, level: int, dest: XmlElement) -> None:
         dest.text = src.text
-        for it in src:
-            sublevel = level if isinstance(it.content, MixedContent) else level + 1
-            for sub in self.sub.format(it, sublevel):
+        for element, tail in src:
+            sublevel = level if isinstance(element.content, MixedContent) else level + 1
+            for sub in self.sub.format(element, sublevel):
                 dest.append(sub)  # type: ignore[arg-type]
-            append_content(it.tail, dest)
+            append_content(tail, dest)
         if not dest.text and not len(dest):
             msg = "Space inserted into otherwise empty {} element"
             warn(msg.format(dest.tag))
@@ -157,8 +157,8 @@ class XmlFormatter(ElementFormatter):
     def root(self, src: Element) -> XmlElement:
         return root_namespaces(self.to_one_only(src, 0))
 
-    def format(self, src: Element, level: int) -> Iterable[XmlElement]:
-        return [self.to_one_only(src, level)]
+    def format(self, src: Element, level: int) -> Iterator[XmlElement]:
+        return iter((self.to_one_only(src, level),))
 
     def to_str(self, src: Element) -> str:
         e = self.root(src)

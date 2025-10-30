@@ -66,11 +66,7 @@ class ElementBase(ABC, Element):
         return False
 
 
-class Inline(Element, Protocol):
-    @property
-    def tail(self) -> str: ...
-
-
+Inline: TypeAlias = Element
 MixedSink: TypeAlias = Callable[[str | Inline], None]
 
 
@@ -107,21 +103,18 @@ class MutableArrayContent(ArrayContent):
 @dataclass
 class MixedContent:
     text: str
-    _children: list[Inline]
+    _children: list[tuple[Element, str]]
 
-    def __init__(self, content: str | MixedContent | Iterable[Inline] = ""):
+    def __init__(self, content: MixedContent | str = ""):
         warn("Use MutableMixedContent", DeprecationWarning)
         if isinstance(content, str):
             self.text = content
             self._children = []
-        elif isinstance(content, MixedContent):
-            self.text = content.text
-            self._children = list(content)
         else:
-            self.text = ""
-            self._children = list(content)
+            self.text = content.text
+            self._children = list(content._children)
 
-    def __iter__(self) -> Iterator[Inline]:
+    def __iter__(self) -> Iterator[tuple[Element, str]]:
         return iter(self._children)
 
     def empty(self) -> bool:
@@ -130,20 +123,9 @@ class MixedContent:
     def blank(self) -> bool:
         return not self._children and not self.text.strip()
 
-    def append(self, a: Inline) -> None:
-        warn("Use MutableMixedContent", DeprecationWarning)
-        self._children.append(a)
-
-    def append_text(self, a: str) -> None:
-        warn("Use MutableMixedContent", DeprecationWarning)
-        if self._children:
-            self._children[-1].tail += a
-        else:
-            self.text += a
-
 
 class MutableMixedContent(MixedContent):
-    def __init__(self, content: str | MixedContent | Iterable[Inline] = ""):
+    def __init__(self, content: MixedContent | str = ""):
         if isinstance(content, str):
             self.text = content
             self._children = []
@@ -157,11 +139,12 @@ class MutableMixedContent(MixedContent):
     def append(self, a: str | Inline) -> None:
         if isinstance(a, str):
             if self._children:
-                self._children[-1].tail += a
+                end = self._children[-1]
+                self._children[-1] = (end[0], end[1] + a)
             else:
                 self.text += a
         else:
-            self._children.append(a)
+            self._children.append((a, ""))
 
     def __call__(self, a: str | Inline) -> None:
         self.append(a)
@@ -219,7 +202,6 @@ class MarkupBlock(MixedParentElement):
 @dataclass
 class MarkupElement(MixedParent):
     _content: MutableMixedContent
-    tail: str = ""
 
     def __init__(self, xml_tag: str | StartTag, content: MixedContent | str = ""):
         super().__init__(xml_tag)
@@ -258,8 +240,6 @@ class HtmlVoidInline(ElementBase):
     on a tag name being in a closed fixed list of HTML void elements.
     """
 
-    tail: str = ""
-
     @property
     def content(self) -> None:
         return None
@@ -286,8 +266,6 @@ class WhitespaceElement(ElementBase):
     whitespace-only elements are serialized with a space as content
     to ensure XML parsers do not re-serialize to the self-closing XML syntax.
     """
-
-    tail: str = ""
 
     @property
     def content(self) -> None:

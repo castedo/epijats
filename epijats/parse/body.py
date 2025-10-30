@@ -186,7 +186,6 @@ class CitationTupleModel(MixedModel):
                 log(fc.UnsupportedElement.issue(child))
             else:
                 ret.extend(range_helper.get_range(child, citation))
-                citation.tail = ''
                 ret.append(citation)
             range_helper.new_start(child)
         if len(ret):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from itertools import chain
 from typing import TYPE_CHECKING, Iterable, Iterator
 from warnings import warn
 
@@ -29,14 +30,14 @@ class BaseHtmlizer(Htmlizer, ElementFormatter):
     def __init__(self, subformat: ElementFormatter):
         self.common = CommonContentFormatter(subformat)
 
-    def format(self, src: Element, level: int) -> Iterable[XmlElement]:
+    def format(self, src: Element, level: int) -> Iterator[XmlElement]:
         ret: list[XmlElement] = []
         if not self.handle(src, level, ret):
             warn(f"Unknown XML {src.xml.tag}")
             xe = ET.Element('span', {'class': f"unknown-xml xml-{src.xml.tag}"})
             self.common.format_content(src, level, xe)
             ret = [xe]
-        return ret
+        return iter(ret)
 
 
 class UnionHtmlizer(BaseHtmlizer):
@@ -203,18 +204,20 @@ class HtmlGenerator:
                 ss.append(ET.tostring(x, encoding='unicode', method='html'))
         return "".join(ss)
 
-    def _elements(self, src: Iterable[Element]) -> Iterator[str | XmlElement]:
+    def _elements(self, src: Iterable[str | Element]) -> Iterator[str | XmlElement]:
         for it in src:
-            for sub in self._html.format(it, 0):
-                yield sub
-            if tail := getattr(it, 'tail', ''):
-                yield tail
+            if isinstance(it, str):
+                yield it
+            else:
+                for sub in self._html.format(it, 0):
+                    yield sub
 
     def elements_to_str(self, src: Iterable[Element]) -> str:
         return self._html_content_to_str(self._elements(src))
 
     def content_to_str(self, src: MixedContent) -> str:
-        return self._html_content_to_str([src.text, *self._elements(src)])
+        flat: chain[str | Element] = chain.from_iterable(src)
+        return self._html_content_to_str([src.text, *self._elements(flat)])
 
     def abstract_to_str(self, src: Abstract) -> str:
         return self._html_content_to_str(self._blocks_content(src.content))
