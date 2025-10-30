@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from .tree import DataElement, ArrayContent, InlineBase, MarkupElement, StartTag
+from .tree import DataElement, ArrayContent, ElementBase, MarkupElement, StartTag
 
 
 MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
@@ -24,10 +24,11 @@ class FormulaStyle(StrEnum):
         return 'inline-formula' if self == FormulaStyle.INLINE else 'disp-formula'
 
 
-class FormulaElement(InlineBase):
+class FormulaElement(ElementBase):
     formula_style: FormulaStyle
     tex: str | None
     mathml: MathmlElement | None
+    tail: str = ""
 
     def __init__(self, formula_style: FormulaStyle):
         super().__init__(formula_style.jats_tag)

@@ -10,9 +10,9 @@ from .tree import (
     ArrayContent,
     ArrayParentElement,
     Element,
+    ElementBase,
     HtmlVoidElement,
     HtmlVoidInline,
-    InlineBase,
     MarkupElement,
     MixedContent,
     MixedParentElement,
@@ -135,14 +135,9 @@ class ListItem(tree.BiformElement):
         super().__init__('li', ArrayContent(content))
 
 
-class OrderedList(ItemListElement[ListItem]):
-    def __init__(self, items: Iterable[ListItem] = ()):
-        super().__init__('ol', items)
-
-
-class UnorderedList(ItemListElement[ListItem]):
-    def __init__(self, items: Iterable[ListItem] = ()):
-        super().__init__('ul', items)
+class List(ItemListElement[ListItem]):
+    def __init__(self, items: Iterable[ListItem] = (), *, ordered: bool):
+        super().__init__('ol' if ordered else 'ul', items)
 
 
 class DTerm(tree.BiformElement):
@@ -172,10 +167,12 @@ class DList(ItemListElement[DItem]):
         super().__init__('dl', items)
 
 
-class IssueElement(InlineBase):
+class IssueElement(ElementBase):
     def __init__(self, msg: str):
         super().__init__('format-issue')
         self.msg = msg
+
+    tail: str = ""
 
     @property
     def content(self) -> str:

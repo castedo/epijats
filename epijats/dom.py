@@ -22,13 +22,15 @@ __all__ = [
     'ItemElement',
     'License',
     'LineBreak',
+    'List',
     'ListItem',
     'MarkupBlock',
     'MarkupElement',
     'MixedContent',
+    'MixedParent',
+    'MixedSink',
     'MutableMixedContent',
     'Orcid',
-    'OrderedList',
     'Paragraph',
     'Permissions',
     'PersonGroup',
@@ -38,7 +40,6 @@ __all__ = [
     'ProtoSection',
     'Section',
     'TableColumn',
-    'UnorderedList',
     'WordBreak',
 ]
 
@@ -48,6 +49,8 @@ from .tree import (
     MarkupBlock,
     MarkupElement,
     MixedContent,
+    MixedParent,
+    MixedSink,
     MutableMixedContent,
 )
 
@@ -73,13 +76,12 @@ from .elements import (
     IssueElement,
     ItemElement,
     LineBreak,
+    List,
     ListItem,
-    OrderedList,
     Paragraph,
     PreElement,
     Preformat,
     TableColumn,
-    UnorderedList,
     WordBreak,
 )
 

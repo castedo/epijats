@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
+from warnings import warn
 
 if TYPE_CHECKING:
     from .typeshed import XmlElement
@@ -69,15 +70,8 @@ class Inline(Element, Protocol):
     @property
     def tail(self) -> str: ...
 
-    @tail.setter
-    def tail(self, value: str) -> None: ...
 
-
-class InlineBase(ElementBase, Inline):
-    tail: str = ""
-
-    def __init__(self, xml_tag: str | StartTag):
-        super().__init__(xml_tag)
+MixedSink: TypeAlias = Callable[[str | Inline], None]
 
 
 @dataclass
@@ -97,6 +91,10 @@ class ArrayContent:
     def only_child(self) -> Element | None:
         return self._children[0] if len(self._children) == 1 else None
 
+    def append(self, a: Element) -> None:
+        warn("Use MutableArrayContent", DeprecationWarning)
+        self._children.append(a)
+
 
 class MutableArrayContent(ArrayContent):
     def append(self, e: Element) -> None:
@@ -111,6 +109,18 @@ class MixedContent:
     text: str
     _children: list[Inline]
 
+    def __init__(self, content: str | MixedContent | Iterable[Inline] = ""):
+        warn("Use MutableMixedContent", DeprecationWarning)
+        if isinstance(content, str):
+            self.text = content
+            self._children = []
+        elif isinstance(content, MixedContent):
+            self.text = content.text
+            self._children = list(content)
+        else:
+            self.text = ""
+            self._children = list(content)
+
     def __iter__(self) -> Iterator[Inline]:
         return iter(self._children)
 
@@ -119,6 +129,17 @@ class MixedContent:
 
     def blank(self) -> bool:
         return not self._children and not self.text.strip()
+
+    def append(self, a: Inline) -> None:
+        warn("Use MutableMixedContent", DeprecationWarning)
+        self._children.append(a)
+
+    def append_text(self, a: str) -> None:
+        warn("Use MutableMixedContent", DeprecationWarning)
+        if self._children:
+            self._children[-1].tail += a
+        else:
+            self.text += a
 
 
 class MutableMixedContent(MixedContent):
@@ -150,7 +171,6 @@ Content: TypeAlias = str | ArrayContent | MixedContent
 AppendT = TypeVar('AppendT', str, Element, str | Inline, covariant=True)
 
 
-@dataclass
 class Parent(ElementBase, Generic[AppendT]):
     @abstractmethod
     def append(self, a: AppendT) -> None: ...
@@ -169,6 +189,9 @@ class ArrayParentElement(Parent[Element]):
 
     def append(self, a: Element) -> None:
         self._content.append(a)
+
+
+MixedParent: TypeAlias = Parent[str | Inline]
 
 
 class MixedParentElement(Parent[str | Inline]):
@@ -194,8 +217,9 @@ class MarkupBlock(MixedParentElement):
 
 
 @dataclass
-class MarkupElement(InlineBase):
+class MarkupElement(MixedParent):
     _content: MutableMixedContent
+    tail: str = ""
 
     def __init__(self, xml_tag: str | StartTag, content: MixedContent | str = ""):
         super().__init__(xml_tag)
@@ -226,13 +250,15 @@ class BiformElement(ArrayParentElement):
         return None
 
 
-class HtmlVoidInline(InlineBase):
+class HtmlVoidInline(ElementBase):
     """HTML void element (such as <br />).
 
     Only HTML void elements should be serialized in the self-closing XML syntax.
     HTML parsers ignore the XML self-closing tag syntax and parse based
     on a tag name being in a closed fixed list of HTML void elements.
     """
+
+    tail: str = ""
 
     @property
     def content(self) -> None:
@@ -253,13 +279,15 @@ class HtmlVoidElement(ElementBase):
         return True
 
 
-class WhitespaceElement(InlineBase):
+class WhitespaceElement(ElementBase):
     """Baseprint XML whitespace-only element.
 
     To avoid interoperability problems between HTML and XML parsers,
     whitespace-only elements are serialized with a space as content
     to ensure XML parsers do not re-serialize to the self-closing XML syntax.
     """
+
+    tail: str = ""
 
     @property
     def content(self) -> None:

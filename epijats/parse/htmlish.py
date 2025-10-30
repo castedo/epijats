@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from .. import dom
 from .. import condition as fc
 from ..tree import (
-    DataElement,
     Element,
     Inline,
     MarkupElement,
@@ -179,10 +178,23 @@ class HtmlParagraphModel(Model[Element]):
             log(fc.IgnoredTail.issue(xe))
 
 
+class ListItemModel(kit.LoadModelBase[dom.ListItem]):
+    def __init__(self, content_model: ArrayContentModel):
+        self.content_model = content_model
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in ['li', 'list-item']
+
+    def load(self, log: Log, xe: XmlElement) -> dom.ListItem | None:
+        kit.check_no_attrib(log, xe)
+        ret = dom.ListItem()
+        self.content_model.parse_content(log, xe, ret.append)
+        return ret
+
+
 class ListModel(kit.LoadModelBase[Element]):
     def __init__(self, item_content_model: ArrayContentModel):
-        tm = TagMold('li', jats_tag='list-item')
-        self._list_content = BiformModel(tm, item_content_model)
+        self._list_content = ListItemModel(item_content_model)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['ul', 'ol', 'list']
@@ -195,7 +207,7 @@ class ListModel(kit.LoadModelBase[Element]):
         else:
             kit.check_no_attrib(log, xe)
             tag = str(xe.tag)
-        ret = DataElement(tag)
+        ret = dom.List(ordered=(tag == 'ol'))
         parse_array_content(log, xe, self._list_content, ret.append)
         return ret
 
