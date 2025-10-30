@@ -1,6 +1,7 @@
 import os, pytest
 from pathlib import Path
 
+from epijats import dom
 from epijats.parse import kit, tree
 from epijats.parse.body import CoreModels
 from epijats.tree import MutableMixedContent
@@ -23,7 +24,7 @@ BLOCK_CASE = Path(__file__).parent / "cases" / "block"
 P_CHILD_CASE = Path(__file__).parent / "cases" / "p_child"
 
 
-def html_from_element(src: tree.Inline) -> str:
+def html_from_element(src: dom.Element) -> str:
     html = HtmlGenerator()
     content = MutableMixedContent()
     content.append(src)

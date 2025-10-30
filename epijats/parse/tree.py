@@ -6,13 +6,11 @@ from abc import abstractmethod
 from collections.abc import Callable
 from typing import Generic, TYPE_CHECKING, TypeVar
 
-from .. import condition as fc
 from ..tree import (
     AppendT,
     ArrayParentElement,
     BiformElement,
     Element,
-    Inline,
     MarkupBlock,
     MarkupElement,
     MixedParentElement,
@@ -33,15 +31,6 @@ if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-def check_no_content(log: Log, xe: XmlElement) -> None:
-    if xe.text and xe.text.strip():
-        log(fc.IgnoredText.issue(xe))
-    for s in xe:
-        log(fc.ExcessElement.issue(s))
-        if s.tail and s.tail.strip():
-            log(fc.IgnoredTail.issue(s))
-
-
 class TrivialElementModel(kit.LoadModelBase[str]):
     def __init__(self, tag: str):
         self.tag = tag
@@ -51,7 +40,7 @@ class TrivialElementModel(kit.LoadModelBase[str]):
 
     def load(self, log: Log, xe: XmlElement) -> str | None:
         kit.check_no_attrib(log, xe)
-        check_no_content(log, xe)
+        kit.check_no_content(log, xe)
         return self.tag
 
 
@@ -94,7 +83,7 @@ class TagMold:
 ElementT = TypeVar('ElementT', bound=Element)
 
 
-class EmptyElementModel(kit.Model[ElementT]):
+class EmptyElementModel(kit.LoadModelBase[ElementT]):
     def __init__(self, tag_mold: TagMold, factory: Callable[[], ElementT]):
         self.tag_mold = tag_mold
         self.factory = factory
@@ -102,14 +91,14 @@ class EmptyElementModel(kit.Model[ElementT]):
     def match(self, xe: XmlElement) -> bool:
         return self.tag_mold.match(xe)
 
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[ElementT]) -> None:
+    def load(self, log: Log, xe: XmlElement) -> ElementT | None:
         ret = self.factory()
         self.tag_mold.copy_attributes(log, xe, ret)
-        check_no_content(log, xe)
-        dest(ret)
+        kit.check_no_content(log, xe)
+        return ret
 
 
-class ElementModelBase(kit.Model[Element], Generic[AppendT]):
+class ElementModelBase(kit.LoadModelBase[Element], Generic[AppendT]):
     def __init__(self, tag_mold: TagMold, content_model: ContentModel[AppendT]):
         self.tag_mold = tag_mold
         self.content_model: ContentModel[AppendT] = content_model
@@ -117,11 +106,11 @@ class ElementModelBase(kit.Model[Element], Generic[AppendT]):
     def match(self, xe: XmlElement) -> bool:
         return self.tag_mold.match(xe)
 
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[Element]) -> None:
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
         ret = self.start(self.tag_mold.stag)
         self.tag_mold.copy_attributes(log, xe, ret)
         self.content_model.parse_content(log, xe, ret.append)
-        dest(ret)
+        return ret
 
     @abstractmethod
     def start(self, stag: StartTag) -> Parent[AppendT]: ...
@@ -138,8 +127,8 @@ class ItemModel(ArrayParentModelBase):
         return ArrayParentElement(stag)
 
 
-class MixedParentElementModel(ElementModelBase[str | Inline]):
-    def start(self, stag: StartTag) -> Parent[str | Inline]:
+class MixedParentElementModel(ElementModelBase[str | Element]):
+    def start(self, stag: StartTag) -> Parent[str | Element]:
         return MixedParentElement(stag)
 
 
@@ -148,7 +137,7 @@ class BiformModel(ArrayParentModelBase):
         return BiformElement(stag)
 
 
-class MarkupMixedModel(MixedModel):
+class MarkupMixedModel(kit.LoadModelBase[Element]):
     def __init__(self, tag_mold: TagMold, content_model: MixedModel):
         self.tag_mold = tag_mold
         self.content_model = content_model
@@ -156,21 +145,22 @@ class MarkupMixedModel(MixedModel):
     def match(self, xe: XmlElement) -> bool:
         return self.tag_mold.match(xe)
 
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+    def load(self, log: Log, xe: XmlElement) -> Element | None:
         ret = MarkupElement(self.tag_mold.stag)
         self.tag_mold.copy_attributes(log, xe, ret)
         self.content_model.parse_content(log, xe, ret.append)
-        sink(ret)
+        return ret
 
 
-class MixedContentInElementParser(kit.Model[str | Inline]):
-    def __init__(self, tag: str, content_model: ContentModel[str | Inline]):
+class MixedContentInElementParser(kit.Model[str | Element]):
+    def __init__(self, tag: str, content_model: ContentModel[str | Element]):
         self.content_model = content_model
         self.tag = tag
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == self.tag
 
-    def parse(self, log: Log, xe: XmlElement, target: Sink[str | Inline]) -> None:
+    def parse(self, log: Log, xe: XmlElement, out: Sink[str | Element]) -> bool:
         kit.check_no_attrib(log, xe)
-        self.content_model.parse_content(log, xe, target)
+        self.content_model.parse_content(log, xe, out)
+        return True

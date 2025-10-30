@@ -10,7 +10,6 @@ from .tree import (
     ArrayContent,
     ArrayParentElement,
     Element,
-    ElementBase,
     HtmlVoidElement,
     HtmlVoidInline,
     MarkupElement,
@@ -81,7 +80,7 @@ ElementT = TypeVar('ElementT', bound=Element)
 
 
 @dataclass
-class ItemListElement(tree.ElementBase, Generic[ElementT]):
+class ItemListElement(tree.Element, Generic[ElementT]):
     _items: list[ElementT]
 
     def __init__(self, xml_tag: str, items: Iterable[ElementT] = ()):
@@ -148,7 +147,7 @@ class DDefinition(tree.BiformElement):
         super().__init__('dd', content)
 
 
-class DItem(tree.ElementBase):
+class DItem(tree.Element):
     def __init__(self, term: DTerm, definitions: Iterable[DDefinition] = ()):
         super().__init__('div')
         self.term = term
@@ -165,7 +164,7 @@ class DList(ItemListElement[DItem]):
         super().__init__('dl', items)
 
 
-class IssueElement(ElementBase):
+class IssueElement(Element):
     def __init__(self, msg: str):
         super().__init__('format-issue')
         self.msg = msg

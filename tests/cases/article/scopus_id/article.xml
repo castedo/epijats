@@ -1,0 +1,18 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>Unsupported ScopusID</article-title>
+      </title-group>
+      <contrib-group>
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="scopus">7007156898</contrib-id>
+          <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-1825-0097</contrib-id>
+          <name>
+            <surname>Carberry</surname>
+          </name>
+        </contrib>
+      </contrib-group>
+    </article-meta>
+  </front>
+</article>

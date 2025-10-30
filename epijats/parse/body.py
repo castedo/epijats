@@ -7,10 +7,10 @@ from .. import dom
 from .. import condition as fc
 from ..biblio import BiblioRefPool
 from ..elements import Citation, CitationTuple
-from ..tree import Element, Inline, MutableMixedContent
+from ..tree import Element, MutableMixedContent
 
 from . import kit
-from .kit import Log, Sink
+from .kit import Log
 from .content import (
     MixedModel,
     PendingMarkupBlock,
@@ -107,7 +107,7 @@ class CitationModel(kit.LoadModelBase[Citation]):
         return ret
 
 
-class AutoCorrectCitationModel(MixedModel):
+class AutoCorrectCitationModel(kit.LoadModelBase[CitationTuple]):
     def __init__(self, biblio: BiblioRefPool):
         submodel = CitationModel(biblio)
         self._submodel = submodel
@@ -115,10 +115,9 @@ class AutoCorrectCitationModel(MixedModel):
     def match(self, xe: XmlElement) -> bool:
         return self._submodel.match(xe)
 
-    def parse(self, log: Log, e: XmlElement, sink: Sink[str | Inline]) -> None:
+    def load(self, log: Log, e: XmlElement) -> CitationTuple | None:
         citation = self._submodel.load(log, e)
-        if citation:
-            sink(CitationTuple([citation]))
+        return CitationTuple([citation]) if citation else None
 
 
 class CitationRangeHelper:
@@ -163,7 +162,7 @@ class CitationRangeHelper:
         self.stopper = None
 
 
-class CitationTupleModel(MixedModel):
+class CitationTupleModel(kit.LoadModelBase[CitationTuple]):
     def __init__(self, biblio: BiblioRefPool):
         super().__init__()
         self._submodel = CitationModel(biblio)
@@ -174,7 +173,7 @@ class CitationTupleModel(MixedModel):
         # But no known archived baseprint did this.
         return xe.tag == 'sup' and any(c.tag == 'xref' for c in xe)
 
-    def parse(self, log: Log, e: XmlElement, sink: Sink[str | Inline]) -> None:
+    def load(self, log: Log, e: XmlElement) -> CitationTuple | None:
         kit.check_no_attrib(log, e)
         range_helper = CitationRangeHelper(log, self._submodel.biblio)
         if not range_helper.is_tuple_open(e.text):
@@ -188,11 +187,10 @@ class CitationTupleModel(MixedModel):
                 ret.extend(range_helper.get_range(child, citation))
                 ret.append(citation)
             range_helper.new_start(child)
-        if len(ret):
-            sink(ret)
+        return ret if len(ret) else None
 
 
-class JatsCrossReferenceModel(MixedModel):
+class JatsCrossReferenceModel(kit.LoadModelBase[dom.CrossReference]):
     def __init__(self, content_model: MixedModel, biblio: BiblioRefPool | None):
         self.content_model = content_model
         self.biblio = biblio
@@ -205,7 +203,7 @@ class JatsCrossReferenceModel(MixedModel):
             return False
         return not (self.biblio and self.biblio.is_bibr_rid(xe.attrib.get("rid")))
 
-    def parse(self, log: Log, e: XmlElement, sink: Sink[str | Inline]) -> None:
+    def load(self, log: Log, e: XmlElement) -> dom.CrossReference | None:
         alt = e.attrib.get("alt")
         if alt and alt == e.text and not len(e):
             del e.attrib["alt"]
@@ -216,17 +214,17 @@ class JatsCrossReferenceModel(MixedModel):
             return None
         ret = dom.CrossReference(rid)
         self.content_model.parse_content(log, e, ret.append)
-        sink(ret)
+        return ret
 
 
-class HtmlCrossReferenceModel(MixedModel):
+class HtmlCrossReferenceModel(kit.LoadModelBase[dom.CrossReference]):
     def __init__(self, content_model: MixedModel):
         self.content_model = content_model
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'a' and 'rel' not in xe.attrib
 
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+    def load(self, log: Log, xe: XmlElement) -> dom.CrossReference | None:
         kit.check_no_attrib(log, xe, ['href'])
         href = xe.attrib.get("href")
         if href is None:
@@ -238,12 +236,12 @@ class HtmlCrossReferenceModel(MixedModel):
             return None
         ret = dom.CrossReference(href[1:])
         self.content_model.parse_content(log, xe, ret.append)
-        sink(ret)
+        return ret
 
 
 def cross_reference_model(
     content_model: MixedModel, biblio: BiblioRefPool | None
-) -> MixedModel:
+) -> kit.Model[Element]:
     jats_xref = JatsCrossReferenceModel(content_model, biblio)
     return jats_xref | HtmlCrossReferenceModel(content_model)
 
@@ -313,9 +311,10 @@ class BodyModel(kit.Parser[dom.ProtoSection]):
     def __init__(self, models: CoreModels):
         self._proto = ProtoSectionParser(models, SectionModel(models))
 
-    def parse(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> None:
+    def parse(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> bool:
         kit.check_no_attrib(log, xe)
         self._proto.parse(log, xe, target, None)
+        return True
 
     def match(self, xe: XmlElement) -> bool:
         # JATS and HTML conflict in use of <body> tag

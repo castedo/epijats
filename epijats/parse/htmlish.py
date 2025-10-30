@@ -6,7 +6,6 @@ from .. import dom
 from .. import condition as fc
 from ..tree import (
     Element,
-    Inline,
     MarkupElement,
     StartTag,
 )
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
 
 def markup_model(
     tag: str, content: MixedModel, *, jats_tag: str | None = None
-) -> MixedModel:
+) -> Model[Element]:
     tm = TagMold(tag, jats_tag=jats_tag)
     return MarkupMixedModel(tm, content)
 
@@ -64,7 +63,7 @@ def blockquote_model(roll_content_model: ArrayContentModel) -> Model[Element]:
     return BiformModel(tm, roll_content_model)
 
 
-def break_model() -> Model[Inline]:
+def break_model() -> Model[Element]:
     """<break> Line Break
     Like HTML <br>.
 
@@ -74,7 +73,7 @@ def break_model() -> Model[Inline]:
     return EmptyElementModel(TagMold('br', jats_tag='break'), dom.LineBreak)
 
 
-def code_model(hypertext: MixedModel) -> MixedModel:
+def code_model(hypertext: MixedModel) -> Model[Element]:
     return markup_model('code', hypertext)
 
 
@@ -93,49 +92,51 @@ def hypotext_model() -> MixedModel:
     return ret
 
 
-class JatsExtLinkModel(MixedModel):
+class ExtLinkModelBase(MixedModel):
     def __init__(self, content_model: MixedModel):
         self.content_model = content_model
 
+    def parse_url(
+        self, log: Log, xe: XmlElement, key: str, out: Sink[str | Element]
+    ) -> bool:
+        url = xe.attrib.get(key)
+        if url is None:
+            log(fc.MissingAttribute.issue(xe, key))
+            self.parse_content(log, xe, out)
+        elif not url.startswith('https:') and not url.startswith('http:'):
+            log(fc.InvalidAttributeValue.issue(xe, key, url))
+        else:
+            ret = dom.ExternalHyperlink(url)
+            self.content_model.parse_content(log, xe, ret.append)
+            out(ret)
+        return True
+
+
+class JatsExtLinkModel(ExtLinkModelBase):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'ext-link'
 
-    def parse(self, log: Log, e: XmlElement, sink: Sink[str | Inline]) -> None:
+    def parse(self, log: Log, e: XmlElement, out: Sink[str | Element]) -> bool:
         link_type = e.attrib.get("ext-link-type")
         if link_type and link_type != "uri":
             log(fc.UnsupportedAttributeValue.issue(e, "ext-link-type", link_type))
-            raise ValueError
+            return False
         k_href = "{http://www.w3.org/1999/xlink}href"
-        href = e.attrib.get(k_href)
         kit.check_no_attrib(log, e, ["ext-link-type", k_href])
-        if href is None:
-            log(fc.MissingAttribute.issue(e, k_href))
-            self.parse_content(log, e, sink)
-        else:
-            ret = dom.ExternalHyperlink(href)
-            self.content_model.parse_content(log, e, ret.append)
-            sink(ret)
+        return self.parse_url(log, e, k_href, out)
 
 
-class HtmlExtLinkModel(MixedModel):
+class HtmlExtLinkModel(ExtLinkModelBase):
     def __init__(self, content_model: MixedModel):
+        super().__init__(content_model)
         self.stag = StartTag('a', {'rel': 'external'})
-        self.content_model = content_model
 
     def match(self, xe: XmlElement) -> bool:
         return self.stag.issubset(xe)
 
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[str | Inline]) -> None:
+    def parse(self, log: Log, xe: XmlElement, out: Sink[str | Element]) -> bool:
         kit.check_no_attrib(log, xe, ['rel', 'href'])
-        href = xe.attrib.get('href')
-        if href is None:
-            log(fc.MissingAttribute.issue(xe, 'href'))
-        elif not href.startswith('https:') and not href.startswith('http:'):
-            log(fc.InvalidAttributeValue.issue(xe, 'href', href))
-        else:
-            ret = dom.ExternalHyperlink(href)
-            self.content_model.parse_content(log, xe, ret.append)
-            sink(ret)
+        return self.parse_url(log, xe, 'href', out)
 
 
 def ext_link_model(content_model: MixedModel) -> MixedModel:
@@ -150,10 +151,10 @@ class HtmlParagraphModel(Model[Element]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'p'
 
-    def parse(self, log: Log, xe: XmlElement, sink: Sink[Element]) -> None:
+    def parse(self, log: Log, xe: XmlElement, out: Sink[Element]) -> bool:
         # ignore JATS <p specific-use> attribute from BpDF ed.1
         kit.check_no_attrib(log, xe, ['specific-use'])
-        pending = PendingMarkupBlock(sink, dom.Paragraph())
+        pending = PendingMarkupBlock(out, dom.Paragraph())
         autoclosed = False
         if xe.text:
             pending.append(xe.text)
@@ -164,7 +165,7 @@ class HtmlParagraphModel(Model[Element]):
                 pending.close()
                 autoclosed = True
                 log(fc.BlockElementInPhrasingContent.issue(s))
-                self.block_model.parse(log, s, sink)
+                self.block_model.parse(log, s, out)
                 if s.tail and not s.tail.strip():
                     s.tail = None
             else:
@@ -173,9 +174,10 @@ class HtmlParagraphModel(Model[Element]):
             if s.tail:
                 pending.append(s.tail)
         if not pending.close() or autoclosed:
-            sink(dom.Paragraph(" "))
+            out(dom.Paragraph(" "))
         if xe.tail:
             log(fc.IgnoredTail.issue(xe))
+        return True
 
 
 class ListItemModel(kit.LoadModelBase[dom.ListItem]):

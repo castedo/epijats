@@ -115,19 +115,19 @@ class PubIdParser(kit.Parser[dict[bp.PubIdType, str]]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'pub-id'
 
-    def parse(self, log: Log, e: XmlElement, dest: dict[bp.PubIdType, str]) -> None:
+    def parse(self, log: Log, e: XmlElement, dest: dict[bp.PubIdType, str]) -> bool:
         kit.check_no_attrib(log, e, ['pub-id-type'])
         pub_id_type = kit.get_enum_value(log, e, 'pub-id-type', bp.PubIdType)
         if not pub_id_type:
             log(fc.InvalidPubId.issue(e))
-            return
+            return False
         if pub_id_type in dest:
             log(fc.ExcessElement.issue(e))
-            return
+            return False
         value = kit.load_string_content(log, e)
         if not value:
             log(fc.MissingContent.issue(e))
-            return
+            return False
         match pub_id_type:
             case bp.PubIdType.DOI:
                 if not value.startswith("10."):
@@ -136,14 +136,15 @@ class PubIdParser(kit.Parser[dict[bp.PubIdType, str]]):
                     if value.startswith(https_prefix):
                         value = value[len(https_prefix) :]
                     else:
-                        return
+                        return False
             case bp.PubIdType.PMID:
                 try:
                     int(value)
                 except ValueError as ex:
                     log(fc.InvalidPmid.issue(e, str(ex)))
-                    return
+                    return False
         dest[pub_id_type] = value
+        return True
 
 
 def load_edition(log: Log, e: XmlElement) -> int | None:
@@ -183,7 +184,7 @@ class ElementCitationParser(kit.Parser[bp.BiblioRefItem]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'element-citation'
 
-    def parse(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> None:
+    def parse(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> bool:
         kit.check_no_attrib(log, e)
         sess = ArrayContentSession(log)
         source_title = sess.one(SourceTitleModel())
@@ -217,6 +218,7 @@ class ElementCitationParser(kit.Parser[bp.BiblioRefItem]):
                 log(fc.ElementFormatCondition.issue(e, msg))
             else:
                 dest.biblio_fields['fpage'] = elocation_id.out
+        return True
 
 
 class BiblioRefItemModel(kit.TagModelBase[bp.BiblioRefItem]):

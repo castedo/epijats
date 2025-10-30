@@ -59,22 +59,23 @@ class TitleGroupModel(kit.LoadModelBase[MixedContent]):
         return None if title.blank() else title
 
 
-def orcid_model() -> Model[bp.Orcid]:
-    return tag_model('contrib-id', load_orcid)
+class OrcidModel(kit.LoadModelBase[bp.Orcid]):
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'contrib-id'
 
-
-def load_orcid(log: Log, e: XmlElement) -> bp.Orcid | None:
-    if e.tag != 'contrib-id' or e.attrib.get('contrib-id-type') != 'orcid':
-        return None
-    kit.check_no_attrib(log, e, ['contrib-id-type'])
-    for s in e:
-        log(fc.UnsupportedElement.issue(s))
-    try:
-        url = e.text or ""
-        return bp.Orcid.from_url(url)
-    except ValueError:
-        log(fc.InvalidOrcid.issue(e, url))
-        return None
+    def load(self, log: Log, xe: XmlElement) -> bp.Orcid | None:
+        kit.check_no_attrib(log, xe, ['contrib-id-type'])
+        kit.check_no_children(log, xe)
+        ret = None
+        url = xe.text or ""
+        if xe.attrib.get('contrib-id-type') == 'orcid':
+            try:
+                ret = bp.Orcid.from_url(url)
+            except ValueError:
+                pass
+        if ret is None:
+            log(fc.InvalidOrcid.issue(xe, url))
+        return ret
 
 
 def load_author_group(log: Log, e: XmlElement) -> list[bp.Author] | None:
@@ -100,7 +101,7 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
     sess = ArrayContentSession(log)
     name = sess.one(person_name_model())
     email = sess.one(tag_model('email', kit.load_string))
-    orcid = sess.one(orcid_model())
+    orcid = sess.one(OrcidModel())
     sess.parse_content(e)
     if name.out is None:
         log(fc.MissingContent.issue(e, "Missing name"))
@@ -116,7 +117,7 @@ class LicenseRefParser(kit.Parser[dom.License]):
             "{http://www.niso.org/schemas/ali/1.0/}license_ref",
         ]
 
-    def parse(self, log: Log, xe: XmlElement, dest: dom.License) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: dom.License) -> bool:
         kit.check_no_attrib(log, xe, ['content-type'])
         dest.license_ref = kit.load_string_content(log, xe)
         from_attribute = kit.get_enum_value(log, xe, 'content-type', dom.CcLicenseType)
@@ -127,6 +128,7 @@ class LicenseRefParser(kit.Parser[dom.License]):
             dest.cc_license_type = from_url
         else:
             dest.cc_license_type = from_attribute
+        return True
 
 
 class LicenseModel(kit.LoadModelBase[dom.License]):
@@ -179,7 +181,7 @@ class ArticleMetaParser(kit.Parser[dom.Article]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'article-meta'
 
-    def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> bool:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'title-group')
         sess = ArrayContentSession(log)
@@ -193,6 +195,7 @@ class ArticleMetaParser(kit.Parser[dom.Article]):
             dest.authors = authors.out
         dest.abstract = abstract.out
         dest.permissions = permissions.out
+        return True
 
 
 class ArticleFrontParser(kit.Parser[dom.Article]):
@@ -202,9 +205,10 @@ class ArticleFrontParser(kit.Parser[dom.Article]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'front'
 
-    def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> bool:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'article-meta')
         sess = ArrayContentSession(log)
         sess.bind_once(self._meta_model, dest)
         sess.parse_content(xe)
+        return True

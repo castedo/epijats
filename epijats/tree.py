@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
+from typing import Generic, TYPE_CHECKING, TypeAlias, TypeVar
 from warnings import warn
 
 if TYPE_CHECKING:
@@ -39,19 +39,8 @@ class StartTag:
         return True
 
 
-class Element(Protocol):
-    @property
-    def xml(self) -> StartTag: ...
-
-    @property
-    def content(self) -> Content | None: ...
-
-    @property
-    def is_void(self) -> bool: ...
-
-
 @dataclass
-class ElementBase(ABC, Element):
+class Element(ABC):
     _xml: StartTag
 
     def __init__(self, xml_tag: str | StartTag):
@@ -60,6 +49,10 @@ class ElementBase(ABC, Element):
     @property
     def xml(self) -> StartTag:
         return self._xml
+
+    @property
+    @abstractmethod
+    def content(self) -> Content | None: ...
 
     @property
     def is_void(self) -> bool:
@@ -154,7 +147,7 @@ Content: TypeAlias = str | ArrayContent | MixedContent
 AppendT = TypeVar('AppendT', str, Element, str | Inline, covariant=True)
 
 
-class Parent(ElementBase, Generic[AppendT]):
+class Parent(Element, Generic[AppendT]):
     @abstractmethod
     def append(self, a: AppendT) -> None: ...
 
@@ -232,7 +225,7 @@ class BiformElement(ArrayParentElement):
         return None
 
 
-class HtmlVoidInline(ElementBase):
+class HtmlVoidInline(Element):
     """HTML void element (such as <br />).
 
     Only HTML void elements should be serialized in the self-closing XML syntax.
@@ -249,7 +242,7 @@ class HtmlVoidInline(ElementBase):
         return True
 
 
-class HtmlVoidElement(ElementBase):
+class HtmlVoidElement(Element):
     @property
     def content(self) -> None:
         return None
@@ -259,7 +252,7 @@ class HtmlVoidElement(ElementBase):
         return True
 
 
-class WhitespaceElement(ElementBase):
+class WhitespaceElement(Element):
     """Baseprint XML whitespace-only element.
 
     To avoid interoperability problems between HTML and XML parsers,

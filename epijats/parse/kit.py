@@ -71,6 +71,19 @@ def copy_ok_attrib_values(
             log(fc.UnsupportedAttribute.issue(e, key))
 
 
+def check_no_children(log: Log, xe: XmlElement) -> None:
+    for s in xe:
+        log(fc.UnsupportedElement.issue(s))
+        if s.tail and s.tail.strip():
+            log(fc.IgnoredTail.issue(s))
+
+
+def check_no_content(log: Log, xe: XmlElement) -> None:
+    if xe.text and xe.text.strip():
+        log(fc.IgnoredText.issue(xe))
+    check_no_children(log, xe)
+
+
 def get_enum_value(
     log: Log, e: XmlElement, key: str, enum: type[EnumT]
 ) -> EnumT | None:
@@ -89,9 +102,8 @@ DestConT = TypeVar('DestConT', contravariant=True)
 ParsedT = TypeVar('ParsedT')
 ParsedCovT = TypeVar('ParsedCovT', covariant=True)
 
-
-class Loader(Protocol, Generic[ParsedCovT]):
-    def __call__(self, log: Log, e: XmlElement) -> ParsedCovT | None: ...
+if TYPE_CHECKING:
+    Loader: TypeAlias = Callable[[Log, XmlElement], ParsedT | None]
 
 
 def load_string(log: Log, e: XmlElement) -> str:
@@ -135,15 +147,17 @@ class Parser(ABC, Generic[DestConT]):
         ...
 
     @abstractmethod
-    def parse(self, log: Log, xe: XmlElement, dest: DestConT) -> None:
-        """Parse XmlElement and log any parsing issues. Only call if match True."""
+    def parse(self, log: Log, xe: XmlElement, dest: DestConT) -> bool:
+        """Parse XmlElement and log any parsing issues. Only call if match True.
+
+        Returns:
+          True if parser has parsed data and stored to dest.
+          False if parser failed to parse element data for storing to dest.
+        """
         ...
 
-    def parse_on_match(self, log: Log, xe: XmlElement, dest: DestConT) -> bool:
-        if not self.match(xe):
-            return False
-        self.parse(log, xe, dest)
-        return True
+    def match_and_parse(self, log: Log, xe: XmlElement, dest: DestConT) -> bool:
+        return self.match(xe) and self.parse(log, xe, dest)
 
     def __or__(self, other: Parser[DestConT]) -> Parser[DestConT]:
         ret = UnionParser[DestConT]()
@@ -159,10 +173,8 @@ class UnionParser(Parser[DestT]):
     def match(self, xe: XmlElement) -> bool:
         return any(p.match(xe) for p in self._parsers)
 
-    def parse(self, log: Log, xe: XmlElement, dest: DestT) -> None:
-        for p in self._parsers:
-            if p.parse_on_match(log, xe, dest):
-                return
+    def parse(self, log: Log, xe: XmlElement, dest: DestT) -> bool:
+        return any(p.match_and_parse(log, xe, dest) for p in self._parsers)
 
     def __or__(self, other: Parser[DestT]) -> Parser[DestT]:
         ret = UnionParser[DestT]()
@@ -189,11 +201,12 @@ class LoadModelBase(Model[ParsedT]):
         else:
             return None
 
-    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> None:
+    def parse(self, log: Log, xe: XmlElement, dest: Sink[ParsedT]) -> bool:
         parsed = self.load(log, xe)
         if parsed is not None:
             # mypy v1.9 has issue below but not v1.15
             dest(parsed)  # type: ignore[arg-type, unused-ignore]
+        return parsed is not None
 
 
 class TagModelBase(LoadModelBase[ParsedT]):
