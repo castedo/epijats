@@ -56,9 +56,9 @@ def pop_load_sub_back(log: Log, xe: XmlElement) -> dom.BiblioRefList | None:
     if back is None:
         return None
     kit.check_no_attrib(log, back)
-    sess = ArrayContentSession(log)
+    sess = ArrayContentSession()
     result = sess.one(RefListModel())
-    sess.parse_content(back)
+    sess.parse_content(log, back)
     xe.remove(back)  # type: ignore[arg-type]
     return result.out
 
@@ -78,10 +78,10 @@ def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     models = CoreModels(biblio)
     abstract_model = AbstractModel(models.block, models.hypertext)
     kit.check_required_child(log, e, 'front')
-    sess = ArrayContentSession(log)
+    sess = ArrayContentSession()
     sess.bind_once(ArticleFrontParser(abstract_model), ret)
     sess.bind(BodyModel(models), ret.body)
-    sess.parse_content(e)
+    sess.parse_content(log, e)
     if ret.ref_list:
         assert biblio
         ret.ref_list.references = biblio.used

@@ -7,9 +7,7 @@ from .. import dom
 from .. import metadata as bp
 from ..tree import StartTag
 
-from .content import (
-    ArrayContentSession,
-)
+from .content import ArrayContentSession
 from . import kit
 from .kit import Log, LoaderTagModel as tag_model
 from .tree import TrivialElementModel
@@ -20,11 +18,11 @@ if TYPE_CHECKING:
 
 def load_person_name(log: Log, e: XmlElement) -> bp.PersonName | None:
     kit.check_no_attrib(log, e)
-    sess = ArrayContentSession(log)
+    sess = ArrayContentSession()
     surname = sess.one(tag_model('surname', kit.load_string))
     given_names = sess.one(tag_model('given-names', kit.load_string))
     suffix = sess.one(tag_model('suffix', kit.load_string))
-    sess.parse_content(e)
+    sess.parse_content(log, e)
     if not surname.out and not given_names.out:
         log(fc.MissingContent.issue(e, "Missing surname or given-names element."))
         return None
@@ -43,11 +41,11 @@ class PersonGroupModel(kit.TagModelBase[bp.PersonGroup]):
         ret = bp.PersonGroup()
         k = 'person-group-type'
         kit.check_no_attrib(log, e, [k])
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         sess.bind(tag_model('name', load_person_name), ret.persons.append)
         sess.bind(tag_model('string-name', kit.load_string), ret.persons.append)
         etal = sess.one(TrivialElementModel('etal'))
-        sess.parse_content(e)
+        sess.parse_content(log, e)
         ret.etal = bool(etal.out)
         return ret
 
@@ -100,9 +98,9 @@ class AccessDateModel(kit.TagModelBase[bp.Date]):
         kit.check_no_attrib(log, xe, ['content-type'])
         if xe.attrib.get('content-type') != 'access-date':
             return None
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         date = DateBuilder(sess)
-        sess.parse_content(xe)
+        sess.parse_content(log, xe)
         return date.build()
 
 
@@ -186,7 +184,7 @@ class ElementCitationParser(kit.Parser[bp.BiblioRefItem]):
 
     def parse(self, log: Log, e: XmlElement, dest: bp.BiblioRefItem) -> bool:
         kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         source_title = sess.one(SourceTitleModel())
         title = sess.one(tag_model('article-title', kit.load_string))
         authors = sess.one(PersonGroupModel('author'))
@@ -199,7 +197,7 @@ class ElementCitationParser(kit.Parser[bp.BiblioRefItem]):
             fields[key] = sess.one(tag_model(key, kit.load_string))
         elocation_id = sess.one(tag_model('elocation-id', kit.load_string))
         sess.bind(PubIdParser(), dest.pub_ids)
-        sess.parse_content(e)
+        sess.parse_content(log, e)
         dest.source_title = source_title.out
         dest.article_title = title.out
         if authors.out:
@@ -233,11 +231,11 @@ class BiblioRefItemModel(kit.TagModelBase[bp.BiblioRefItem]):
     def load(self, log: Log, xe: XmlElement) -> bp.BiblioRefItem | None:
         ret = bp.BiblioRefItem()
         kit.check_no_attrib(log, xe, ['id'])
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         label = PositiveIntModel('label', 1048576, strip_trailing_period=True)
         sess.one(label)  # ignoring if it's a valid integer
         sess.bind_once(ElementCitationParser(), ret)
-        sess.parse_content(xe)
+        sess.parse_content(log, xe)
         ret.id = xe.attrib.get('id', "")
         return ret
 
@@ -249,10 +247,10 @@ class RefListModel(kit.TagModelBase[dom.BiblioRefList]):
     def load(self, log: Log, e: XmlElement) -> dom.BiblioRefList | None:
         ret = dom.BiblioRefList()
         kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         title = sess.one(tag_model('title', kit.load_string))
         sess.bind(BiblioRefItemModel(), ret.references.append)
-        sess.parse_content(e)
+        sess.parse_content(log, e)
         if title.out and title.out != "References":
             log(fc.IgnoredText.issue(e, 'ref-list/title ignored'))
         return ret

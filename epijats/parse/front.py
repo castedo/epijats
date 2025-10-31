@@ -52,10 +52,10 @@ class TitleGroupModel(kit.LoadModelBase[MixedContent]):
 
     def load(self, log: Log, xe: XmlElement) -> dom.MixedContent | None:
         kit.check_no_attrib(log, xe)
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         title = MutableMixedContent()
         sess.bind_once(article_title_model(), title)
-        sess.parse_content(xe)
+        sess.parse_content(log, xe)
         return None if title.blank() else title
 
 
@@ -82,9 +82,9 @@ def load_author_group(log: Log, e: XmlElement) -> list[bp.Author] | None:
     ret: list[bp.Author] = []
     kit.check_no_attrib(log, e)
     kit.check_required_child(log, e, 'contrib')
-    sess = ArrayContentSession(log)
+    sess = ArrayContentSession()
     sess.bind(tag_model('contrib', load_author), ret.append)
-    sess.parse_content(e)
+    sess.parse_content(log, e)
     return ret
 
 
@@ -98,11 +98,11 @@ def load_author(log: Log, e: XmlElement) -> bp.Author | None:
     if not kit.confirm_attrib_value(log, e, 'contrib-type', ['author']):
         return None
     kit.check_no_attrib(log, e, ['contrib-type'])
-    sess = ArrayContentSession(log)
+    sess = ArrayContentSession()
     name = sess.one(person_name_model())
     email = sess.one(tag_model('email', kit.load_string))
     orcid = sess.one(OrcidModel())
-    sess.parse_content(e)
+    sess.parse_content(log, e)
     if name.out is None:
         log(fc.MissingContent.issue(e, "Missing name"))
         return None
@@ -138,10 +138,10 @@ class LicenseModel(kit.LoadModelBase[dom.License]):
     def load(self, log: Log, e: XmlElement) -> dom.License | None:
         ret = dom.License()
         kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         sess.bind_once(copytext_element_model('license-p'), ret.license_p)
         sess.bind_once(LicenseRefParser(), ret)
-        sess.parse_content(e)
+        sess.parse_content(log, e)
         return None if ret.blank() else ret
 
 
@@ -151,11 +151,11 @@ class PermissionsModel(kit.LoadModelBase[dom.Permissions]):
 
     def load(self, log: Log, e: XmlElement) -> dom.Permissions | None:
         kit.check_no_attrib(log, e)
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         statement = MutableMixedContent()
         sess.bind_once(copytext_element_model('copyright-statement'), statement)
         license = sess.one(LicenseModel())
-        sess.parse_content(e)
+        sess.parse_content(log, e)
         if license.out is None:
             return None
         copyright = None if statement.blank() else dom.Copyright(statement)
@@ -184,12 +184,12 @@ class ArticleMetaParser(kit.Parser[dom.Article]):
     def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> bool:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'title-group')
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         title = sess.one(TitleGroupModel())
         authors = sess.one(tag_model('contrib-group', load_author_group))
         abstract = sess.one(self._abstract_model)
         permissions = sess.one(PermissionsModel())
-        sess.parse_content(xe)
+        sess.parse_content(log, xe)
         dest.title = title.out
         if authors.out is not None:
             dest.authors = authors.out
@@ -208,7 +208,7 @@ class ArticleFrontParser(kit.Parser[dom.Article]):
     def parse(self, log: Log, xe: XmlElement, dest: dom.Article) -> bool:
         kit.check_no_attrib(log, xe)
         kit.check_required_child(log, xe, 'article-meta')
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         sess.bind_once(self._meta_model, dest)
-        sess.parse_content(xe)
+        sess.parse_content(log, xe)
         return True

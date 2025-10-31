@@ -97,10 +97,10 @@ class FormulaAlternativesModel(kit.TagModelBase[Element]):
 
     def load(self, log: Log, e: XmlElement) -> Element | None:
         kit.check_no_attrib(log, e)
-        cp = ArrayContentSession(log)
+        cp = ArrayContentSession()
         tex = cp.one(kit.LoaderTagModel('tex-math', kit.load_string))
         mathml = cp.one(MathmlElementModel('math'))
-        cp.parse_content(e)
+        cp.parse_content(log, e)
         if not tex.out:
             return None
         ret = FormulaElement(self.formula_style)
@@ -119,9 +119,9 @@ class FormulaModel(kit.TagModelBase[Element]):
 
     def load(self, log: Log, xe: XmlElement) -> Element | None:
         kit.check_no_attrib(log, xe)
-        sess = ArrayContentSession(log)
+        sess = ArrayContentSession()
         result = sess.one(self.child_model)
-        sess.parse_content(xe)
+        sess.parse_content(log, xe)
         return result.out
 
 

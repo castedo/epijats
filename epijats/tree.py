@@ -144,12 +144,13 @@ class MutableMixedContent(MixedContent):
 
 
 Content: TypeAlias = str | ArrayContent | MixedContent
-AppendT = TypeVar('AppendT', str, Element, str | Inline, covariant=True)
+AppendT = TypeVar('AppendT', covariant=True)
+AppendConT = TypeVar('AppendConT', contravariant=True)
 
 
-class Parent(Element, Generic[AppendT]):
+class Parent(Element, Generic[AppendConT]):
     @abstractmethod
-    def append(self, a: AppendT) -> None: ...
+    def append(self, a: AppendConT) -> None: ...
 
 
 class ArrayParentElement(Parent[Element]):

@@ -13,10 +13,10 @@ from ..tree import (
 from . import kit
 from .content import (
     ArrayContentModel,
+    DataContentModel,
     MixedModel,
     PendingMarkupBlock,
     UnionMixedModel,
-    parse_array_content,
 )
 from .tree import (
     BiformModel,
@@ -196,7 +196,8 @@ class ListItemModel(kit.LoadModelBase[dom.ListItem]):
 
 class ListModel(kit.LoadModelBase[Element]):
     def __init__(self, item_content_model: ArrayContentModel):
-        self._list_content = ListItemModel(item_content_model)
+        li_element_model = ListItemModel(item_content_model)
+        self._list_content = DataContentModel(li_element_model)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['ul', 'ol', 'list']
@@ -210,7 +211,7 @@ class ListModel(kit.LoadModelBase[Element]):
             kit.check_no_attrib(log, xe)
             tag = str(xe.tag)
         ret = dom.List(ordered=(tag == 'ol'))
-        parse_array_content(log, xe, self._list_content, ret.append)
+        self._list_content.parse_content(log, xe, ret.append)
         return ret
 
 

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Generic, TYPE_CHECKING, TypeVar
+from typing import Generic, TYPE_CHECKING
 
+from ..elements import ElementT
 from ..tree import (
     AppendT,
     ArrayParentElement,
@@ -78,9 +79,6 @@ class TagMold:
     def copy_attributes(self, log: Log, xe: XmlElement, dest: Element) -> None:
         kit.check_no_attrib(log, xe, self._ok_attrib_keys)
         kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
-
-
-ElementT = TypeVar('ElementT', bound=Element)
 
 
 class EmptyElementModel(kit.LoadModelBase[ElementT]):
