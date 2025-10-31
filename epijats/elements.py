@@ -3,23 +3,19 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, MutableSequence
 from dataclasses import dataclass
 from typing import Generic, TypeVar
-from warnings import warn
 
-from . import tree
 from .tree import (
     ArrayContent,
-    ArrayParentElement,
+    BiformElement,
     Element,
     HtmlVoidElement,
-    HtmlVoidInline,
-    MarkupElement,
     MixedContent,
-    MixedParentElement,
+    MixedParent,
     StartTag,
 )
 
 
-class LineBreak(HtmlVoidInline):
+class LineBreak(HtmlVoidElement):
     def __init__(self) -> None:
         super().__init__('br')
 
@@ -34,13 +30,13 @@ class HorizontalRule(HtmlVoidElement):
         super().__init__('hr')
 
 
-class WordBreak(HtmlVoidInline):
+class WordBreak(HtmlVoidElement):
     def __init__(self) -> None:
         super().__init__('wbr')
 
 
 @dataclass
-class ExternalHyperlink(MarkupElement):
+class ExternalHyperlink(MixedParent):
     def __init__(self, href: str):
         super().__init__('a')
         self.href = href
@@ -48,39 +44,33 @@ class ExternalHyperlink(MarkupElement):
 
 
 @dataclass
-class CrossReference(MarkupElement):
+class CrossReference(MixedParent):
     def __init__(self, rid: str):
         super().__init__('a')
         self.rid = rid
         self.xml.attrib = {"href": "#" + rid}
 
 
-class Paragraph(MixedParentElement):
+class Paragraph(MixedParent):
     def __init__(self, content: MixedContent | str = ""):
         super().__init__('p', content)
 
 
-class BlockQuote(ArrayParentElement):
+class BlockQuote(BiformElement):
     def __init__(self) -> None:
         super().__init__('blockquote', ArrayContent())
 
 
-class Preformat(MixedParentElement):
+class Preformat(MixedParent):
     def __init__(self, content: MixedContent | str = "") -> None:
         super().__init__('pre', content)
-
-
-class PreElement(MixedParentElement):
-    def __init__(self, content: MixedContent | str = "") -> None:
-        super().__init__('pre', content)
-        warn("Use class Preformat", DeprecationWarning)
 
 
 ElementT = TypeVar('ElementT', bound=Element)
 
 
 @dataclass
-class ItemListElement(tree.Element, Generic[ElementT]):
+class ItemListElement(Element, Generic[ElementT]):
     _items: list[ElementT]
 
     def __init__(self, xml_tag: str, items: Iterable[ElementT] = ()):
@@ -105,7 +95,7 @@ class ItemListElement(tree.Element, Generic[ElementT]):
 
 
 @dataclass
-class Citation(MarkupElement):
+class Citation(MixedParent):
     def __init__(self, rid: str, rord: int):
         super().__init__(StartTag('xref', {'rid': rid, 'ref-type': 'bibr'}))
         self.rid = rid
@@ -116,18 +106,12 @@ class Citation(MarkupElement):
         return text is not None and text.strip() == self.content.text
 
 
-class CitationTuple(ItemListElement[Citation], tree.Inline):
+class CitationTuple(ItemListElement[Citation], Element):
     def __init__(self, citations: Iterable[Citation] = ()) -> None:
         super().__init__('sup', citations)
 
 
-class ItemElement(ArrayParentElement):
-    def __init__(self, xml_tag: str, content: Iterable[Element] = ()):
-        super().__init__(xml_tag, ArrayContent(content))
-        warn("Use specific element class for specific tag", DeprecationWarning)
-
-
-class ListItem(tree.BiformElement):
+class ListItem(BiformElement):
     def __init__(self, content: Iterable[Element] = ()):
         super().__init__('li', ArrayContent(content))
 
@@ -137,17 +121,17 @@ class List(ItemListElement[ListItem]):
         super().__init__('ol' if ordered else 'ul', items)
 
 
-class DTerm(tree.BiformElement):
-    def __init__(self, content: Iterable[Element] = ()):
+class DTerm(MixedParent):
+    def __init__(self, content: MixedContent | str = ""):
         super().__init__('dt', content)
 
 
-class DDefinition(tree.BiformElement):
+class DDefinition(BiformElement):
     def __init__(self, content: Iterable[Element] = ()):
         super().__init__('dd', content)
 
 
-class DItem(tree.Element):
+class DItem(Element):
     def __init__(self, term: DTerm, definitions: Iterable[DDefinition] = ()):
         super().__init__('div')
         self.term = term

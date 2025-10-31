@@ -16,7 +16,7 @@ from epijats.elements import Paragraph
 from epijats.metadata import BiblioRefItem
 from epijats.parse import parse_baseprint, parse_baseprint_root
 from epijats.parse.front import AbstractModel, load_author_group
-from epijats.tree import Element, Inline
+from epijats.tree import Element
 from epijats.xml import html
 from epijats.xml.format import XmlFormatter
 
@@ -165,8 +165,8 @@ def mock_biblio_pool() -> _.BiblioRefPool:
     return _.BiblioRefPool([r1, r2])
 
 
-def parse_inline_element(log: _.Log, model, src: str) -> Inline:
-    dest = list[str | Inline]()
+def parse_inline_element(log: _.Log, model, src: str) -> Element:
+    dest = list[str | Element]()
     model.parse(log, lxml_element_from_str(src), dest.append)
     assert len(dest) == 1
     assert not isinstance(dest[0], str)

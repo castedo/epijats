@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from .tree import DataElement, ArrayContent, Element, MarkupElement, StartTag
+from .tree import ArrayParent, ArrayContent, Element, MixedParent, StartTag
 
 
 MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
 
 
-class MathmlElement(MarkupElement):
+class MathmlElement(MixedParent):
     def __init__(self, xml_tag: str | StartTag):
         super().__init__(xml_tag)
         mathml_tag = self.xml.tag[len(MATHML_NAMESPACE_PREFIX) :]
@@ -37,9 +37,9 @@ class FormulaElement(Element):
 
     @property
     def content(self) -> ArrayContent:
-        alts = DataElement("alternatives")
+        alts = ArrayParent("alternatives")
         if self.tex:
-            alts.append(MarkupElement('tex-math', self.tex))
+            alts.append(MixedParent('tex-math', self.tex))
         if self.mathml:
             alts.append(self.mathml)
         return ArrayContent((alts,))

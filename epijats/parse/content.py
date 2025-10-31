@@ -7,11 +7,10 @@ from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias
 from .. import condition as fc
 from ..elements import ElementT
 from ..tree import (
-    AppendT,
+    AppendCovT,
     Element,
-    Inline,
     MarkupBlock,
-    MixedParentElement,
+    MixedParent,
 )
 from . import kit
 from .kit import (
@@ -25,6 +24,8 @@ from .kit import (
 
 if TYPE_CHECKING:
     from ..typeshed import XmlContent, XmlElement
+
+Inline: TypeAlias = Element
 
 
 class BoundParser:
@@ -87,8 +88,10 @@ class ArrayContentSession:
                 log(fc.IgnoredTail.issue(s))
 
 
-class ContentModel(Protocol, Generic[AppendT]):
-    def parse_content(self, log: Log, xc: XmlContent, dest: Sink[AppendT]) -> None: ...
+class ContentModel(Protocol, Generic[AppendCovT]):
+    def parse_content(
+        self, log: Log, xc: XmlContent, dest: Sink[AppendCovT]
+    ) -> None: ...
 
 
 class MixedModel(Model[str | Inline], ContentModel[str | Inline]):
@@ -140,7 +143,7 @@ class DataContentModel(ContentModel[ElementT]):
 
 
 class PendingMarkupBlock:
-    def __init__(self, dest: Sink[Element], init: MixedParentElement | None = None):
+    def __init__(self, dest: Sink[Element], init: MixedParent | None = None):
         self.dest = dest
         self._pending = init
 

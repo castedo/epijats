@@ -39,7 +39,7 @@ def test_simple_title() -> None:
 def test_mixed_content() -> None:
     div = dom.MarkupBlock()
     div.append("hi")
-    div.append(dom.MarkupElement('b', "ya"))
+    div.append(dom.MarkupInline('b', "ya"))
     div.append(dom.IssueElement("serious"))
     expect = "<div>hi<b>ya</b><format-issue>serious</format-issue></div>"
     assert XML.to_str(div) == expect
@@ -83,7 +83,7 @@ def test_block_element() -> None:
 
 
 def test_dlist_element() -> None:
-    dt = dom.DTerm([dom.MarkupBlock('0')])
+    dt = dom.DTerm('0')
     dd = dom.DDefinition([dom.MarkupBlock('nada')])
     di = dom.DItem(dt, [dd])
     dl = dom.DList([di])

@@ -6,7 +6,7 @@ from .. import condition as fc
 from .. import dom
 from .. import metadata as bp
 from ..document import Abstract
-from ..tree import Element, Inline, MixedContent, MutableMixedContent
+from ..tree import Element, MixedContent, MutableMixedContent
 
 from . import kit
 from .kit import Log, Model, LoaderTagModel as tag_model
@@ -34,11 +34,11 @@ def copytext_model() -> MixedModel:
     return ret
 
 
-def copytext_element_model(tag: str) -> Model[str | Inline]:
+def copytext_element_model(tag: str) -> Model[str | Element]:
     return MixedContentInElementParser(tag, copytext_model())
 
 
-def article_title_model() -> Model[str | Inline]:
+def article_title_model() -> Model[str | Element]:
     # Contents corresponds to {MINITEXT} in BpDF spec ed.2
     # https://perm.pub/DPRkAz3vwSj85mBCgG49DeyndaE/2
     minitext_model = UnionMixedModel()

@@ -59,8 +59,7 @@ class Element(ABC):
         return False
 
 
-Inline: TypeAlias = Element
-MixedSink: TypeAlias = Callable[[str | Inline], None]
+MixedSink: TypeAlias = Callable[[str | Element], None]
 
 
 @dataclass
@@ -129,7 +128,7 @@ class MutableMixedContent(MixedContent):
             self.text = ""
             self._children = list(content)
 
-    def append(self, a: str | Inline) -> None:
+    def append(self, a: str | Element) -> None:
         if isinstance(a, str):
             if self._children:
                 end = self._children[-1]
@@ -139,12 +138,13 @@ class MutableMixedContent(MixedContent):
         else:
             self._children.append((a, ""))
 
-    def __call__(self, a: str | Inline) -> None:
+    def __call__(self, a: str | Element) -> None:
         self.append(a)
 
 
 Content: TypeAlias = str | ArrayContent | MixedContent
-AppendT = TypeVar('AppendT', covariant=True)
+AppendT = TypeVar('AppendT')
+AppendCovT = TypeVar('AppendCovT', covariant=True)
 AppendConT = TypeVar('AppendConT', contravariant=True)
 
 
@@ -153,7 +153,7 @@ class Parent(Element, Generic[AppendConT]):
     def append(self, a: AppendConT) -> None: ...
 
 
-class ArrayParentElement(Parent[Element]):
+class ArrayParent(Parent[Element]):
     _content: MutableArrayContent
 
     def __init__(self, xml_tag: str | StartTag, content: Iterable[Element] = ()):
@@ -168,10 +168,8 @@ class ArrayParentElement(Parent[Element]):
         self._content.append(a)
 
 
-MixedParent: TypeAlias = Parent[str | Inline]
-
-
-class MixedParentElement(Parent[str | Inline]):
+@dataclass
+class MixedParent(Parent[str | Element]):
     _content: MutableMixedContent
 
     def __init__(self, xml_tag: str | StartTag, content: MixedContent | str = ""):
@@ -182,39 +180,28 @@ class MixedParentElement(Parent[str | Inline]):
     def content(self) -> MixedContent:
         return self._content
 
-    def append(self, a: str | Inline) -> None:
+    def append(self, a: str | Element) -> None:
         self._content(a)
 
 
-class MarkupBlock(MixedParentElement):
+class MarkupBlock(MixedParent):
     """Semantic of HTML div containing only phrasing content"""
 
     def __init__(self, content: MixedContent | str = ""):
         super().__init__('div', content)
 
 
-@dataclass
+class MarkupInline(MixedParent):
+    "General purpose public DOM API class for inline elements like <b>, <i>, etc..."
+
+
 class MarkupElement(MixedParent):
-    _content: MutableMixedContent
-
     def __init__(self, xml_tag: str | StartTag, content: MixedContent | str = ""):
-        super().__init__(xml_tag)
-        self._content = MutableMixedContent(content)
-
-    @property
-    def content(self) -> MixedContent:
-        return self._content
-
-    def append(self, a: str | Inline) -> None:
-        self._content(a)
+        super().__init__(xml_tag, content)
+        warn("Use MarkupInline", DeprecationWarning)
 
 
-class DataElement(ArrayParentElement):
-    def __init__(self, xml_tag: str | StartTag, array: Iterable[Element] = ()):
-        super().__init__(xml_tag, array)
-
-
-class BiformElement(ArrayParentElement):
+class BiformElement(ArrayParent):
     def __init__(self, xml_tag: str | StartTag, array: Iterable[Element] = ()):
         super().__init__(xml_tag, array)
 
@@ -226,7 +213,7 @@ class BiformElement(ArrayParentElement):
         return None
 
 
-class HtmlVoidInline(Element):
+class HtmlVoidElement(Element):
     """HTML void element (such as <br />).
 
     Only HTML void elements should be serialized in the self-closing XML syntax.
@@ -234,16 +221,6 @@ class HtmlVoidInline(Element):
     on a tag name being in a closed fixed list of HTML void elements.
     """
 
-    @property
-    def content(self) -> None:
-        return None
-
-    @property
-    def is_void(self) -> bool:
-        return True
-
-
-class HtmlVoidElement(Element):
     @property
     def content(self) -> None:
         return None

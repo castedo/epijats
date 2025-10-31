@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 from warnings import warn
 
 from .. import dom
@@ -11,10 +11,10 @@ from ..metadata import BiblioRefItem, Date
 from ..parse import parse_baseprint
 from ..parse.kit import Log, Sink, nolog
 from ..tree import (
-    DataElement,
+    ArrayParent,
     Element,
-    MarkupElement,
     MixedContent,
+    MixedParent,
     StartTag,
     WhitespaceElement,
 )
@@ -22,6 +22,9 @@ from .format import XmlFormatter
 
 if TYPE_CHECKING:
     from ..typeshed import StrPath
+
+DataElement: TypeAlias = ArrayParent
+MarkupElement: TypeAlias = MixedParent
 
 
 def title_group(src: MixedContent | None) -> DataElement:
@@ -188,16 +191,14 @@ def article(src: dom.Article) -> DataElement:
     ret = DataElement('article')
     if len(article_meta.content):
         ret.append(DataElement('front', [article_meta]))
-    if src.body.has_content(): 
+    if src.body.has_content():
         ret.append(proto_section('article-body', src.body, 0))
     if src.ref_list is not None:
         ret.append(DataElement('back', [ref_list(src.ref_list)]))
     return ret
 
 
-def write_baseprint(
-    src: dom.Article, dest: StrPath, *, use_lxml: bool = False
-) -> None:
+def write_baseprint(src: dom.Article, dest: StrPath, *, use_lxml: bool = False) -> None:
     if use_lxml:
         warn("Avoid depending on lxml specific behavior", DeprecationWarning)
     XML = XmlFormatter(use_lxml=use_lxml)
