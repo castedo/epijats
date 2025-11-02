@@ -9,9 +9,9 @@ MATHML_NAMESPACE_PREFIX = "{http://www.w3.org/1998/Math/MathML}"
 
 
 class MathmlElement(MixedParent):
-    def __init__(self, xml_tag: str | StartTag):
-        super().__init__(xml_tag)
-        mathml_tag = self.xml.tag[len(MATHML_NAMESPACE_PREFIX) :]
+    def __init__(self, tag: str | StartTag):
+        super().__init__(tag)
+        mathml_tag = self.xml.name[len(MATHML_NAMESPACE_PREFIX) :]
         self.html = StartTag(mathml_tag, self.xml.attrib)
 
 

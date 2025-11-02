@@ -34,20 +34,20 @@ if TYPE_CHECKING:
 
 class MarkupInlineModel(MixedParentModel):
     def factory(self) -> Parent[str | Element]:
-        return dom.MarkupInline(self.tag_mold.stag)
+        return dom.MarkupInline(self.tag_mold.tag)
 
 
 def minimally_formatted_text_model(content: MixedModel) -> MixedModel:
     ret = UnionMixedModel()
-    ret |= MarkupInlineModel(TagMold('b', jats_tag='bold'), content)
-    ret |= MarkupInlineModel(TagMold('i', jats_tag='italic'), content)
+    ret |= MarkupInlineModel(TagMold('b', jats_name='bold'), content)
+    ret |= MarkupInlineModel(TagMold('i', jats_name='italic'), content)
     ret |= MarkupInlineModel(TagMold('sub'), content)
     ret |= MarkupInlineModel(TagMold('sup'), content)
     return ret
 
 
 def preformat_model(hypertext: MixedModel) -> Model[Element]:
-    tm = TagMold('pre', jats_tag='preformat')
+    tm = TagMold('pre', jats_name='preformat')
     return MixedParentModel(tm, hypertext)
 
 
@@ -57,7 +57,7 @@ def blockquote_model(roll_content_model: ArrayContentModel) -> Model[Element]:
 
     https://jats.nlm.nih.gov/archiving/tag-library/1.4/element/disp-quote.html
     """
-    tm = TagMold('blockquote', jats_tag='disp-quote')
+    tm = TagMold('blockquote', jats_name='disp-quote')
     return ParentModel(tm, roll_content_model, dom.BlockQuote)
 
 
@@ -68,7 +68,7 @@ def break_model() -> Model[Element]:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
     """
 
-    return EmptyElementModel(TagMold('br', jats_tag='break'), dom.LineBreak)
+    return EmptyElementModel(TagMold('br', jats_name='break'), dom.LineBreak)
 
 
 def code_model(hypertext: MixedModel) -> Model[Element]:
@@ -78,7 +78,7 @@ def code_model(hypertext: MixedModel) -> Model[Element]:
 def formatted_text_model(content: MixedModel) -> MixedModel:
     ret = UnionMixedModel()
     ret |= minimally_formatted_text_model(content)
-    ret |= MarkupInlineModel(TagMold('tt', jats_tag='monospace'), content)
+    ret |= MarkupInlineModel(TagMold('tt', jats_name='monospace'), content)
     return ret
 
 
@@ -218,7 +218,7 @@ def def_term_model(term_text: MixedModel) -> Model[Element]:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
-    tm = TagMold('dt', jats_tag='term')
+    tm = TagMold('dt', jats_name='term')
     return ParentModel(tm, term_text, dom.DTerm)
 
 
@@ -227,7 +227,7 @@ def def_def_model(def_content: ArrayContentModel) -> Model[Element]:
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
-    tm = TagMold('dd', jats_tag='def')
+    tm = TagMold('dd', jats_name='def')
     return ParentModel(tm, def_content, dom.DDefinition)
 
 
@@ -238,7 +238,7 @@ def def_item_model(
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
     """
-    tm = TagMold('div', jats_tag='def-item')
+    tm = TagMold('div', jats_name='def-item')
     child_model = def_term_model(term_text) | def_def_model(def_content)
     return ArrayParentModel(tm, child_model)
 
@@ -246,7 +246,7 @@ def def_item_model(
 def def_list_model(
     hypertext_model: MixedModel, roll_content: ArrayContentModel
 ) -> Model[Element]:
-    tm = TagMold('dl', jats_tag='def-list')
+    tm = TagMold('dl', jats_name='def-list')
     child_model = def_item_model(hypertext_model, roll_content)
     return ArrayParentModel(tm, child_model)
 
@@ -264,7 +264,11 @@ class TableCellModel(kit.LoadModelBase[Element]):
         align_attribs = {'left', 'right', 'center', 'justify', None}
         kit.confirm_attrib_value(log, e, 'align', align_attribs)
         ret = MixedParent(self.tag)
-        kit.copy_ok_attrib_values(log, e, self._ok_attrib_keys, ret.xml.attrib)
+        for key, value in e.attrib.items():
+            if key in self._ok_attrib_keys:
+                ret.set_attrib(key, value)
+            else:
+                log(fc.UnsupportedAttribute.issue(e, key))
         self.content_model.parse_content(log, e, ret.append)
         if ret.content.empty():
             ret.content.text = ' '

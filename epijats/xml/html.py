@@ -124,14 +124,14 @@ class TableHtmlizer(BaseHtmlizer):
         return True
 
     def table(self, src: Element, level: int) -> XmlElement:
-        attrib = src.xml.attrib.copy()
+        attrib = dict(src.xml_attrib)
         attrib.setdefault('frame', 'hsides')
         attrib.setdefault('rules', 'groups')
-        return ET.Element(src.xml.tag, dict(sorted(attrib.items())))  # type: ignore[no-any-return]
+        return ET.Element(src.tag.name, dict(sorted(attrib.items())))  # type: ignore[no-any-return]
 
     def table_cell(self, src: Element, level: int) -> XmlElement:
         attrib = {}
-        for key, value in src.xml.attrib.items():
+        for key, value in src.xml_attrib.items():
             if key in {'rowspan', 'colspan'}:
                 attrib[key] = value
             elif key == 'align':

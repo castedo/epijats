@@ -6,6 +6,7 @@ from abc import abstractmethod
 from collections.abc import Callable
 from typing import Generic, TYPE_CHECKING
 
+from .. import condition as fc
 from ..elements import ElementT
 from ..tree import (
     AppendT,
@@ -49,20 +50,24 @@ class TagMold:
         tag: str | StartTag,
         *,
         optional_attrib: set[str] = set(),
-        jats_tag: str | None = None,
+        jats_name: str | None = None,
     ):
-        self.stag = StartTag(tag)
-        self._ok_attrib_keys = optional_attrib | set(self.stag.attrib.keys())
-        self.jats_tag = jats_tag
+        self.tag = StartTag(tag)
+        self._ok_attrib_keys = optional_attrib | set(self.tag.attrib.keys())
+        self.jats_name = jats_name
 
     def match(self, x: StartTag | XmlElement) -> bool:
-        if self.jats_tag is not None and x.tag == self.jats_tag:
+        if self.jats_name is not None and x.tag == self.jats_name:
             return True
-        return self.stag.issubset(x)
+        return self.tag.issubset(x)
 
     def copy_attributes(self, log: Log, xe: XmlElement, dest: Element) -> None:
         kit.check_no_attrib(log, xe, self._ok_attrib_keys)
-        kit.copy_ok_attrib_values(log, xe, self._ok_attrib_keys, dest.xml.attrib)
+        for key, value in xe.attrib.items():
+            if key not in self._ok_attrib_keys:
+                log(fc.UnsupportedAttribute.issue(xe, key))
+            elif key not in self.tag.attrib:
+                dest.set_attrib(key, value)
 
 
 class EmptyElementModel(kit.LoadModelBase[ElementT]):
@@ -119,12 +124,12 @@ class ArrayParentModel(ParentModelBase[Element]):
         super().__init__(tag_mold, DataContentModel(child_model))
 
     def factory(self) -> Parent[Element]:
-        return ArrayParent(self.tag_mold.stag)
+        return ArrayParent(self.tag_mold.tag)
 
 
 class MixedParentModel(ParentModelBase[str | Element]):
     def factory(self) -> Parent[str | Element]:
-        return MixedParent(self.tag_mold.stag)
+        return MixedParent(self.tag_mold.tag)
 
 
 class MixedContentInElementParser(kit.Model[str | Element]):

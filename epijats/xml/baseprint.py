@@ -70,10 +70,9 @@ def contrib_group(src: list[dom.Author]) -> DataElement:
 
 def license(src: dom.License) -> DataElement:
     ret = DataElement('license')
-    license_ref = MarkupElement("license-ref")
+    attrib = {'content-type': src.cc_license_type} if src.cc_license_type else {}
+    license_ref = MarkupElement(StartTag("license-ref", attrib))
     license_ref.content.text = src.license_ref
-    if src.cc_license_type:
-        license_ref.xml.attrib['content-type'] = src.cc_license_type
     ret.append(license_ref)
     ret.append(MarkupElement('license-p', src.license_p))
     return ret
@@ -99,7 +98,7 @@ def proto_section(
         level += 1
     ret = DataElement(tag)
     if xid is not None:
-        ret.xml.attrib['id'] = xid
+        ret.set_attrib('id', xid)
     if title is not None:
         t = MarkupElement(f"h{level}", title)
         ret.append(t)
@@ -164,10 +163,10 @@ def biblio_ref_item(src: BiblioRefItem) -> DataElement:
         ec.append(MarkupElement(key, value))
     for pub_id_type, value in src.pub_ids.items():
         ele = MarkupElement('pub-id', value)
-        ele.xml.attrib['pub-id-type'] = pub_id_type
+        ele.set_attrib('pub-id-type', pub_id_type)
         ec.append(ele)
     ret = DataElement('ref', [ec])
-    ret.xml.attrib['id'] = src.id
+    ret.set_attrib('id', src.id)
     return ret
 
 

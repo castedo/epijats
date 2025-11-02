@@ -12,17 +12,31 @@ if TYPE_CHECKING:
 
 @dataclass
 class StartTag:
-    tag: str
-    attrib: dict[str, str]
+    """Immutable start tag (includes attributes)."""
+
+    _name: str
+    _attrib: dict[str, str]
 
     def __init__(self, tag: str | StartTag, attrib: Mapping[str, str] = {}):
         if isinstance(tag, str):
-            self.tag = tag
-            self.attrib = dict(attrib)
+            self._name = tag
+            self._attrib = dict(attrib)
         else:
-            self.tag = tag.tag
-            self.attrib = tag.attrib.copy()
-            self.attrib.update(attrib)
+            self._name = tag.name
+            self._attrib = tag._attrib.copy()
+            self._attrib.update(attrib)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def tag(self) -> str:
+        return self._name
+
+    @property
+    def attrib(self) -> Mapping[str, str]:
+        return self._attrib
 
     @staticmethod
     def from_xml(xe: XmlElement) -> StartTag | None:
@@ -31,7 +45,7 @@ class StartTag:
 
     def issubset(self, x: StartTag | XmlElement) -> bool:
         other = x if isinstance(x, StartTag) else StartTag.from_xml(x)
-        if other is None or self.tag != other.tag:
+        if other is None or self.name != other.name:
             return False
         for key, value in self.attrib.items():
             if other.attrib.get(key) != value:
@@ -41,14 +55,35 @@ class StartTag:
 
 @dataclass
 class Element(ABC):
-    _xml: StartTag
+    _tag: StartTag
 
-    def __init__(self, xml_tag: str | StartTag):
-        self._xml = StartTag(xml_tag)
+    def __init__(self, tag: str | StartTag | None = None):
+        class_tag = getattr(self.__class__, 'TAG', None)
+        if class_tag:
+            if tag:
+                warn(self.__class__.__name__ + "tag argument ignored")
+            self._tag = StartTag(class_tag)
+        else:
+            if not tag:
+                raise ValueError("Missing element tag")
+            self._tag = StartTag(tag)
+
+    @property
+    def tag(self) -> StartTag:
+        return self._tag
+
+    def set_attrib(self, key: str, value: str) -> None:
+        if key in self.tag.attrib:
+            raise KeyError
+        self._tag._attrib[key] = value
 
     @property
     def xml(self) -> StartTag:
-        return self._xml
+        return self.tag
+
+    @property
+    def xml_attrib(self) -> Mapping[str, str]:
+        return self.tag.attrib
 
     @property
     @abstractmethod
@@ -156,8 +191,8 @@ class Parent(Element, Generic[AppendConT]):
 class ArrayParent(Parent[Element]):
     _content: MutableArrayContent
 
-    def __init__(self, xml_tag: str | StartTag, content: Iterable[Element] = ()):
-        super().__init__(StartTag(xml_tag))
+    def __init__(self, tag: str | StartTag | None, content: Iterable[Element] = ()):
+        super().__init__(tag)
         self._content = MutableArrayContent(content)
 
     @property
@@ -172,8 +207,8 @@ class ArrayParent(Parent[Element]):
 class MixedParent(Parent[str | Element]):
     _content: MutableMixedContent
 
-    def __init__(self, xml_tag: str | StartTag, content: MixedContent | str = ""):
-        super().__init__(StartTag(xml_tag))
+    def __init__(self, tag: str | StartTag | None, content: MixedContent | str = ""):
+        super().__init__(tag)
         self._content = MutableMixedContent(content)
 
     @property
@@ -187,8 +222,10 @@ class MixedParent(Parent[str | Element]):
 class MarkupBlock(MixedParent):
     """Semantic of HTML div containing only phrasing content"""
 
+    TAG = 'div'
+
     def __init__(self, content: MixedContent | str = ""):
-        super().__init__('div', content)
+        super().__init__(None, content)
 
 
 class MarkupInline(MixedParent):
@@ -202,8 +239,8 @@ class MarkupElement(MixedParent):
 
 
 class BiformElement(ArrayParent):
-    def __init__(self, xml_tag: str | StartTag, array: Iterable[Element] = ()):
-        super().__init__(xml_tag, array)
+    def __init__(self, tag: str | StartTag | None, array: Iterable[Element] = ()):
+        super().__init__(tag, array)
 
     @property
     def just_phrasing(self) -> MixedContent | None:

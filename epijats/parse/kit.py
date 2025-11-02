@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable, Mapping, MutableMapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Generic, Protocol, TYPE_CHECKING, TypeAlias, TypeVar
@@ -56,19 +56,6 @@ def confirm_attrib_value(
     else:
         log(fc.UnsupportedAttributeValue.issue(e, key, got))
         return False
-
-
-def copy_ok_attrib_values(
-    log: Log,
-    e: XmlElement,
-    ok_keys: Iterable[str],
-    dest: MutableMapping[str, str],
-) -> None:
-    for key, value in e.attrib.items():
-        if key in ok_keys:
-            dest[key] = value
-        else:
-            log(fc.UnsupportedAttribute.issue(e, key))
 
 
 def check_no_children(log: Log, xe: XmlElement) -> None:

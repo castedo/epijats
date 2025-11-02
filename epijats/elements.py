@@ -16,39 +16,47 @@ from .tree import (
 
 
 class LineBreak(HtmlVoidElement):
-    def __init__(self) -> None:
-        super().__init__('br')
+    TAG = 'br'
 
 
 class TableColumn(HtmlVoidElement):
-    def __init__(self) -> None:
-        super().__init__('col')
+    TAG = 'col'
 
 
 class HorizontalRule(HtmlVoidElement):
-    def __init__(self) -> None:
-        super().__init__('hr')
+    TAG = 'hr'
 
 
 class WordBreak(HtmlVoidElement):
-    def __init__(self) -> None:
-        super().__init__('wbr')
+    TAG = 'wbr'
 
 
 @dataclass
 class ExternalHyperlink(MixedParent):
+    TAG = StartTag('a', {'rel': 'external'})
+
     def __init__(self, href: str):
-        super().__init__('a')
+        super().__init__(None)
         self.href = href
-        self.xml.attrib = {'rel': 'external', 'href': href}
+
+    @property
+    def xml(self) -> StartTag:
+        extra = {'href': self.href} if self.href else {}
+        return StartTag(self.tag, extra)
 
 
 @dataclass
 class CrossReference(MixedParent):
+    TAG = 'a'
+
     def __init__(self, rid: str):
-        super().__init__('a')
+        super().__init__(None)
         self.rid = rid
-        self.xml.attrib = {"href": "#" + rid}
+
+    @property
+    def xml(self) -> StartTag:
+        extra = {'href': "#" + self.rid} if self.rid else {}
+        return StartTag(self.tag, extra)
 
 
 class Paragraph(MixedParent):
@@ -73,8 +81,8 @@ ElementT = TypeVar('ElementT', bound=Element)
 class ItemListElement(Element, Generic[ElementT]):
     _items: list[ElementT]
 
-    def __init__(self, xml_tag: str, items: Iterable[ElementT] = ()):
-        super().__init__(xml_tag)
+    def __init__(self, tag: str, items: Iterable[ElementT] = ()):
+        super().__init__(tag)
         self._items = list(items)
 
     @property
@@ -132,8 +140,10 @@ class DDefinition(BiformElement):
 
 
 class DItem(Element):
+    TAG = 'div'
+
     def __init__(self, term: DTerm, definitions: Iterable[DDefinition] = ()):
-        super().__init__('div')
+        super().__init__(None)
         self.term = term
         self.definitions: MutableSequence[DDefinition] = list(definitions)
 
@@ -149,8 +159,10 @@ class DList(ItemListElement[DItem]):
 
 
 class IssueElement(Element):
+    TAG = 'format-issue'
+
     def __init__(self, msg: str):
-        super().__init__('format-issue')
+        super().__init__(None)
         self.msg = msg
 
     @property

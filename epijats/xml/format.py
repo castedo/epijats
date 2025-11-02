@@ -116,7 +116,7 @@ class CommonContentFormatter:
             dest.text = None
         else:
             if not isinstance(src, WhitespaceElement):
-                warn(f"Unknown element {src.xml.tag} wihtout content")
+                warn(f"Unknown element {src.tag.name} wihtout content")
             # For interop with both XML and HTML parsers,
             # a space will prevent XML parsers from converting a Baseprint XML
             # whitespace-only element to a self-closing XML tag.
@@ -147,7 +147,7 @@ class XmlFormatter(ElementFormatter):
         self.ET = get_ET(use_lxml=use_lxml)
 
     def to_one_only(self, src: Element, level: int) -> XmlElement:
-        ret: XmlElement = self.ET.Element(src.xml.tag, src.xml.attrib)
+        ret: XmlElement = self.ET.Element(src.tag.name, src.xml.attrib)
         if isinstance(src, CitationTuple):
             self.citation.format(src.content, level, ret)
         else:
