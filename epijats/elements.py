@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, MutableSequence
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from .tree import (
     ArrayContent,
@@ -11,6 +11,7 @@ from .tree import (
     HtmlVoidElement,
     MixedContent,
     MixedParent,
+    Parent,
     StartTag,
 )
 
@@ -60,28 +61,34 @@ class CrossReference(MixedParent):
 
 
 class Paragraph(MixedParent):
+    TAG = 'p'
+
     def __init__(self, content: MixedContent | str = ""):
-        super().__init__('p', content)
+        super().__init__(None, content)
 
 
 class BlockQuote(BiformElement):
+    TAG = 'blockquote'
+
     def __init__(self) -> None:
-        super().__init__('blockquote', ArrayContent())
+        super().__init__(None, ArrayContent())
 
 
 class Preformat(MixedParent):
+    TAG = 'pre'
+
     def __init__(self, content: MixedContent | str = "") -> None:
-        super().__init__('pre', content)
+        super().__init__(None, content)
 
 
 ElementT = TypeVar('ElementT', bound=Element)
 
 
 @dataclass
-class ItemListElement(Element, Generic[ElementT]):
+class ItemListElement(Parent[ElementT]):
     _items: list[ElementT]
 
-    def __init__(self, tag: str, items: Iterable[ElementT] = ()):
+    def __init__(self, tag: str | None, items: Iterable[ElementT] = ()):
         super().__init__(tag)
         self._items = list(items)
 
@@ -94,9 +101,6 @@ class ItemListElement(Element, Generic[ElementT]):
 
     def append(self, item: ElementT) -> None:
         self._items.append(item)
-
-    def extend(self, items: Iterable[ElementT]) -> None:
-        self._items.extend(items)
 
     def __len__(self) -> int:
         return len(self._items)
@@ -115,13 +119,17 @@ class Citation(MixedParent):
 
 
 class CitationTuple(ItemListElement[Citation], Element):
+    TAG = 'sup'
+
     def __init__(self, citations: Iterable[Citation] = ()) -> None:
-        super().__init__('sup', citations)
+        super().__init__(None, citations)
 
 
 class ListItem(BiformElement):
+    TAG = 'li'
+
     def __init__(self, content: Iterable[Element] = ()):
-        super().__init__('li', ArrayContent(content))
+        super().__init__(None, ArrayContent(content))
 
 
 class List(ItemListElement[ListItem]):
@@ -130,13 +138,17 @@ class List(ItemListElement[ListItem]):
 
 
 class DTerm(MixedParent):
+    TAG = 'dt'
+
     def __init__(self, content: MixedContent | str = ""):
-        super().__init__('dt', content)
+        super().__init__(None, content)
 
 
 class DDefinition(BiformElement):
+    TAG = 'dd'
+
     def __init__(self, content: Iterable[Element] = ()):
-        super().__init__('dd', content)
+        super().__init__(None, content)
 
 
 class DItem(Element):
@@ -154,8 +166,10 @@ class DItem(Element):
 
 @dataclass
 class DList(ItemListElement[DItem]):
+    TAG = 'dl'
+
     def __init__(self, items: Iterable[DItem] = ()):
-        super().__init__('dl', items)
+        super().__init__(None, items)
 
 
 class IssueElement(Element):

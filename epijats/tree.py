@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Generic, TYPE_CHECKING, TypeAlias, TypeVar
+from typing import ClassVar, Generic, TYPE_CHECKING, TypeAlias, TypeVar
 from warnings import warn
 
 if TYPE_CHECKING:
@@ -55,13 +55,15 @@ class StartTag:
 
 @dataclass
 class Element(ABC):
+    TAG: ClassVar[str | StartTag]
+
     _tag: StartTag
 
     def __init__(self, tag: str | StartTag | None = None):
         class_tag = getattr(self.__class__, 'TAG', None)
         if class_tag:
             if tag:
-                warn(self.__class__.__name__ + "tag argument ignored")
+                warn(f"{self.__class__.__name__} tag argument ignored")
             self._tag = StartTag(class_tag)
         else:
             if not tag:

@@ -4,17 +4,15 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import Generic, TYPE_CHECKING
+from typing import Generic, TYPE_CHECKING, TypeVar
 
 from .. import condition as fc
 from ..elements import ElementT
 from ..tree import (
-    AppendT,
-    ArrayParent,
     Element,
     MarkupBlock,
-    MixedParent,
     Parent,
+    MixedParent,
     StartTag,
 )
 
@@ -24,11 +22,11 @@ from .content import (
     DataContentModel,
     MixedModel,
 )
-from .kit import Log, Model, ParsedT, Sink
+from .kit import Log, Model, Sink
 
 
 if TYPE_CHECKING:
-    from ..typeshed import XmlElement
+    from ..typeshed import XmlContent, XmlElement
 
 
 class TrivialElementModel(kit.LoadModelBase[str]):
@@ -44,92 +42,112 @@ class TrivialElementModel(kit.LoadModelBase[str]):
         return self.tag
 
 
-class TagMold:
+ElementCovT = TypeVar('ElementCovT', bound=Element, covariant=True)
+
+
+class TagModel(Generic[ElementCovT]):
     def __init__(
         self,
-        tag: str | StartTag,
+        element_type: type[ElementCovT],
         *,
+        tag: str | StartTag | None = None,
         optional_attrib: set[str] = set(),
         jats_name: str | None = None,
     ):
-        self.tag = StartTag(tag)
+        self.element_type = element_type
+        if tag is not None:
+            self.tag = StartTag(tag)
+            self.factory: Callable[[], ElementCovT] = lambda: self.element_type(tag)
+        else:
+            self.tag = StartTag(element_type.TAG)
+            self.factory = self.element_type
         self._ok_attrib_keys = optional_attrib | set(self.tag.attrib.keys())
         self.jats_name = jats_name
 
-    def match(self, x: StartTag | XmlElement) -> bool:
-        if self.jats_name is not None and x.tag == self.jats_name:
+    def match(self, xe: XmlElement) -> bool:
+        if self.jats_name is not None and xe.tag == self.jats_name:
             return True
-        return self.tag.issubset(x)
+        return self.tag.issubset(xe)
 
-    def copy_attributes(self, log: Log, xe: XmlElement, dest: Element) -> None:
+    def start(self, log: Log, xe: XmlElement) -> ElementCovT | None:
         kit.check_no_attrib(log, xe, self._ok_attrib_keys)
+        ret = self.factory()
         for key, value in xe.attrib.items():
             if key not in self._ok_attrib_keys:
                 log(fc.UnsupportedAttribute.issue(xe, key))
             elif key not in self.tag.attrib:
-                dest.set_attrib(key, value)
-
-
-class EmptyElementModel(kit.LoadModelBase[ElementT]):
-    def __init__(self, tag_mold: TagMold, factory: Callable[[], ElementT]):
-        self.tag_mold = tag_mold
-        self.factory = factory
-
-    def match(self, xe: XmlElement) -> bool:
-        return self.tag_mold.match(xe)
-
-    def load(self, log: Log, xe: XmlElement) -> ElementT | None:
-        ret = self.factory()
-        self.tag_mold.copy_attributes(log, xe, ret)
-        kit.check_no_content(log, xe)
+                ret.set_attrib(key, value)
         return ret
 
 
-class ParentModel(kit.LoadModelBase[Parent[ParsedT]]):
-    def __init__(
-        self,
-        tag_mold: TagMold,
-        content_model: ContentModel[ParsedT],
-        factory: Callable[[], Parent[ParsedT]],
-    ):
-        self.tag_mold = tag_mold
-        self.content_model = content_model
-        self.factory = factory
+class ElementLoadModelBase(kit.LoadModelBase[ElementT]):
+    def __init__(self, tag_model: TagModel[ElementT]):
+        self.tag_model = tag_model
 
     def match(self, xe: XmlElement) -> bool:
-        return self.tag_mold.match(xe)
-
-    def load(self, log: Log, xe: XmlElement) -> Parent[ParsedT] | None:
-        ret = self.factory()
-        self.tag_mold.copy_attributes(log, xe, ret)
-        self.content_model.parse_content(log, xe, ret.append)
-        return ret
-
-
-class MarkupBlockModel(ParentModel[str | Element]):
-    def __init__(self, inline_model: MixedModel):
-        super().__init__(TagMold('div'), inline_model, MarkupBlock)
-
-
-class ParentModelBase(ParentModel[AppendT], Generic[AppendT]):
-    def __init__(self, tag_mold: TagMold, content_model: ContentModel[AppendT]):
-        super().__init__(tag_mold, content_model, self.factory)
+        return self.tag_model.match(xe)
 
     @abstractmethod
-    def factory(self) -> Parent[AppendT]: ...
+    def parse_content(self, log: Log, xc: XmlContent, dest: ElementT) -> None: ...
+
+    def load(self, log: Log, xe: XmlElement) -> ElementT | None:
+        ret = self.tag_model.start(log, xe)
+        if ret is not None:
+            self.parse_content(log, xe, ret)
+        return ret
 
 
-class ArrayParentModel(ParentModelBase[Element]):
-    def __init__(self, tag_mold: TagMold, child_model: Model[Element]):
-        super().__init__(tag_mold, DataContentModel(child_model))
-
-    def factory(self) -> Parent[Element]:
-        return ArrayParent(self.tag_mold.tag)
+class EmptyElementModel(ElementLoadModelBase[ElementT]):
+    def parse_content(self, log: Log, xc: XmlContent, dest: ElementT) -> None:
+        kit.check_no_content(log, xc)
 
 
-class MixedParentModel(ParentModelBase[str | Element]):
-    def factory(self) -> Parent[str | Element]:
-        return MixedParent(self.tag_mold.tag)
+ArrayParentT = TypeVar('ArrayParentT', bound=Parent[Element])
+
+
+class ArrayParentModel(ElementLoadModelBase[ArrayParentT]):
+    def __init__(
+        self, tag_model: TagModel[ArrayParentT], content_model: ContentModel[Element]
+    ):
+        super().__init__(tag_model)
+        self.content_model = content_model
+
+    def parse_content(self, log: Log, xc: XmlContent, dest: Parent[Element]) -> None:
+        self.content_model.parse_content(log, xc, dest.append)
+
+
+class DataParentModel(ElementLoadModelBase[Parent[ElementT]]):
+    def __init__(
+        self, tag_model: TagModel[Parent[ElementT]], child_model: Model[ElementT]
+    ):
+        super().__init__(tag_model)
+        self.content_model = DataContentModel(child_model)
+
+    def parse_content(self, log: Log, xc: XmlContent, dest: Parent[ElementT]) -> None:
+        self.content_model.parse_content(log, xc, dest.append)
+
+
+MixedParentT = TypeVar('MixedParentT', bound=Parent[str | Element], default=MixedParent)
+
+
+class MixedParentModel(ElementLoadModelBase[MixedParentT]):
+    def __init__(
+        self,
+        tag_model: TagModel[MixedParentT],
+        content_model: ContentModel[str | Element],
+    ):
+        super().__init__(tag_model)
+        self.content_model = content_model
+
+    def parse_content(
+        self, log: Log, xc: XmlContent, dest: Parent[str | Element]
+    ) -> None:
+        self.content_model.parse_content(log, xc, dest.append)
+
+
+class MarkupBlockModel(MixedParentModel):
+    def __init__(self, inline_model: MixedModel):
+        super().__init__(TagModel(MarkupBlock), inline_model)
 
 
 class MixedContentInElementParser(kit.Model[str | Element]):

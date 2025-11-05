@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from .. import dom
 from .. import condition as fc
 from ..tree import (
+    ArrayParent,
     Element,
     MixedParent,
     StartTag,
@@ -13,6 +14,8 @@ from ..tree import (
 from . import kit
 from .content import (
     ArrayContentModel,
+    ArrayContentSession,
+    ContentModel,
     DataContentModel,
     MixedModel,
     PendingMarkupBlock,
@@ -21,10 +24,10 @@ from .content import (
 from ..tree import Parent
 from .tree import (
     ArrayParentModel,
+    DataParentModel,
     EmptyElementModel,
     MixedParentModel,
-    ParentModel,
-    TagMold,
+    TagModel,
 )
 from .kit import Log, Model, Sink
 
@@ -32,22 +35,27 @@ if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-class MarkupInlineModel(MixedParentModel):
-    def factory(self) -> Parent[str | Element]:
-        return dom.MarkupInline(self.tag_mold.tag)
+def markup_model(
+    tag: str | StartTag,
+    content_model: ContentModel[str | Element],
+    *,
+    jats_name: str | None = None,
+) -> Model[Parent[str | Element]]:
+    tm = TagModel(dom.MarkupInline, tag=tag, jats_name=jats_name)
+    return MixedParentModel(tm, content_model)
 
 
 def minimally_formatted_text_model(content: MixedModel) -> MixedModel:
     ret = UnionMixedModel()
-    ret |= MarkupInlineModel(TagMold('b', jats_name='bold'), content)
-    ret |= MarkupInlineModel(TagMold('i', jats_name='italic'), content)
-    ret |= MarkupInlineModel(TagMold('sub'), content)
-    ret |= MarkupInlineModel(TagMold('sup'), content)
+    ret |= markup_model('b', content, jats_name='bold')
+    ret |= markup_model('i', content, jats_name='italic')
+    ret |= markup_model('sub', content)
+    ret |= markup_model('sup', content)
     return ret
 
 
 def preformat_model(hypertext: MixedModel) -> Model[Element]:
-    tm = TagMold('pre', jats_name='preformat')
+    tm = TagModel(dom.Preformat, jats_name='preformat')
     return MixedParentModel(tm, hypertext)
 
 
@@ -57,8 +65,8 @@ def blockquote_model(roll_content_model: ArrayContentModel) -> Model[Element]:
 
     https://jats.nlm.nih.gov/archiving/tag-library/1.4/element/disp-quote.html
     """
-    tm = TagMold('blockquote', jats_name='disp-quote')
-    return ParentModel(tm, roll_content_model, dom.BlockQuote)
+    tm = TagModel(dom.BlockQuote, jats_name='disp-quote')
+    return ArrayParentModel(tm, roll_content_model)
 
 
 def break_model() -> Model[Element]:
@@ -68,17 +76,17 @@ def break_model() -> Model[Element]:
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/break.html
     """
 
-    return EmptyElementModel(TagMold('br', jats_name='break'), dom.LineBreak)
+    return EmptyElementModel(TagModel(dom.LineBreak, jats_name='break'))
 
 
 def code_model(hypertext: MixedModel) -> Model[Element]:
-    return MarkupInlineModel(TagMold('code'), hypertext)
+    return markup_model('code', hypertext)
 
 
 def formatted_text_model(content: MixedModel) -> MixedModel:
     ret = UnionMixedModel()
     ret |= minimally_formatted_text_model(content)
-    ret |= MarkupInlineModel(TagMold('tt', jats_name='monospace'), content)
+    ret |= markup_model('tt', content, jats_name='monospace')
     return ret
 
 
@@ -178,23 +186,10 @@ class HtmlParagraphModel(Model[Element]):
         return True
 
 
-class ListItemModel(kit.LoadModelBase[dom.ListItem]):
-    def __init__(self, roll_content_model: ArrayContentModel):
-        self.content_model = roll_content_model
-
-    def match(self, xe: XmlElement) -> bool:
-        return xe.tag in ['li', 'list-item']
-
-    def load(self, log: Log, xe: XmlElement) -> dom.ListItem | None:
-        kit.check_no_attrib(log, xe)
-        ret = dom.ListItem()
-        self.content_model.parse_content(log, xe, ret.append)
-        return ret
-
-
 class ListModel(kit.LoadModelBase[Element]):
     def __init__(self, roll_content_model: ArrayContentModel):
-        li_element_model = ListItemModel(roll_content_model)
+        li_tag_model = TagModel(dom.ListItem, jats_name='list-item')
+        li_element_model = ArrayParentModel(li_tag_model, roll_content_model)
         self._list_content = DataContentModel(li_element_model)
 
     def match(self, xe: XmlElement) -> bool:
@@ -213,42 +208,53 @@ class ListModel(kit.LoadModelBase[Element]):
         return ret
 
 
-def def_term_model(term_text: MixedModel) -> Model[Element]:
+def def_term_model(term_text: MixedModel) -> Model[dom.DTerm]:
     """<term> Definition List: Term
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/term.html
     """
-    tm = TagMold('dt', jats_name='term')
-    return ParentModel(tm, term_text, dom.DTerm)
+    tm = TagModel(dom.DTerm, jats_name='term')
+    return MixedParentModel(tm, term_text)
 
 
-def def_def_model(def_content: ArrayContentModel) -> Model[Element]:
+def def_def_model(def_content: ArrayContentModel) -> Model[dom.DDefinition]:
     """<def> Definition List: Definition
 
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def.html
     """
-    tm = TagMold('dd', jats_name='def')
-    return ParentModel(tm, def_content, dom.DDefinition)
+    tm = TagModel(dom.DDefinition, jats_name='def')
+    return ArrayParentModel(tm, def_content)
 
 
-def def_item_model(
-    term_text: MixedModel, def_content: ArrayContentModel
-) -> Model[Element]:
-    """<def-item> Definition List: Definition Item
+class DefListItemModel(kit.LoadModelBase[dom.DItem]):
+    """Description list item. HTML a <div> under <dl>, in JATS a <def-item>."""
 
-    https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/def-item.html
-    """
-    tm = TagMold('div', jats_name='def-item')
-    child_model = def_term_model(term_text) | def_def_model(def_content)
-    return ArrayParentModel(tm, child_model)
+    def __init__(self, term_text: MixedModel, def_content: ArrayContentModel):
+        self.dt_element_model = def_term_model(term_text)
+        self.dd_element_model = def_def_model(def_content)
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag in ['div', 'def-item']
+
+    def load(self, log: Log, xe: XmlElement) -> dom.DItem | None:
+        kit.check_no_attrib(log, xe)
+        sess = ArrayContentSession()
+        term = sess.one(self.dt_element_model)
+        definitions: list[dom.DDefinition] = []
+        sess.bind(self.dd_element_model, definitions.append)
+        sess.parse_content(log, xe)
+        if term.out is None:
+            log(fc.MissingContent.issue(xe, "Definition/description term missing"))
+            return None
+        return dom.DItem(term.out, definitions)
 
 
 def def_list_model(
     hypertext_model: MixedModel, roll_content: ArrayContentModel
-) -> Model[Element]:
-    tm = TagMold('dl', jats_name='def-list')
-    child_model = def_item_model(hypertext_model, roll_content)
-    return ArrayParentModel(tm, child_model)
+) -> Model[Parent[dom.DItem]]:
+    tm = TagModel(dom.DList, jats_name='def-list')
+    child_model = DefListItemModel(hypertext_model, roll_content)
+    return DataParentModel(tm, child_model)
 
 
 class TableCellModel(kit.LoadModelBase[Element]):
@@ -276,14 +282,15 @@ class TableCellModel(kit.LoadModelBase[Element]):
 
 
 def data_element_model(tag: str, child_model: Model[Element]) -> Model[Element]:
-    return ArrayParentModel(TagMold(tag), child_model)
+    return DataParentModel(TagModel(ArrayParent, tag=tag), child_model)
 
 
 def col_group_model() -> Model[Element]:
-    tm = TagMold('col', optional_attrib={'span', 'width'})
-    col = EmptyElementModel(tm, dom.TableColumn)
-    tm = TagMold('colgroup', optional_attrib={'span', 'width'})
-    return ArrayParentModel(tm, col)
+    col = EmptyElementModel(
+        TagModel(dom.TableColumn, optional_attrib={'span', 'width'})
+    )
+    tm = TagModel(ArrayParent, tag='colgroup', optional_attrib={'span', 'width'})
+    return DataParentModel(tm, col)
 
 
 def table_wrap_model(text: MixedModel) -> Model[Element]:
@@ -293,6 +300,6 @@ def table_wrap_model(text: MixedModel) -> Model[Element]:
     tr = data_element_model('tr', th | td)
     thead = data_element_model('thead', tr)
     tbody = data_element_model('tbody', tr)
-    table_mold = TagMold('table', optional_attrib={'frame', 'rules'})
-    table = ArrayParentModel(table_mold, col_group_model() | thead | tbody)
+    table_mold = TagModel(ArrayParent, tag='table', optional_attrib={'frame', 'rules'})
+    table = DataParentModel(table_mold, col_group_model() | thead | tbody)
     return data_element_model('table-wrap', table)

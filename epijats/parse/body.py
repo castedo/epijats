@@ -184,7 +184,8 @@ class CitationTupleModel(kit.LoadModelBase[CitationTuple]):
             if citation is None:
                 log(fc.UnsupportedElement.issue(child))
             else:
-                ret.extend(range_helper.get_range(child, citation))
+                for implied in range_helper.get_range(child, citation):
+                    ret.append(implied)
                 ret.append(citation)
             range_helper.new_start(child)
         return ret if len(ret) else None
