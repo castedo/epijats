@@ -236,6 +236,21 @@ def set_ref_item_pages(dest: BiblioRefItem, src: CslJson) -> None:
             dest.biblio_fields['lpage'] = pages[1]
 
 
+def edition_int_or_none(text: str | None) -> int | None:
+    if text is None:
+        return None
+    if text.endswith('.'):
+        text = text[:-1]
+    if text.endswith((' Ed', ' ed')):
+        text = text[:-3]
+    if text.endswith(('st', 'nd', 'rd', 'th')):
+        text = text[:-2]
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+
 def csljson_from_ref_item(src: BiblioRefItem) -> CslJson:
     ret = dict[str, 'JsonData']()
     ret['type'] = ''
@@ -275,7 +290,10 @@ def ref_item_from_csljson(csljson: JsonData) -> BiblioRefItem | None:
     set_ref_item_dates(ret, csljson)
     set_ref_item_persons(ret, csljson)
     if edition := get_str_or_none(csljson, 'edition'):
-        ret.edition = int(edition)
+        ed_int = edition_int_or_none(edition)
+        if ed_int is None:
+            warn(f"Bilbiography has edition not in numeric form: '{edition}'")
+        ret.edition = ed_int
     set_ref_item_pages(ret, csljson)
     for pub_id_type in bp.PubIdType:
         pub_id = get_str_or_none(csljson, pub_id_type.upper())

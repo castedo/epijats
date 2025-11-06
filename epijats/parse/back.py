@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from .. import condition as fc
 from .. import dom
 from .. import metadata as bp
+from ..biblio import edition_int_or_none
 from ..tree import StartTag
 
 from .content import ArrayContentSession
@@ -151,17 +152,10 @@ def load_edition(log: Log, e: XmlElement) -> int | None:
         if s.tail and s.tail.strip():
             log(fc.IgnoredText.issue(e))
     text = e.text or ""
-    if text.endswith('.'):
-        text = text[:-1]
-    if text.endswith((' Ed', ' ed')):
-        text = text[:-3]
-    if text.endswith(('st', 'nd', 'rd', 'th')):
-        text = text[:-2]
-    try:
-        return int(text)
-    except ValueError:
+    ret = edition_int_or_none(text)
+    if ret is None:
         log(fc.InvalidInteger.issue(e, text))
-        return None
+    return ret
 
 
 class SourceTitleModel(kit.LoadModelBase[str]):
