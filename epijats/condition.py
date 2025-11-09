@@ -11,18 +11,59 @@ if TYPE_CHECKING:
     QName: TypeAlias = xml.etree.ElementTree.QName | lxml.etree.QName
 
 
-@dataclass(frozen=True)
 class FormatCondition:
     def __str__(self) -> str:
         return self.__doc__ or type(self).__name__
 
-    def as_pod(self) -> JsonData:
-        return type(self).__name__
+    @property
+    def names(self) -> tuple[str, ...]:
+        return (type(self).__name__,)
+
+    def as_pod(self) -> list[JsonData]:
+        return list(self.names)
 
 
 @dataclass(frozen=True)
 class FormatIssue:
     condition: FormatCondition
+
+    def __str__(self) -> str:
+        return str(self.condition)
+
+    def as_pod(self) -> dict[str, JsonData]:
+        ret: dict[str, JsonData] = {}
+        ret['condition'] = self.condition.as_pod()
+        return ret
+
+
+@dataclass(frozen=True)
+class SimpleFormatIssue(FormatIssue):
+    text: str | None
+
+    def __str__(self) -> str:
+        msg = str(self.condition)
+        if self.text:
+            msg += f": {self.text}"
+        return msg
+
+    def as_pod(self) -> dict[str, JsonData]:
+        ret: dict[str, JsonData] = {}
+        ret['condition'] = self.condition.as_pod()
+        if self.text:
+            ret['text'] = self.text
+        return ret
+
+
+class SimpleFormatCondition(FormatCondition):
+    """Format condition"""
+
+    @classmethod
+    def issue(klas, text: str) -> FormatIssue:
+        return SimpleFormatIssue(klas(), text)
+
+
+@dataclass(frozen=True)
+class XmlFormatIssue(FormatIssue):
     sourceline: int | None = None
     info: str | None = None
 
@@ -58,21 +99,6 @@ class EncodingNotUtf8(FormatCondition):
 
 
 @dataclass(frozen=True)
-class ProcessingInstruction(FormatCondition):
-    """XML processing instruction"""
-
-    text: str | None
-
-    def __str__(self) -> str:
-        return "{} {}".format(self.__doc__, repr(self.text))
-
-    @staticmethod
-    def issue(e: XmlElement) -> FormatIssue:
-        sourceline = getattr(e, 'sourceline', None)
-        return FormatIssue(ProcessingInstruction(e.text), sourceline)
-
-
-@dataclass(frozen=True)
 class ElementFormatCondition(FormatCondition):
     tag: str | bytes | bytearray | QName
     parent: str | bytes | bytearray | QName | None
@@ -87,11 +113,14 @@ class ElementFormatCondition(FormatCondition):
         parent = getparent() if getparent else None
         ptag = None if parent is None else parent.tag
         sourceline = getattr(e, 'sourceline', None)
-        return FormatIssue(klas(e.tag, ptag), sourceline, info)
+        return XmlFormatIssue(klas(e.tag, ptag), sourceline, info)
 
-    def as_pod(self) -> JsonData:
-        parent = str(self.parent) if self.parent else None
-        return [type(self).__name__, str(self.tag), parent]
+    @property
+    def names(self) -> tuple[str, ...]:
+        ret = (type(self).__name__, str(self.tag))
+        if self.parent:
+            return (*ret, str(self.parent))
+        return ret
 
 
 @dataclass(frozen=True)
@@ -175,11 +204,14 @@ class MissingChild(FormatCondition):
         parent = getparent() if getparent else None
         ptag = None if parent is None else parent.tag
         sourceline = getattr(e, 'sourceline', None)
-        return FormatIssue(klas(e.tag, ptag, child), sourceline, info)
+        return XmlFormatIssue(klas(e.tag, ptag, child), sourceline, info)
 
-    def as_pod(self) -> JsonData:
-        parent = str(self.parent) if self.parent else None
-        return [type(self).__name__, str(self.child), str(self.tag), parent]
+    @property
+    def names(self) -> tuple[str, ...]:
+        ret = (type(self).__name__, str(self.child), str(self.tag))
+        if self.parent:
+            return (*ret, str(self.parent))
+        return ret
 
 
 @dataclass(frozen=True)
@@ -195,37 +227,37 @@ class UnsupportedAttribute(FormatCondition):
     @staticmethod
     def issue(e: XmlElement, key: str) -> FormatIssue:
         sourceline = getattr(e, 'sourceline', None)
-        return FormatIssue(UnsupportedAttribute(e.tag, key), sourceline)
+        return XmlFormatIssue(UnsupportedAttribute(e.tag, key), sourceline)
 
-    def as_pod(self) -> JsonData:
-        return [type(self).__name__, str(self.tag), self.attribute]
+    @property
+    def names(self) -> tuple[str, ...]:
+        return (type(self).__name__, str(self.tag), self.attribute)
 
 
 @dataclass(frozen=True)
 class AttributeValueCondition(FormatCondition):
     tag: str | bytes | bytearray | QName
     attribute: str
-    value: str | None
+    value: str
 
     def __str__(self) -> str:
         msg = "{} {!r}@{!r} = {!r}"
         return msg.format(self.__doc__, self.tag, self.attribute, self.value)
 
     @staticmethod
-    def issue(e: XmlElement, key: str, value: str | None) -> FormatIssue:
+    def issue(e: XmlElement, key: str, value: str) -> FormatIssue:
         sourceline = getattr(e, 'sourceline', None)
-        return FormatIssue(UnsupportedAttributeValue(e.tag, key, value), sourceline)
+        return XmlFormatIssue(UnsupportedAttributeValue(e.tag, key, value), sourceline)
 
-    def as_pod(self) -> JsonData:
-        return [type(self).__name__, str(self.tag), self.attribute, self.value]
+    @property
+    def names(self) -> tuple[str, ...]:
+        return (type(self).__name__, str(self.tag), self.attribute, self.value)
 
 
-@dataclass(frozen=True)
 class UnsupportedAttributeValue(AttributeValueCondition):
     """Unsupported XML attribute value"""
 
 
-@dataclass(frozen=True)
 class InvalidAttributeValue(AttributeValueCondition):
     """Invalid XML attribute value"""
 
@@ -248,4 +280,4 @@ class MissingAttribute(FormatCondition):
     @staticmethod
     def issue(e: XmlElement, key: str) -> FormatIssue:
         sourceline = getattr(e, 'sourceline', None)
-        return FormatIssue(MissingAttribute(e.tag, key), sourceline)
+        return XmlFormatIssue(MissingAttribute(e.tag, key), sourceline)

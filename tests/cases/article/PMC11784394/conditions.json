@@ -1,5 +1,5 @@
 [
-  "DoctypeDeclaration",
+  ["DoctypeDeclaration"],
   ["UnsupportedAttribute", "article", "dtd-version"],
   ["UnsupportedAttribute", "article", "article-type"],
   ["UnsupportedElement", "processing-meta", "article"],

@@ -20,7 +20,7 @@
     "license_ref": "https://creativecommons.org/licenses/by/4.0/",
     "license_p": "This document is distributed under a Creative Commons\nAttribution 4.0 International license.",
     "issues": [
-        {"condition": "DoctypeDeclaration"},
+        {"condition": ["DoctypeDeclaration"]},
         { "condition": ["UnsupportedAttribute", "article", "dtd-version"], "sourceline": 3},
         { "condition": ["UnsupportedAttribute", "article", "article-type"], "sourceline": 3},
         { "condition": ["UnsupportedElement", "journal-meta", "front"], "sourceline": 5},

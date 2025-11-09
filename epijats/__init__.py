@@ -2,9 +2,11 @@ __all__ = [
     'BiblioRefPool',
     'Eprint',
     'EprinterConfig',
+    'FormatCondition',
     'FormatIssue',
     'IssuesPage',
     'Log',
+    'SimpleFormatCondition',
     'Webstract',
     'baseprint_from_edition',
     'eprint_dir',
@@ -18,7 +20,11 @@ __all__ = [
 ]
 
 from .biblio import BiblioRefPool, ref_list_from_csljson
-from .condition import FormatIssue
+from .condition import (
+    FormatCondition,
+    FormatIssue,
+    SimpleFormatCondition,
+)
 from .eprint import EprinterConfig, Eprint, IssuesPage, eprint_dir
 from .parse.baseprint import baseprint_from_edition, parse_baseprint
 from .parse.kit import Log, nolog

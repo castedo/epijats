@@ -123,8 +123,7 @@ class LicenseRefParser(kit.Parser[dom.License]):
         from_attribute = kit.get_enum_value(log, xe, 'content-type', dom.CcLicenseType)
         if from_url := dom.CcLicenseType.from_url(dest.license_ref):
             if from_attribute and from_attribute != from_url:
-                issue = fc.InvalidAttributeValue.issue
-                log(issue(xe, 'content-type', from_attribute))
+                log(fc.InvalidAttributeValue.issue(xe, 'content-type', from_attribute))
             dest.cc_license_type = from_url
         else:
             dest.cc_license_type = from_attribute

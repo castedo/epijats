@@ -30,7 +30,7 @@ def issue(
     sourceline: int | None = None,
     info: str | None = None,
 ) -> None:
-    return log(fc.FormatIssue(condition, sourceline, info))
+    return log(fc.XmlFormatIssue(condition, sourceline, info))
 
 
 def check_no_attrib(log: Log, e: XmlElement, ignore: Iterable[str] = []) -> None:
@@ -53,9 +53,11 @@ def confirm_attrib_value(
     got = e.attrib.get(key)
     if got in ok:
         return True
+    if got is None:
+        log(fc.MissingAttribute.issue(e, key))
     else:
         log(fc.UnsupportedAttributeValue.issue(e, key, got))
-        return False
+    return False
 
 
 def check_no_children(log: Log, xe: XmlElement) -> None:

@@ -127,7 +127,7 @@ class DataParentModel(ElementLoadModelBase[Parent[ElementT]]):
         self.content_model.parse_content(log, xc, dest.append)
 
 
-MixedParentT = TypeVar('MixedParentT', bound=Parent[str | Element], default=MixedParent)
+MixedParentT = TypeVar('MixedParentT', bound=Parent[str | Element])
 
 
 class MixedParentModel(ElementLoadModelBase[MixedParentT]):
@@ -145,7 +145,7 @@ class MixedParentModel(ElementLoadModelBase[MixedParentT]):
         self.content_model.parse_content(log, xc, dest.append)
 
 
-class MarkupBlockModel(MixedParentModel):
+class MarkupBlockModel(MixedParentModel[MixedParent]):
     def __init__(self, inline_model: MixedModel):
         super().__init__(TagModel(MarkupBlock), inline_model)
 
