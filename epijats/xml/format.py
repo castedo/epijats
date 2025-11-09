@@ -11,6 +11,7 @@ from ..elements import CitationTuple
 from ..tree import (
     ArrayContent,
     BiformElement,
+    FormatIssueElement,
     MixedContent,
     Element,
     WhitespaceElement,
@@ -158,6 +159,8 @@ class XmlFormatter(ElementFormatter):
         return root_namespaces(self.to_one_only(src, 0))
 
     def format(self, src: Element, level: int) -> Iterator[XmlElement]:
+        if isinstance(src, FormatIssueElement):
+            return iter(())
         return iter((self.to_one_only(src, level),))
 
     def to_str(self, src: Element) -> str:

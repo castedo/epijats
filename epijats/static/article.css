@@ -442,3 +442,16 @@
   margin-left: -0.75rem;
   margin-right: -0.75rem;
 }
+
+.eprint output.format-issue {
+  background: pink;
+  padding: 0.25rem 0.5rem;
+  border: 0.125rem solid red;
+  border-radius: 0.25rem;
+}
+
+@media print {
+  .eprint output.format-issue {
+    display: none;
+  }
+}

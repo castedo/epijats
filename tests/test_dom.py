@@ -3,7 +3,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from epijats import dom, write_baseprint
+from epijats import dom, write_baseprint, SimpleFormatCondition
 from epijats.xml.format import XmlFormatter
 from epijats.xml.html import HtmlGenerator
 
@@ -40,9 +40,15 @@ def test_mixed_content() -> None:
     div = dom.MarkupBlock()
     div.append("hi")
     div.append(dom.MarkupInline('b', "ya"))
-    div.append(dom.IssueElement("serious"))
-    expect = "<div>hi<b>ya</b><format-issue>serious</format-issue></div>"
-    assert XML.to_str(div) == expect
+    div.log(SimpleFormatCondition.issue("serious"))
+    expect_xml = "<div>hi<b>ya</b></div>"
+    assert XML.to_str(div) == expect_xml
+    expect_html = (
+        '<div>hi<strong>ya</strong>'
+        '<output class="format-issue">Format condition: serious</output>'
+        '</div>'
+    )
+    assert HTML.elements_to_str([div]) == expect_html
 
 
 def test_author():

@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Any, Never, Protocol, TYPE_CHECKING
 from warnings import warn
 
-from .jats import webstract_from_jats
+from .document import Article
+from .jats import webstract_from_baseprint, webstract_from_jats
 from .util import copytree_nostat
 from .webstract import Webstract
+from .xml.baseprint import write_baseprint
 
 if TYPE_CHECKING:
     from .typeshed import StrPath
@@ -187,3 +189,19 @@ def eprint_dir(
     webstract = webstract_from_jats(src)
     eprint = Eprint(webstract, config=config, issues_page=issues_page)
     eprint.make(Path(target_dir))
+
+
+def eprint_article(
+    config: EprinterConfig,
+    src: Article,
+    baseprint_dest: StrPath,
+    preview_dest: StrPath,
+    *,
+    issues_page: IssuesPage | None = None,
+) -> None:
+    baseprint_dest = Path(baseprint_dest)
+    write_baseprint(src, baseprint_dest)
+    ws = webstract_from_baseprint(src, html_refs=True)
+    ws.set_source_from_path(baseprint_dest)
+    ep = Eprint(ws, config=config, issues_page=issues_page)
+    ep.make(Path(preview_dest))

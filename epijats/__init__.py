@@ -9,6 +9,7 @@ __all__ = [
     'SimpleFormatCondition',
     'Webstract',
     'baseprint_from_edition',
+    'eprint_article',
     'eprint_dir',
     'nolog',
     'parse_baseprint',
@@ -25,7 +26,13 @@ from .condition import (
     FormatIssue,
     SimpleFormatCondition,
 )
-from .eprint import EprinterConfig, Eprint, IssuesPage, eprint_dir
+from .eprint import (
+    Eprint,
+    EprinterConfig,
+    IssuesPage, 
+    eprint_article, 
+    eprint_dir,
+)
 from .parse.baseprint import baseprint_from_edition, parse_baseprint
 from .parse.kit import Log, nolog
 from .xml.baseprint import restyle_xml, write_baseprint

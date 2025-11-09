@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import ClassVar, Generic, TYPE_CHECKING, TypeAlias, TypeVar
 from warnings import warn
 
+from .condition import FormatIssue
+
 if TYPE_CHECKING:
     from .typeshed import XmlElement
 
@@ -95,8 +97,28 @@ class Element(ABC):
     def is_void(self) -> bool:
         return False
 
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        return iter(())
 
-MixedSink: TypeAlias = Callable[[str | Element], None]
+
+class FormatIssueElement(Element):
+    TAG = 'format-issue'
+
+    def __init__(self, issue: FormatIssue):
+        super().__init__(None)
+        self.issue = issue
+
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        return iter((self.issue,))
+
+    @property
+    def content(self) -> str:
+        return str(self.issue)
+
+
+MixedSink: TypeAlias = Callable[[str | Element | FormatIssue], None]
 
 
 @dataclass
@@ -108,6 +130,11 @@ class ArrayContent:
 
     def __iter__(self) -> Iterator[Element]:
         return iter(self._children)
+
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        for child in self._children:
+            yield from child.issues
 
     def __len__(self) -> int:
         return len(self._children)
@@ -122,10 +149,16 @@ class ArrayContent:
 
 
 class MutableArrayContent(ArrayContent):
-    def append(self, e: Element) -> None:
-        self._children.append(e)
+    def append(self, a: Element | FormatIssue) -> None:
+        if isinstance(a, FormatIssue):
+            self.log(a)
+        else:
+            self._children.append(a)
 
-    def __call__(self, a: Element) -> None:
+    def log(self, issue: FormatIssue) -> None:
+        self._children.append(FormatIssueElement(issue))
+
+    def __call__(self, a: Element | FormatIssue) -> None:
         self.append(a)
 
 
@@ -135,7 +168,6 @@ class MixedContent:
     _children: list[tuple[Element, str]]
 
     def __init__(self, content: MixedContent | str = ""):
-        warn("Use MutableMixedContent", DeprecationWarning)
         if isinstance(content, str):
             self.text = content
             self._children = []
@@ -146,6 +178,11 @@ class MixedContent:
     def __iter__(self) -> Iterator[tuple[Element, str]]:
         return iter(self._children)
 
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        for child, _ in self:
+            yield from child.issues
+
     def empty(self) -> bool:
         return not self._children and not self.text
 
@@ -154,28 +191,22 @@ class MixedContent:
 
 
 class MutableMixedContent(MixedContent):
-    def __init__(self, content: MixedContent | str = ""):
-        if isinstance(content, str):
-            self.text = content
-            self._children = []
-        elif isinstance(content, MixedContent):
-            self.text = content.text
-            self._children = list(content)
-        else:
-            self.text = ""
-            self._children = list(content)
-
-    def append(self, a: str | Element) -> None:
+    def append(self, a: str | Element | FormatIssue) -> None:
         if isinstance(a, str):
             if self._children:
                 end = self._children[-1]
                 self._children[-1] = (end[0], end[1] + a)
             else:
                 self.text += a
+        elif isinstance(a, FormatIssue):
+            self.log(a)
         else:
             self._children.append((a, ""))
 
-    def __call__(self, a: str | Element) -> None:
+    def log(self, issue: FormatIssue) -> None:
+        self._children.append((FormatIssueElement(issue), ""))
+
+    def __call__(self, a: str | Element | FormatIssue) -> None:
         self.append(a)
 
 
@@ -187,7 +218,7 @@ AppendConT = TypeVar('AppendConT', contravariant=True)
 
 class Parent(Element, Generic[AppendConT]):
     @abstractmethod
-    def append(self, a: AppendConT) -> None: ...
+    def append(self, a: AppendConT | FormatIssue) -> None: ...
 
 
 class ArrayParent(Parent[Element]):
@@ -201,7 +232,7 @@ class ArrayParent(Parent[Element]):
     def content(self) -> ArrayContent:
         return self._content
 
-    def append(self, a: Element) -> None:
+    def append(self, a: Element | FormatIssue) -> None:
         self._content.append(a)
 
 
@@ -217,8 +248,11 @@ class MixedParent(Parent[str | Element]):
     def content(self) -> MixedContent:
         return self._content
 
-    def append(self, a: str | Element) -> None:
+    def append(self, a: str | Element | FormatIssue) -> None:
         self._content(a)
+
+    def log(self, issue: FormatIssue) -> None:
+        self._content.log(issue)
 
 
 class MarkupBlock(MixedParent):

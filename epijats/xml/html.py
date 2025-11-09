@@ -11,7 +11,7 @@ from ..document import Abstract
 from ..math import FormulaElement
 from ..parse.baseprint import get_ET
 from ..elements import Citation, CitationTuple
-from ..tree import Element, MixedContent
+from ..tree import Element, FormatIssueElement, MixedContent
 from .format import CommonContentFormatter, ElementFormatter, MarkupFormatter
 
 if TYPE_CHECKING:
@@ -62,7 +62,6 @@ HTML_FROM_XML = {
     'div': 'div',
     'dl': 'dl',
     'dt': 'dt',
-    'format-issue': 'output',
     'hr': 'hr',
     'i': 'em',
     'li': 'li',
@@ -96,6 +95,8 @@ class DefaultHtmlizer(BaseHtmlizer):
             ret = E('a', {'href': '#' + src.rid})
         elif isinstance(src, dom.ExternalHyperlink):
             ret = E('a', {'href': src.href, 'rel': 'external'})
+        elif isinstance(src, FormatIssueElement):
+            ret = E('output', {'class': 'format-issue'})
         else:
             return False
         self.common.format_content(src, level, ret)

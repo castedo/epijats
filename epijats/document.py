@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
+from .condition import FormatIssue
 from .metadata import Author, BiblioRefList, Permissions
 from .tree import Element, MixedContent, MutableArrayContent, MutableMixedContent
 
@@ -13,6 +14,10 @@ class Abstract:
 
     def __init__(self, blocks: Iterable[Element] = ()) -> None:
         self.content = MutableArrayContent(blocks)
+
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        return self.content.issues
 
 
 @dataclass
@@ -27,6 +32,12 @@ class ProtoSection:
     def has_content(self) -> bool:
         return bool(self.presection) or bool(self.subsections)
 
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        yield from self.presection.issues
+        for sub in self.subsections:
+            yield from sub.issues
+
 
 class ArticleBody(ProtoSection): ...
 
@@ -40,6 +51,11 @@ class Section(ProtoSection):
         super().__init__()
         self.title = MutableMixedContent(title)
         self.id = id
+
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        yield from self.title.issues
+        yield from super().issues
 
 
 @dataclass
@@ -58,6 +74,14 @@ class Article:
         self.abstract = None
         self.body = ArticleBody()
         self.ref_list = None
+
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        if self.title:
+            yield from self.title.issues
+        if self.abstract:
+            yield from self.abstract.issues
+        yield from self.body.issues
 
 
 @dataclass

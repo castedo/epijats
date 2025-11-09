@@ -3,11 +3,15 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, MutableSequence
 from dataclasses import dataclass
 from typing import TypeVar
+from warnings import warn
+
+from .condition import FormatIssue
 
 from .tree import (
     ArrayContent,
     BiformElement,
     Element,
+    FormatIssueElement,
     HtmlVoidElement,
     MixedContent,
     MixedParent,
@@ -86,7 +90,7 @@ ElementT = TypeVar('ElementT', bound=Element)
 
 @dataclass
 class ItemListElement(Parent[ElementT]):
-    _items: list[ElementT]
+    _items: list[ElementT | FormatIssueElement]
 
     def __init__(self, tag: str | None, items: Iterable[ElementT] = ()):
         super().__init__(tag)
@@ -97,10 +101,21 @@ class ItemListElement(Parent[ElementT]):
         return ArrayContent(self._items)
 
     def __iter__(self) -> Iterator[ElementT]:
-        return iter(self._items)
+        return iter(e for e in self._items if not isinstance(e, FormatIssueElement))
 
-    def append(self, item: ElementT) -> None:
-        self._items.append(item)
+    @property
+    def issues(self) -> Iterator[FormatIssue]:
+        for child in self._items:
+            yield from child.issues
+
+    def append(self, item: ElementT | FormatIssue) -> None:
+        if isinstance(item, FormatIssue):
+            self.log(item)
+        else:
+            self._items.append(item)
+
+    def log(self, issue: FormatIssue) -> None:
+        self._items.append(FormatIssueElement(issue))
 
     def __len__(self) -> int:
         return len(self._items)
@@ -178,6 +193,7 @@ class IssueElement(Element):
     def __init__(self, msg: str):
         super().__init__(None)
         self.msg = msg
+        warn("Construct a FormatIssue and call a log method", DeprecationWarning)
 
     @property
     def content(self) -> str:
