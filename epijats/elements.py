@@ -24,10 +24,6 @@ class LineBreak(HtmlVoidElement):
     TAG = 'br'
 
 
-class TableColumn(HtmlVoidElement):
-    TAG = 'col'
-
-
 class HorizontalRule(HtmlVoidElement):
     TAG = 'hr'
 
@@ -177,6 +173,36 @@ class DItem(Element):
     @property
     def content(self) -> ArrayContent:
         return ArrayContent([self.term, *self.definitions])
+
+
+class TableColumn(HtmlVoidElement):
+    TAG = 'col'
+
+
+class TableCell(BiformElement):
+    def __init__(self, content: Iterable[Element] = (), *, header: bool):
+        super().__init__('th' if header else 'td', content)
+
+
+class TableRow(ItemListElement[TableCell]):
+    TAG = 'tr'
+
+    def __init__(self, cells: Iterable[TableCell] = ()):
+        super().__init__(None, cells)
+
+
+class TableBody(ItemListElement[TableRow]):
+    TAG = 'tbody'
+
+    def __init__(self, rows: Iterable[TableRow] = ()):
+        super().__init__(None, rows)
+
+
+class TableHead(ItemListElement[TableRow]):
+    TAG = 'thead'
+
+    def __init__(self, rows: Iterable[TableRow] = ()):
+        super().__init__(None, rows)
 
 
 @dataclass

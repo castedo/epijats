@@ -60,6 +60,7 @@ class Element(ABC):
     TAG: ClassVar[str | StartTag]
 
     _tag: StartTag
+    _free_attrib: dict[str, str]
 
     def __init__(self, tag: str | StartTag | None = None):
         class_tag = getattr(self.__class__, 'TAG', None)
@@ -71,6 +72,7 @@ class Element(ABC):
             if not tag:
                 raise ValueError("Missing element tag")
             self._tag = StartTag(tag)
+        self._free_attrib = dict()
 
     @property
     def tag(self) -> StartTag:
@@ -78,16 +80,18 @@ class Element(ABC):
 
     def set_attrib(self, key: str, value: str) -> None:
         if key in self.tag.attrib:
-            raise KeyError
-        self._tag._attrib[key] = value
+            raise KeyError(key)
+        self._free_attrib[key] = value
 
     @property
     def xml(self) -> StartTag:
-        return self.tag
+        return StartTag(self.tag.name, self.xml_attrib)
 
     @property
     def xml_attrib(self) -> Mapping[str, str]:
-        return self.tag.attrib
+        ret = self._free_attrib.copy()
+        ret.update(self.tag.attrib)
+        return ret
 
     @property
     @abstractmethod
@@ -275,9 +279,6 @@ class MarkupElement(MixedParent):
 
 
 class BiformElement(ArrayParent):
-    def __init__(self, tag: str | StartTag | None, array: Iterable[Element] = ()):
-        super().__init__(tag, array)
-
     @property
     def just_phrasing(self) -> MixedContent | None:
         solo = self.content.only_child

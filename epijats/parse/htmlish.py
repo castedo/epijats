@@ -7,7 +7,7 @@ from .. import condition as fc
 from ..tree import (
     ArrayParent,
     Element,
-    MixedParent,
+    Parent,
     StartTag,
 )
 
@@ -19,20 +19,22 @@ from .content import (
     DataContentModel,
     MixedModel,
     PendingMarkupBlock,
+    RollContentModel,
     UnionMixedModel,
 )
-from ..tree import Parent
 from .tree import (
     ArrayParentModel,
     DataParentModel,
+    ElementLoadModelBase,
     EmptyElementModel,
+    MarkupBlockModel,
     MixedParentModel,
     TagModel,
 )
 from .kit import Log, Model, Sink
 
 if TYPE_CHECKING:
-    from ..typeshed import XmlElement
+    from ..typeshed import XmlContent, XmlElement
 
 
 def markup_model(
@@ -257,8 +259,9 @@ def def_list_model(
     return DataParentModel(tm, child_model)
 
 
-class TableCellModel(kit.LoadModelBase[Element]):
-    def __init__(self, content_model: MixedModel, *, header: bool):
+class TableCellModel(kit.LoadModelBase[dom.TableCell]):
+    def __init__(self, content_model: ArrayContentModel, *, header: bool):
+        self.header = header
         self.tag = 'th' if header else 'td'
         self.content_model = content_model
         self._ok_attrib_keys = {'align', 'colspan', 'rowspan'}
@@ -266,18 +269,16 @@ class TableCellModel(kit.LoadModelBase[Element]):
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == self.tag
 
-    def load(self, log: Log, e: XmlElement) -> Element | None:
+    def load(self, log: Log, e: XmlElement) -> dom.TableCell | None:
         align_attribs = {'left', 'right', 'center', 'justify', None}
         kit.confirm_attrib_value(log, e, 'align', align_attribs)
-        ret = MixedParent(self.tag)
+        ret = dom.TableCell(header=self.header)
         for key, value in e.attrib.items():
             if key in self._ok_attrib_keys:
                 ret.set_attrib(key, value)
             else:
                 log(fc.UnsupportedAttribute.issue(e, key))
         self.content_model.parse_content(log, e, ret.append)
-        if ret.content.empty():
-            ret.content.text = ' '
         return ret
 
 
@@ -293,13 +294,25 @@ def col_group_model() -> Model[Element]:
     return DataParentModel(tm, col)
 
 
+class TableRowModel(ElementLoadModelBase[dom.TableRow]):
+    def __init__(self, text: MixedModel):
+        super().__init__(TagModel(dom.TableRow))
+        br = break_model()
+        cell_content = RollContentModel(MarkupBlockModel(text | br), text | br)
+        th = TableCellModel(cell_content, header=True)
+        td = TableCellModel(cell_content, header=False)
+        self.content_model = DataContentModel(th | td)
+
+    def parse_content(
+        self, log: Log, xc: XmlContent, dest: Parent[dom.TableCell]
+    ) -> None:
+        self.content_model.parse_content(log, xc, dest.append)
+
+
 def table_wrap_model(text: MixedModel) -> Model[Element]:
-    br = break_model()
-    th = TableCellModel(text | br, header=True)
-    td = TableCellModel(text | br, header=False)
-    tr = data_element_model('tr', th | td)
-    thead = data_element_model('thead', tr)
-    tbody = data_element_model('tbody', tr)
+    tr = TableRowModel(text)
+    thead = DataParentModel(TagModel(dom.TableHead), tr)
+    tbody = DataParentModel(TagModel(dom.TableBody), tr)
     table_mold = TagModel(ArrayParent, tag='table', optional_attrib={'frame', 'rules'})
     table = DataParentModel(table_mold, col_group_model() | thead | tbody)
     return data_element_model('table-wrap', table)

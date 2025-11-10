@@ -105,6 +105,8 @@ class CommonContentFormatter:
         elif isinstance(src, BiformElement):
             if src.just_phrasing is not None:
                 self.markup.format(src.just_phrasing, level, dest)
+            elif len(src.content) == 0:
+                dest.text = ' '
             else:
                 self.default.format(src.content, level, dest)
         elif isinstance(src.content, ArrayContent):

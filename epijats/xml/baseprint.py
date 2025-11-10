@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING
 from warnings import warn
 
 from .. import dom
@@ -23,65 +23,62 @@ from .format import XmlFormatter
 if TYPE_CHECKING:
     from ..typeshed import StrPath
 
-DataElement: TypeAlias = ArrayParent
-MarkupElement: TypeAlias = MixedParent
 
-
-def title_group(src: MixedContent | None) -> DataElement:
+def title_group(src: MixedContent | None) -> ArrayParent:
     # space prevents self-closing XML syntax
     text = ' ' if src is None else src.text
-    title = MarkupElement('article-title', text)
+    title = MixedParent('article-title', text)
     if src:
         for element, tail in src:
             title.append(element)
             title.append(tail)
-    return DataElement('title-group', [title])
+    return ArrayParent('title-group', [title])
 
 
-def person_name(src: dom.PersonName) -> DataElement:
-    ret = DataElement('name')
+def person_name(src: dom.PersonName) -> ArrayParent:
+    ret = ArrayParent('name')
     if src.surname:
-        ret.append(MarkupElement('surname', src.surname))
+        ret.append(MixedParent('surname', src.surname))
     if src.given_names:
-        ret.append(MarkupElement('given-names', src.given_names))
+        ret.append(MixedParent('given-names', src.given_names))
     if src.suffix:
-        ret.append(MarkupElement('suffix', src.suffix))
+        ret.append(MixedParent('suffix', src.suffix))
     return ret
 
 
-def contrib(src: dom.Author) -> DataElement:
-    ret = DataElement(StartTag('contrib', {'contrib-type': 'author'}))
+def contrib(src: dom.Author) -> ArrayParent:
+    ret = ArrayParent(StartTag('contrib', {'contrib-type': 'author'}))
     if src.orcid:
         url = str(src.orcid)
         xml_stag = StartTag('contrib-id', {'contrib-id-type': 'orcid'})
-        ret.append(MarkupElement(xml_stag, url))
+        ret.append(MixedParent(xml_stag, url))
     ret.append(person_name(src.name))
     if src.email:
-        ret.append(MarkupElement('email', src.email))
+        ret.append(MixedParent('email', src.email))
     return ret
 
 
-def contrib_group(src: list[dom.Author]) -> DataElement:
-    ret = DataElement('contrib-group')
+def contrib_group(src: list[dom.Author]) -> ArrayParent:
+    ret = ArrayParent('contrib-group')
     for a in src:
         ret.append(contrib(a))
     return ret
 
 
-def license(src: dom.License) -> DataElement:
-    ret = DataElement('license')
+def license(src: dom.License) -> ArrayParent:
+    ret = ArrayParent('license')
     attrib = {'content-type': src.cc_license_type} if src.cc_license_type else {}
-    license_ref = MarkupElement(StartTag("license-ref", attrib))
+    license_ref = MixedParent(StartTag("license-ref", attrib))
     license_ref.content.text = src.license_ref
     ret.append(license_ref)
-    ret.append(MarkupElement('license-p', src.license_p))
+    ret.append(MixedParent('license-p', src.license_p))
     return ret
 
 
-def permissions(src: dom.Permissions) -> DataElement:
-    ret = DataElement('permissions')
+def permissions(src: dom.Permissions) -> ArrayParent:
+    ret = ArrayParent('permissions')
     if src.copyright is not None:
-        ret.append(MarkupElement('copyright-statement', src.copyright.statement))
+        ret.append(MixedParent('copyright-statement', src.copyright.statement))
     if src.license is not None:
         ret.append(license(src.license))
     return ret
@@ -93,14 +90,13 @@ def proto_section(
     level: int,
     xid: str | None = None,
     title: MixedContent | None = None,
-) -> DataElement:
+) -> ArrayParent:
     if level < 6:
         level += 1
-    ret = DataElement(tag)
-    if xid is not None:
-        ret.set_attrib('id', xid)
+    attrib = {} if xid is None else {'id': xid}
+    ret = ArrayParent(StartTag(tag, attrib))
     if title is not None:
-        t = MarkupElement(f"h{level}", title)
+        t = MixedParent(f"h{level}", title)
         ret.append(t)
     for s in src.presection:
         ret.append(s)
@@ -109,29 +105,29 @@ def proto_section(
     return ret
 
 
-def abstract(src: Abstract) -> DataElement:
-    return DataElement('abstract', src.content)
+def abstract(src: Abstract) -> ArrayParent:
+    return ArrayParent('abstract', src.content)
 
 
 def append_date_parts(src: Date | None, dest: Sink[Element]) -> None:
     if src is not None:
         y = str(src.year)
-        dest(MarkupElement('year', y))
+        dest(MixedParent('year', y))
         if src.month is not None:
             # zero padding is more common in PMC citations
             # some JATS parsers (like pandoc) expect zero padding
-            dest(MarkupElement('month', f"{src.month:02}"))
+            dest(MixedParent('month', f"{src.month:02}"))
             if src.day is not None:
-                dest(MarkupElement('day', f"{src.day:02}"))
+                dest(MixedParent('day', f"{src.day:02}"))
 
 
-def biblio_person_group(group_type: str, src: dom.PersonGroup) -> DataElement:
-    ret = DataElement(StartTag('person-group', {'person-group-type': group_type}))
+def biblio_person_group(group_type: str, src: dom.PersonGroup) -> ArrayParent:
+    ret = ArrayParent(StartTag('person-group', {'person-group-type': group_type}))
     for person in src.persons:
         if isinstance(person, dom.PersonName):
             ret.append(person_name(person))
         else:
-            ret.append(MarkupElement('string-name', person))
+            ret.append(MixedParent('string-name', person))
     if src.etal:
         # <etal> is not an HTML void element.
         # If it is saved as a self-closing XML element, an HTML parser
@@ -141,44 +137,43 @@ def biblio_person_group(group_type: str, src: dom.PersonGroup) -> DataElement:
     return ret
 
 
-def biblio_ref_item(src: BiblioRefItem) -> DataElement:
+def biblio_ref_item(src: BiblioRefItem) -> ArrayParent:
     stag = StartTag('element-citation')
-    ec = DataElement(stag)
+    ec = ArrayParent(stag)
     if src.authors:
         ec.append(biblio_person_group('author', src.authors))
     if src.editors:
         ec.append(biblio_person_group('editor', src.editors))
     if src.article_title:
-        ec.append(MarkupElement('article-title', src.article_title))
+        ec.append(MixedParent('article-title', src.article_title))
     if src.source_title:
-        ec.append(MarkupElement('source-title', src.source_title))
+        ec.append(MixedParent('source-title', src.source_title))
     if src.edition is not None:
-        ec.append(MarkupElement('edition', str(src.edition)))
+        ec.append(MixedParent('edition', str(src.edition)))
     append_date_parts(src.date, ec.append)
     if src.access_date:
-        ad = DataElement(StartTag('date-in-citation', {'content-type': 'access-date'}))
+        ad = ArrayParent(StartTag('date-in-citation', {'content-type': 'access-date'}))
         append_date_parts(src.access_date, ad.append)
         ec.append(ad)
     for key, value in src.biblio_fields.items():
-        ec.append(MarkupElement(key, value))
+        ec.append(MixedParent(key, value))
     for pub_id_type, value in src.pub_ids.items():
-        ele = MarkupElement('pub-id', value)
-        ele.set_attrib('pub-id-type', pub_id_type)
+        stag = StartTag('pub-id', {'pub-id-type': pub_id_type})
+        ele = MixedParent(stag, value)
         ec.append(ele)
-    ret = DataElement('ref', [ec])
-    ret.set_attrib('id', src.id)
+    ret = ArrayParent(StartTag('ref', {'id': src.id}), [ec])
     return ret
 
 
-def ref_list(src: dom.BiblioRefList) -> DataElement:
-    ret = DataElement('ref-list', [])
+def ref_list(src: dom.BiblioRefList) -> ArrayParent:
+    ret = ArrayParent('ref-list', [])
     for ref in src.references:
         ret.append(biblio_ref_item(ref))
     return ret
 
 
-def article(src: dom.Article) -> DataElement:
-    article_meta = DataElement('article-meta')
+def article(src: dom.Article) -> ArrayParent:
+    article_meta = ArrayParent('article-meta')
     if src.title:
         article_meta.append(title_group(src.title))
     if src.authors:
@@ -187,13 +182,13 @@ def article(src: dom.Article) -> DataElement:
         article_meta.append(permissions(src.permissions))
     if src.abstract:
         article_meta.append(abstract(src.abstract))
-    ret = DataElement('article')
+    ret = ArrayParent('article')
     if len(article_meta.content):
-        ret.append(DataElement('front', [article_meta]))
+        ret.append(ArrayParent('front', [article_meta]))
     if src.body.has_content():
         ret.append(proto_section('article-body', src.body, 0))
     if src.ref_list is not None:
-        ret.append(DataElement('back', [ref_list(src.ref_list)]))
+        ret.append(ArrayParent('back', [ref_list(src.ref_list)]))
     return ret
 
 

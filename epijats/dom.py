@@ -38,7 +38,11 @@ __all__ = [
     'Preformat',
     'ProtoSection',
     'Section',
+    'TableBody',
+    'TableCell',
     'TableColumn',
+    'TableHead',
+    'TableRow',
     'WordBreak',
 ]
 
@@ -79,7 +83,11 @@ from .elements import (
     ListItem,
     Paragraph,
     Preformat,
+    TableBody,
+    TableCell,
     TableColumn,
+    TableHead,
+    TableRow,
     WordBreak,
 )
 

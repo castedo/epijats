@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Callable
 from typing import Generic, TYPE_CHECKING, TypeVar
 
 from .. import condition as fc
@@ -57,7 +56,11 @@ class TagModel(Generic[ElementCovT]):
         self.element_type = element_type
         if tag is not None:
             self.tag = StartTag(tag)
-            self.factory: Callable[[], ElementCovT] = lambda: self.element_type(tag)
+
+            def factory() -> ElementCovT:
+                return self.element_type(tag)
+
+            self.factory = factory
         else:
             self.tag = StartTag(element_type.TAG)
             self.factory = self.element_type
