@@ -28,7 +28,7 @@ from .htmlish import (
     formatted_text_model,
     hypotext_model,
     preformat_model,
-    table_wrap_model,
+    table_or_wrap_model,
 )
 from .tree import MarkupBlockModel
 from .math import disp_formula_model, inline_formula_model
@@ -68,7 +68,7 @@ class CoreModels:
         block |= ListModel(roll_content)
         block |= def_list_model(self.hypertext, roll_content)
         block |= blockquote_model(roll_content)
-        block |= table_wrap_model(self.hypertext)
+        block |= table_or_wrap_model(self.hypertext)
         self.block = block
 
 

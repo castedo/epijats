@@ -15,6 +15,7 @@ from .tree import (
     HtmlVoidElement,
     MixedContent,
     MixedParent,
+    MutableArrayContent,
     Parent,
     StartTag,
 )
@@ -88,7 +89,7 @@ ElementT = TypeVar('ElementT', bound=Element)
 class ItemListElement(Parent[ElementT]):
     _items: list[ElementT | FormatIssueElement]
 
-    def __init__(self, tag: str | None, items: Iterable[ElementT] = ()):
+    def __init__(self, tag: str | None = None, items: Iterable[ElementT] = ()):
         super().__init__(tag)
         self._items = list(items)
 
@@ -179,6 +180,13 @@ class TableColumn(HtmlVoidElement):
     TAG = 'col'
 
 
+class TableColumnGroup(ItemListElement[TableColumn]):
+    TAG = 'colgroup'
+
+    def __init__(self) -> None:
+        super().__init__()
+
+
 class TableCell(BiformElement):
     def __init__(self, content: Iterable[Element] = (), *, header: bool):
         super().__init__('th' if header else 'td', content)
@@ -203,6 +211,43 @@ class TableHead(ItemListElement[TableRow]):
 
     def __init__(self, rows: Iterable[TableRow] = ()):
         super().__init__(None, rows)
+
+
+class TableFoot(ItemListElement[TableRow]):
+    TAG = 'tfoot'
+
+    def __init__(self, rows: Iterable[TableRow] = ()):
+        super().__init__(None, rows)
+
+
+@dataclass
+class Table(Element):
+    TAG = 'table'
+
+    colgroups: MutableSequence[TableColumnGroup]
+    head: TableHead | None
+    bodies: MutableSequence[TableBody]
+    foot: TableFoot | None
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.colgroups = []
+        self.head = None
+        self.bodies = []
+        self.foot = None
+
+    @property
+    def content(self) -> ArrayContent:
+        ret = MutableArrayContent()
+        for cg in self.colgroups:
+            ret.append(cg)
+        if self.head:
+            ret.append(self.head)
+        for b in self.bodies:
+            ret.append(b)
+        if self.foot:
+            ret.append(self.foot)
+        return ret
 
 
 @dataclass

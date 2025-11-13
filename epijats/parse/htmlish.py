@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from .. import dom
 from .. import condition as fc
@@ -282,16 +282,19 @@ class TableCellModel(kit.LoadModelBase[dom.TableCell]):
         return ret
 
 
-def data_element_model(tag: str, child_model: Model[Element]) -> Model[Element]:
-    return DataParentModel(TagModel(ArrayParent, tag=tag), child_model)
+class TableColumnGroupModel(ElementLoadModelBase[dom.TableColumnGroup]):
+    def __init__(self) -> None:
+        tm = TagModel(dom.TableColumnGroup, optional_attrib={'span', 'width'})
+        super().__init__(tm)
+        col = EmptyElementModel(
+            TagModel(dom.TableColumn, optional_attrib={'span', 'width'})
+        )
+        self.content_model = DataContentModel(col)
 
-
-def col_group_model() -> Model[Element]:
-    col = EmptyElementModel(
-        TagModel(dom.TableColumn, optional_attrib={'span', 'width'})
-    )
-    tm = TagModel(ArrayParent, tag='colgroup', optional_attrib={'span', 'width'})
-    return DataParentModel(tm, col)
+    def parse_content(
+        self, log: Log, xc: XmlContent, dest: Parent[dom.TableColumn]
+    ) -> None:
+        self.content_model.parse_content(log, xc, dest.append)
 
 
 class TableRowModel(ElementLoadModelBase[dom.TableRow]):
@@ -309,10 +312,57 @@ class TableRowModel(ElementLoadModelBase[dom.TableRow]):
         self.content_model.parse_content(log, xc, dest.append)
 
 
-def table_wrap_model(text: MixedModel) -> Model[Element]:
-    tr = TableRowModel(text)
-    thead = DataParentModel(TagModel(dom.TableHead), tr)
-    tbody = DataParentModel(TagModel(dom.TableBody), tr)
-    table_mold = TagModel(ArrayParent, tag='table', optional_attrib={'frame', 'rules'})
-    table = DataParentModel(table_mold, col_group_model() | thead | tbody)
-    return data_element_model('table-wrap', table)
+RowParentT = TypeVar('RowParentT', bound=Parent[dom.TableRow])
+
+
+class RowParentModel(ElementLoadModelBase[RowParentT]):
+    def __init__(
+        self, tag_model: TagModel[RowParentT], child_model: Model[dom.TableRow]
+    ):
+        super().__init__(tag_model)
+        self.content_model = DataContentModel(child_model)
+
+    def parse_content(
+        self, log: Log, xc: XmlContent, dest: Parent[dom.TableRow]
+    ) -> None:
+        self.content_model.parse_content(log, xc, dest.append)
+
+
+class TableModel(kit.LoadModelBase[dom.Table]):
+    def __init__(self, text: MixedModel):
+        tr = TableRowModel(text)
+        self.colgroups = TableColumnGroupModel()
+        self.thead = RowParentModel(TagModel(dom.TableHead), tr)
+        self.tbody = RowParentModel(TagModel(dom.TableBody), tr)
+        self.tfoot = RowParentModel(TagModel(dom.TableFoot), tr)
+
+    def match(self, xe: XmlElement) -> bool:
+        return xe.tag == 'table'
+
+    def load(self, log: Log, xe: XmlElement) -> dom.Table | None:
+        attribs = {'frame', 'rules'}
+        kit.check_no_attrib(log, xe, attribs)
+        ret = dom.Table()
+        for key, value in xe.attrib.items():
+            if key not in attribs:
+                log(fc.UnsupportedAttribute.issue(xe, key))
+            else:
+                ret.set_attrib(key, value)
+        sess = ArrayContentSession()
+        sess.bind(self.colgroups, ret.colgroups.append)
+        head = sess.one(self.thead)
+        foot = sess.one(self.tfoot)
+        sess.bind(self.tbody, ret.bodies.append)
+        sess.parse_content(log, xe)
+        ret.head = head.out
+        ret.foot = foot.out
+        return ret
+
+
+def data_element_model(tag: str, child_model: Model[Element]) -> Model[Element]:
+    return DataParentModel(TagModel(ArrayParent, tag=tag), child_model)
+
+
+def table_or_wrap_model(text: MixedModel) -> Model[Element]:
+    table = TableModel(text)
+    return data_element_model('table-wrap', table) | table

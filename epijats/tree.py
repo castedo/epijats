@@ -122,6 +122,7 @@ class FormatIssueElement(Element):
         return str(self.issue)
 
 
+ArraySink: TypeAlias = Callable[[Element | FormatIssue], None]
 MixedSink: TypeAlias = Callable[[str | Element | FormatIssue], None]
 
 
