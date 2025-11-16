@@ -236,8 +236,7 @@ def test_author_restyle():
 
 
 def test_abstract_restyle() -> None:
-    models = _.CoreModels(None)
-    model = AbstractModel(models.block, models.hypertext)
+    model = AbstractModel(None)
 
     bad_style = """\
 <abstract>

@@ -1,0 +1,16 @@
+<article>
+  <front>
+    <article-meta>
+      <title-group>
+        <article-title>So many format issues</article-title>
+      </title-group>
+    </article-meta>
+  </front>
+  <article-body>
+    <p>Unknown markup tag.</p>
+    <section>
+      <h2>In sections too</h2>
+      <p>Again unknown tag.</p>
+    </section>
+  </article-body>
+</article>

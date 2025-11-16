@@ -5,12 +5,14 @@ from typing import TYPE_CHECKING
 from .. import condition as fc
 from .. import dom
 from .. import metadata as bp
+from ..biblio import BiblioRefPool
 from ..document import Abstract
 from ..tree import Element, MixedContent, MutableMixedContent
 
 from . import kit
 from .kit import Log, Model, LoaderTagModel as tag_model
 
+from .body import roll_model
 from .content import ArrayContentSession, MixedModel, UnionMixedModel
 from .htmlish import (
     ext_link_model,
@@ -19,7 +21,6 @@ from .htmlish import (
     minimally_formatted_text_model,
 )
 from .back import load_person_name
-from .content import RollContentModel
 from .tree import MixedContentInElementParser
 
 if TYPE_CHECKING:
@@ -162,14 +163,14 @@ class PermissionsModel(kit.LoadModelBase[dom.Permissions]):
 
 
 class AbstractModel(kit.TagModelBase[Abstract]):
-    def __init__(self, block: Model[Element], inline: MixedModel):
+    def __init__(self, biblio: BiblioRefPool | None):
         super().__init__('abstract')
-        self._roll = RollContentModel(block, inline)
+        self.content_model = roll_model(biblio)
 
     def load(self, log: Log, xe: XmlElement) -> Abstract | None:
         kit.check_no_attrib(log, xe)
         a = Abstract()
-        self._roll.parse_content(log, xe, a.content.append)
+        self.content_model.parse_content(log, xe, a.content.append)
         return a if len(a.content) else None
 
 

@@ -1,0 +1,5 @@
+[
+  ["UnsupportedElement", "test", "article-title"],
+  ["UnsupportedElement", "foo", "p"],
+  ["UnsupportedElement", "bar", "p"]
+]

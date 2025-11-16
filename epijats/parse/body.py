@@ -10,8 +10,9 @@ from ..elements import Citation, CitationTuple
 from ..tree import Element, MutableMixedContent
 
 from . import kit
-from .kit import Log
+from .kit import Log, Model
 from .content import (
+    ArrayContentModel,
     MixedModel,
     PendingMarkupBlock,
     RollContentModel,
@@ -28,8 +29,8 @@ from .htmlish import (
     formatted_text_model,
     hypotext_model,
     preformat_model,
-    table_or_wrap_model,
 )
+from .table import table_or_wrap_model
 from .tree import MarkupBlockModel
 from .math import disp_formula_model, inline_formula_model
 
@@ -38,7 +39,7 @@ if TYPE_CHECKING:
     from ..typeshed import XmlElement
 
 
-def hypertext_model(biblio: BiblioRefPool | None) -> MixedModel:
+def hypertext_model(biblio: BiblioRefPool | None, *, math: bool = True) -> MixedModel:
     # Corresponds to {HYPERTEXT} in BpDF spec ed.2
     # but with experimental inline math element too
     hypotext = hypotext_model()
@@ -51,25 +52,39 @@ def hypertext_model(biblio: BiblioRefPool | None) -> MixedModel:
     hypertext |= ext_link_model(hypotext)
     hypertext |= cross_reference_model(hypotext, biblio)
     hypertext |= code_model(hypertext)
-    hypertext |= inline_formula_model()
+    if math:
+        hypertext |= inline_formula_model()
     return hypertext
 
 
 class CoreModels:
-    def __init__(self, biblio: BiblioRefPool | None) -> None:
-        self.hypertext = hypertext_model(biblio)
-        self.heading = self.hypertext | break_model()
-        block = kit.UnionModel[Element]()
-        roll_content = RollContentModel(block, self.hypertext)
-        block |= HtmlParagraphModel(self.hypertext, block)
-        block |= MarkupBlockModel(self.hypertext)
-        block |= disp_formula_model()
-        block |= preformat_model(self.hypertext)
-        block |= ListModel(roll_content)
-        block |= def_list_model(self.hypertext, roll_content)
-        block |= blockquote_model(roll_content)
-        block |= table_or_wrap_model(self.hypertext)
-        self.block = block
+    def __init__(
+        self,
+        biblio: BiblioRefPool | None,
+        *,
+        math: bool = True,
+        tables: bool = True,
+    ) -> None:
+        self.inline = hypertext_model(biblio, math=True) | break_model()
+        self.block = kit.UnionModel[Element]()
+        self.roll = RollContentModel(self.block, self.inline)
+        self.block |= HtmlParagraphModel(self.inline, self.block)
+        self.block |= MarkupBlockModel(self.inline)
+        self.block |= preformat_model(self.inline)
+        self.block |= ListModel(self.roll)
+        self.block |= def_list_model(self.inline, self.roll)
+        self.block |= blockquote_model(self.roll)
+        if math:
+            self.block |= disp_formula_model()
+        if tables:
+            self.block |= table_or_wrap_model(self.roll)
+
+
+def roll_model(
+    biblio: BiblioRefPool | None, *, math: bool = True, tables: bool = True
+) -> ArrayContentModel:
+    core = CoreModels(biblio, math=math, tables=tables)
+    return core.roll
 
 
 class CitationModel(kit.LoadModelBase[Citation]):
@@ -242,17 +257,14 @@ class HtmlCrossReferenceModel(kit.LoadModelBase[dom.CrossReference]):
 
 def cross_reference_model(
     content_model: MixedModel, biblio: BiblioRefPool | None
-) -> kit.Model[Element]:
+) -> Model[Element]:
     jats_xref = JatsCrossReferenceModel(content_model, biblio)
     return jats_xref | HtmlCrossReferenceModel(content_model)
 
 
 class ProtoSectionParser:
-    def __init__(self, models: CoreModels, section_model: SectionModel):
-        self.inline_model = models.hypertext
-        self.block_model = models.block
+    def __init__(self, section_model: SectionModel):
         self.section_model = section_model
-        self.heading_content_model = models.heading
 
     def parse(
         self,
@@ -261,6 +273,8 @@ class ProtoSectionParser:
         target: dom.ProtoSection,
         title: MutableMixedContent | None,
     ) -> None:
+        inline_model = self.section_model.inline_model
+        block_model = self.section_model.block_model
         pending = PendingMarkupBlock(target.presection.append)
         if xe.text and xe.text.strip():
             pending.append(xe.text)
@@ -271,16 +285,16 @@ class ProtoSectionParser:
                 if title is None:
                     log(fc.ExcessElement.issue(s))
                 else:
-                    self.heading_content_model.parse_content(log, s, title)
+                    inline_model.parse_content(log, s, title)
                     title = None
-            elif self.block_model.match(s):
+            elif block_model.match(s):
                 pending.close()
-                self.block_model.parse(log, s, target.presection.append)
+                block_model.parse(log, s, target.presection.append)
             elif self.section_model.match(s):
                 pending.close()
                 self.section_model.parse(log, s, target.subsections.append)
-            elif self.inline_model.match(s):
-                self.inline_model.parse(log, s, pending.append)
+            elif inline_model.match(s):
+                inline_model.parse(log, s, pending.append)
             else:
                 log(fc.UnsupportedElement.issue(s))
             if tail and tail.strip():
@@ -293,8 +307,10 @@ class SectionModel(kit.LoadModelBase[dom.Section]):
     https://jats.nlm.nih.gov/articleauthoring/tag-library/1.4/element/sec.html
     """
 
-    def __init__(self, models: CoreModels):
-        self._proto = ProtoSectionParser(models, self)
+    def __init__(self, block_model: Model[Element], inline_model: MixedModel):
+        self.block_model = block_model
+        self.inline_model = inline_model
+        self._proto = ProtoSectionParser(self)
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag in ['section', 'sec']
@@ -309,8 +325,9 @@ class SectionModel(kit.LoadModelBase[dom.Section]):
 
 
 class BodyModel(kit.Parser[dom.ProtoSection]):
-    def __init__(self, models: CoreModels):
-        self._proto = ProtoSectionParser(models, SectionModel(models))
+    def __init__(self, biblio: BiblioRefPool | None):
+        core = CoreModels(biblio, math=True, tables=True)
+        self._proto = ProtoSectionParser(SectionModel(core.block, core.inline))
 
     def parse(self, log: Log, xe: XmlElement, target: dom.ProtoSection) -> bool:
         kit.check_no_attrib(log, xe)

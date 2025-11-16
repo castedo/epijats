@@ -13,7 +13,7 @@ from ..biblio import BiblioRefPool
 
 from . import kit
 from .back import RefListModel
-from .body import BodyModel, CoreModels
+from .body import BodyModel
 from .content import ArrayContentSession
 from .front import AbstractModel, ArticleFrontParser
 from .kit import Log, nolog
@@ -75,12 +75,11 @@ def load_article(log: Log, e: XmlElement) -> dom.Article | None:
     back_log = list[fc.FormatIssue]()
     ret.ref_list = pop_load_sub_back(back_log.append, e)
     biblio = BiblioRefPool(ret.ref_list.references) if ret.ref_list else None
-    models = CoreModels(biblio)
-    abstract_model = AbstractModel(models.block, models.hypertext)
+    abstract_model = AbstractModel(biblio)
     kit.check_required_child(log, e, 'front')
     sess = ArrayContentSession()
     sess.bind_once(ArticleFrontParser(abstract_model), ret)
-    sess.bind(BodyModel(models), ret.body)
+    sess.bind(BodyModel(biblio), ret.body)
     sess.parse_content(log, e)
     if ret.ref_list:
         assert biblio

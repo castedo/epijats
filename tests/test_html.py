@@ -87,4 +87,4 @@ def test_roll_content_html(case):
 def test_p_child_html(case):
     case_dir = P_CHILD_CASE / case
     core = CoreModels(None)
-    check_xml_html(case_dir, core.hypertext, case.startswith("math"))
+    check_xml_html(case_dir, core.inline, case.startswith("math"))
