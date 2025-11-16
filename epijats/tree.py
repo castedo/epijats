@@ -103,7 +103,8 @@ class Element(ABC):
 
     @property
     def issues(self) -> Iterator[FormatIssue]:
-        return iter(())
+        c = self.content
+        return iter(()) if c is None or isinstance(c, str) else c.issues
 
 
 class FormatIssueElement(Element):

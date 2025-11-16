@@ -10,7 +10,7 @@ from ..elements import Citation, CitationTuple
 from ..tree import Element, MutableMixedContent
 
 from . import kit
-from .kit import Log, Model
+from .kit import Log, Model, Sink
 from .content import (
     ArrayContentModel,
     MixedModel,
@@ -233,33 +233,37 @@ class JatsCrossReferenceModel(kit.LoadModelBase[dom.CrossReference]):
         return ret
 
 
-class HtmlCrossReferenceModel(kit.LoadModelBase[dom.CrossReference]):
+class HtmlCrossReferenceModel(MixedModel):
     def __init__(self, content_model: MixedModel):
         self.content_model = content_model
 
     def match(self, xe: XmlElement) -> bool:
         return xe.tag == 'a' and 'rel' not in xe.attrib
 
-    def load(self, log: Log, xe: XmlElement) -> dom.CrossReference | None:
+    def parse(self, log: Log, xe: XmlElement, out: Sink[str | Element]) -> bool:
         kit.check_no_attrib(log, xe, ['href'])
         href = xe.attrib.get("href")
         if href is None:
             log(fc.MissingAttribute.issue(xe, "href"))
-            return None
-        href = href.strip()
-        if not href.startswith("#"):
-            log(fc.InvalidAttributeValue.issue(xe, 'href', href))
-            return None
-        ret = dom.CrossReference(href[1:])
-        self.content_model.parse_content(log, xe, ret.append)
-        return ret
+            # parse per model with hyperlinks (not within), to allow hyperlinks
+            self.parse_content(log, xe, out)
+        else:
+            href = href.strip()
+            if not href.startswith("#"):
+                log(fc.InvalidAttributeValue.issue(xe, 'href', href))
+                self.content_model.parse_content(log, xe, out)
+            else:
+                ret = dom.CrossReference(href[1:])
+                self.content_model.parse_content(log, xe, ret.append)
+                out(ret)
+        return True
 
 
 def cross_reference_model(
     content_model: MixedModel, biblio: BiblioRefPool | None
-) -> Model[Element]:
+) -> MixedModel:
     jats_xref = JatsCrossReferenceModel(content_model, biblio)
-    return jats_xref | HtmlCrossReferenceModel(content_model)
+    return HtmlCrossReferenceModel(content_model) | jats_xref
 
 
 class ProtoSectionParser:

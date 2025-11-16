@@ -106,9 +106,11 @@ class ExtLinkModelBase(MixedModel):
         url = xe.attrib.get(key)
         if url is None:
             log(fc.MissingAttribute.issue(xe, key))
+            # parse per model with hyperlinks (not within), to allow hyperlinks
             self.parse_content(log, xe, out)
         elif not url.startswith('https:') and not url.startswith('http:'):
             log(fc.InvalidAttributeValue.issue(xe, key, url))
+            self.content_model.parse_content(log, xe, out)
         else:
             ret = dom.ExternalHyperlink(url)
             self.content_model.parse_content(log, xe, ret.append)

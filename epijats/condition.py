@@ -54,6 +54,7 @@ class SimpleFormatIssue(FormatIssue):
         return ret
 
 
+@dataclass(frozen=True)
 class SimpleFormatCondition(FormatCondition):
     """Format condition"""
 
@@ -281,3 +282,7 @@ class MissingAttribute(FormatCondition):
     def issue(e: XmlElement, key: str) -> FormatIssue:
         sourceline = getattr(e, 'sourceline', None)
         return XmlFormatIssue(MissingAttribute(e.tag, key), sourceline)
+
+    @property
+    def names(self) -> tuple[str, ...]:
+        return (type(self).__name__, str(self.tag), self.attribute)

@@ -36,11 +36,30 @@ def test_simple_title() -> None:
 """
 
 
+def test_article_issues() -> None:
+    art = dom.Article()
+    div = dom.MarkupBlock()
+    div.append("Something ")
+    div.append(SimpleFormatCondition.issue("serious"))
+    div.append(" happened.")
+    art.body.presection.append(div)
+    got = read_article_xml(art)
+    assert got == """\
+<article>
+  <article-body>
+    <div>Something  happened.</div>
+  </article-body>
+</article>
+"""
+    conditions = [i.condition for i in art.issues]
+    assert conditions == [SimpleFormatCondition()]
+
+
 def test_mixed_content() -> None:
     div = dom.MarkupBlock()
     div.append("hi")
     div.append(dom.MarkupInline('b', "ya"))
-    div.log(SimpleFormatCondition.issue("serious"))
+    div.append(SimpleFormatCondition.issue("serious"))
     expect_xml = "<div>hi<b>ya</b></div>"
     assert XML.to_str(div) == expect_xml
     expect_html = (

@@ -1,0 +1,5 @@
+[
+  ["UnsupportedAttributeValue", "a", "href", "example.com"],
+  ["UnsupportedAttributeValue", "a", "href", "wtf"],
+  ["MissingAttribute", "a", "href"]
+]
